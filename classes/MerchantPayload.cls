@@ -51,22 +51,22 @@ public class MerchantPayload {
                 }
             }
             
-      if (cas.Company_Profile__r.MSA_Effective_Date__c != null) {
-        DateTime myDateTime = DateTime.newInstance(
-          cas.Company_Profile__r.MSA_Effective_Date__c.year(),
-          cas.Company_Profile__r.MSA_Effective_Date__c.month(),
-          cas.Company_Profile__r.MSA_Effective_Date__c.day()
-        );
-        dateSigned = myDateTime.formatGmt('yyyy-MM-dd\'T\'HH:mm:ss\'Z\'');
-      }
+            if (cas.Company_Profile__r.MSA_Effective_Date__c != null) {
+                DateTime myDateTime = DateTime.newInstance(
+                    cas.Company_Profile__r.MSA_Effective_Date__c.year(),
+                    cas.Company_Profile__r.MSA_Effective_Date__c.month(),
+                    cas.Company_Profile__r.MSA_Effective_Date__c.day()
+                );
+                dateSigned = myDateTime.formatGmt('yyyy-MM-dd\'T\'HH:mm:ss\'Z\'');
+            }
             
             
             phoneNumber = cas.Company_Profile__r.City_field__c;
             
             String stateSource = MerchantValidator.getStateCode(
                 cas.Company_Profile__r.Registered_Country__c,
-            cas.Company_Profile__r.State_USA__c
-                );
+                cas.Company_Profile__r.State_USA__c
+            );
             
             
             if (cas.Company_Profile__r.Primary_Contact__r != null
@@ -76,10 +76,11 @@ public class MerchantPayload {
             
             address = new Address(
                 cas.Company_Profile__r.Registered_Street__c,
-            cas.Company_Profile__r.Registered_City__c,
-            cas.Company_Profile__r.Registered_Country__c,
-            cas.Company_Profile__r.Registered_Zip_Postal_Code__c,stateSource
-                );
+                cas.Company_Profile__r.Registered_City__c,
+                cas.Company_Profile__r.Registered_Country__c,
+                cas.Company_Profile__r.Registered_Zip_Postal_Code__c,
+                stateSource
+            );
             
             users = new List<User>();
             if (cas.ContactId != null) {
@@ -91,7 +92,7 @@ public class MerchantPayload {
             }
             
             clientManagementDetails = new ClientManagementDetails(cas);
-            merchantCategoryCode =cas.Company_Profile__r.MCC_Code__c;
+            merchantCategoryCode = cas.Company_Profile__r.MCC_Code__c;
         }
 
         if (isPayFac) {
@@ -99,9 +100,7 @@ public class MerchantPayload {
                 new PaymentMethod('Visa', new Map<String, String>{ 'payfacId' => cas.Company_Profile__r.Visa_Payfac_ID__c }),
                 new PaymentMethod('MasterCard', new Map<String, String>{ 'payfacId' => cas.Company_Profile__r.Mastercard_Payfac_ID__c })
             };
-            
         }
-
     }
     
     public MerchantPayload(Case cas, Boolean isProd) {
@@ -168,10 +167,25 @@ public class MerchantPayload {
     }
     
     
+    /**
+     * NCP cPanel User wrapper.
+     *
+     * IMPORTANT — DO NOT add a phoneNumber field here.
+     * The NCP merchants JSON schema defines User with `additionalProperties: false`
+     * and the allowed properties are ONLY: name, email, roles, password, username,
+     * adminOfAdmins. Sending phoneNumber on the user object causes NCP to reject
+     * the whole request with HTTP 422:
+     *   "Additional properties not allowed: phoneNumber at
+     *    #->allOf[0]->$ref[#/$defs/Merchant]->properties:users
+     *    ->$ref[#/$defs/UserList]->items[0]:0->$ref[#/$defs/User]"
+     *
+     * The merchant-level (top-level) phoneNumber on the parent MerchantPayload
+     * is the correct place to carry the phone number; that field IS required by
+     * NCP and is populated from Compliance__c.City_field__c above.
+     */
     public class User {
         public Name name { get; set; }
         public String email { get; set; }
-        public String phoneNumber { get; set; }
         public List<String> roles { get; set; }
         public String password { get; set; }
         public String username { get; set; }
@@ -182,16 +196,6 @@ public class MerchantPayload {
                 username = cas.SB_PPP_Username__c;
                 name = new Name(cas.Contact.FirstName, cas.Contact.LastName);
                 email = cas.Contact.Email;
-                // NCP requires phoneNumber on every user object. Source is the
-                // cPanel admin Contact.Phone; fall back to the Compliance phone
-                // (City_field__c stores the merchant phone) if the Contact has
-                // no direct phone number populated.
-                if (String.isNotBlank(cas.Contact.Phone)) {
-                    phoneNumber = cas.Contact.Phone;
-                } else if (cas.Company_Profile__r != null
-                    && String.isNotBlank(cas.Company_Profile__r.City_field__c)) {
-                    phoneNumber = cas.Company_Profile__r.City_field__c;
-                }
                 password = cas.SB_PPP_Password__c != null ? cas.SB_PPP_Password__c : MerchantValidator.genPassword(8);
                 roles = new List<String>{ isProd ? 'tempUser' : 'management' };
             }
@@ -217,16 +221,16 @@ public class MerchantPayload {
                 
                 String stateSource = MerchantValidator.getStateCode(
                     cas.Company_Profile__r.Registered_Country__c,
-                cas.Company_Profile__r.State_USA__c
-                    );
+                    cas.Company_Profile__r.State_USA__c
+                );
                 
                 address = new Address(
                     useLocation ? cas.Location__r.Street__c : cas.Company_Profile__r.Registered_Street__c,
-                useLocation ? cas.Location__r.City__c : cas.Company_Profile__r.Registered_City__c,
-                useLocation ? cas.Location__r.Country__c : cas.Company_Profile__r.Registered_Country__c,
-                useLocation ? cas.Location__r.Postal_Code__c : cas.Company_Profile__r.Registered_Zip_Postal_Code__c,
-                stateSource
-                    );
+                    useLocation ? cas.Location__r.City__c : cas.Company_Profile__r.Registered_City__c,
+                    useLocation ? cas.Location__r.Country__c : cas.Company_Profile__r.Registered_Country__c,
+                    useLocation ? cas.Location__r.Postal_Code__c : cas.Company_Profile__r.Registered_Zip_Postal_Code__c,
+                    stateSource
+                );
                 
                 if (cas.Company_Profile__r.Primary_Contact__r != null) {
                     contacts = new List<Contact>();
@@ -251,8 +255,8 @@ public class MerchantPayload {
                 if(objectName == 'PaymentProcessing' && cas.Company_Profile__r.Primary_Contact__r != null){
                     name = new Name(
                         cas.Company_Profile__r.Primary_Contact__r.FirstName,
-                    cas.Company_Profile__r.Primary_Contact__r.LastName
-                        );
+                        cas.Company_Profile__r.Primary_Contact__r.LastName
+                    );
                     email = cas.Company_Profile__r.Primary_Contact__r.Email;
                     roles = new List<String>{ 'Contact' };
                     
@@ -266,16 +270,10 @@ public class MerchantPayload {
                     
                     String stateSource = MerchantValidator.getStateCode(
                         countrySource,
-                    cas.Company_Profile__r.State_USA__c
-                        );
+                        cas.Company_Profile__r.State_USA__c
+                    );
                     
-                    // address = new Address(
-                    //     cas.Company_Profile__r.Primary_Contact__r.MailingStreet != null ? cas.Company_Profile__r.Primary_Contact__r.MailingStreet : cas.Company_Profile__r.Registered_Street__c,
-                    // cas.Company_Profile__r.Primary_Contact__r.MailingCity != null ? cas.Company_Profile__r.Primary_Contact__r.MailingCity : cas.Company_Profile__r.Registered_City__c,
-                    // cas.Company_Profile__r.Primary_Contact__r.MailingCountry != null ? cas.Company_Profile__r.Primary_Contact__r.MailingCountry : cas.Company_Profile__r.Registered_Country__c,
-                    // cas.Company_Profile__r.Primary_Contact__r.MailingPostalCode != null ? cas.Company_Profile__r.Primary_Contact__r.MailingPostalCode : cas.Company_Profile__r.Registered_Zip_Postal_Code__c,
-                    // stateSource
-                    //     );
+                    // address = new Address(...)  // kept commented as in source
                 }
                 
                 if(objectName == 'ClientManagementDetails'){
@@ -402,7 +400,7 @@ public class MerchantPayload {
         public String name { get; set; }
         
         public BusinessOriginRegion(Case cas){
-            name =  cas.Company_Profile__r.Origin_Region__c;
+            name = cas.Company_Profile__r.Origin_Region__c;
             if (name == 'NA') {
                 id = '1';
             } else if (name == 'EMEA') {
@@ -412,7 +410,6 @@ public class MerchantPayload {
             } else if (name == 'APAC') {
                 id = '4';
             }
-            
         }
     }
     

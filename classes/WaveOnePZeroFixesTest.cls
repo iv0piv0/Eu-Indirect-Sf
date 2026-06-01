@@ -114,6 +114,7 @@ private class WaveOnePZeroFixesTest {
 
         // FinanceIntegration_Setting__c is required by getSett()
         FinanceIntegration_Setting__c sett = new FinanceIntegration_Setting__c(
+            Name = 'Default',
             endpoint__c = 'https://test.example.com/finance',
             secret__c = 'test-secret'
         );

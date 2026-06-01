@@ -102,11 +102,12 @@ private class WaveOnePZeroFixesTest {
         );
         insert comp;
 
-        Banking_Details__c bank = new Banking_Details__c(
+       Banking_Details__c bank = new Banking_Details__c(
             Compliance__c = comp.Id,
             Name = 'Test Bank',
             Target_Currency__c = 'EUR',
-            Account_Holder_Name__c = 'Test Holder'
+            Account_Holder_Name__c = 'Test Holder',
+            UW_Approval__c = 'Verified'  // required: GenerateTree's SOQL filters on this
             // beneficiaryStreet__c, beneficiaryCity__c, beneficiaryPostCode__c,
             // Beneficiary_Country__c intentionally LEFT BLANK
         );

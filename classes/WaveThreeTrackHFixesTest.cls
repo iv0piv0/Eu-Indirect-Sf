@@ -1,7 +1,6 @@
 @isTest
 private class WaveThreeTrackHFixesTest {
 
-    // Captured by the mock — static must live on the OUTER class (Apex rule).
     private static String lastBody;
 
     @isTest
@@ -33,6 +32,18 @@ private class WaveThreeTrackHFixesTest {
         );
         insert comp;
 
+        // Application_Form must exist BEFORE director (director has required lookup to it)
+        Application_Form__c af = new Application_Form__c(
+            Company_Profile__c = comp.Id,
+            Average_transaction_value__c = 100,
+            Maximum_Ticket_Value_1__c = 500,
+            E_comm__c = 100,
+            Expected_Monthly_Volume__c = 10000,
+            Processing_Currencies_New__c = 'GBP',
+            Target_Market__c = 'United Kingdom'
+        );
+        insert af;
+
         insert new Banking_Details__c(
             Compliance__c = comp.Id,
             Account_Holder_Name__c = 'TrackH Co',
@@ -44,21 +55,12 @@ private class WaveThreeTrackHFixesTest {
 
         insert new Directors_or_Ultimate_Beneficial_Owner__c(
             Company_Profile__c = comp.Id,
+            Application_Form__c = af.Id,
             First_Name__c = 'John',
             Last_Name__c = 'Doe',
             Email__c = 'jd@example.com',
             Phone__c = '+44222',
             Country__c = 'United Kingdom'
-        );
-
-        insert new Application_Form__c(
-            Company_Profile__c = comp.Id,
-            Average_transaction_value__c = 100,
-            Maximum_Ticket_Value_1__c = 500,
-            E_comm__c = 100,
-            Expected_Monthly_Volume__c = 10000,
-            Processing_Currencies_New__c = 'GBP',
-            Target_Market__c = 'United Kingdom'
         );
 
         Test.setMock(HttpCalloutMock.class, new TrackHMock());
@@ -83,7 +85,7 @@ private class WaveThreeTrackHFixesTest {
 
     public class TrackHMock implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
-            lastBody = req.getBody();   // writes to outer-class static
+            lastBody = req.getBody();
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
             res.setBody('{"ok":true}');

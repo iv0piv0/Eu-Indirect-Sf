@@ -89,7 +89,12 @@ public with sharing class MerchantOnboardingController {
         public List<String> missingFields; // New: Returns list of missing fields
     }
     
-    @future(callout=true)
+    // Wave 1 fix (gap #2): removed @future from this 2-arg overload — calling
+    // an @future from inside another @future throws System.AsyncException, which
+    // marked Compliance 'Failed NCP' even when NCP succeeded. This is now a thin
+    // synchronous wrapper that delegates to the 3-arg @future. All callers
+    // (createMerchant page action, createMerchantFromFlow invocable) are sync,
+    // so the @future is still kicked off exactly once per request.
     public static void sendMerchantRequest(String caseId, Boolean isProd) {
         sendMerchantRequest(caseId, isProd, false); // ברירת מחדל – לא PayFac
     }
@@ -216,7 +221,11 @@ public with sharing class MerchantOnboardingController {
             System.debug('Response Status Code: ' + res.getStatusCode());
             System.debug('Response Body: ' + res.getBody());
             
-            if (res.getStatusCode() == 202 || res.getStatusCode() == 207) {
+            // Wave 1 fix (gap #1): accept any 2xx as success. Prod NCP returns
+            // HTTP 200 (not just 202/207), which previously made the success
+            // path never fire and left Technical_Onboarding_Status__c stuck
+            // at 'In Progress' even when the merchant was created in NCP.
+            if (res.getStatusCode() >= 200 && res.getStatusCode() < 300) {
                 System.debug('Response Status is successful, calling handleResponse()...');
                 handleResponse(res.getBody(), cas, isProd);
                 if (euIndirect) {

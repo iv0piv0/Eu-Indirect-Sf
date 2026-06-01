@@ -189,11 +189,37 @@ public class FinanceIntegration {
                 if(bank.Target_Currency__c!=null)
                     pay.currencies.add(bank.Target_Currency__c);
                 //pay.currencies = comp.Processing_Currencies_New__c!=null?comp.Processing_Currencies_New__c.replaceAll(' ','').split(';'):new List <String>();
-                pay.beneficiaryName = bank.Account_Holder_Name__c;
-                pay.beneficiaryStreet = bank.beneficiaryStreet__c;
-                pay.beneficiaryCity = bank.beneficiaryCity__c;
-                pay.beneficiaryPostCode = bank.beneficiaryPostCode__c;
-                pay.beneficiaryCountry = bank.Beneficiary_Country__c;
+                                pay.beneficiaryName = bank.Account_Holder_Name__c;
+                // Wave 1 fix (gap #5): Banking_Details__c beneficiary fields are
+                // often blank for EU Indirect merchants, which causes Finance
+                // Admin API to return HTTP 400 ("missing beneficiary address").
+                // Fall back to Compliance.Registered_* so we always send a
+                // populated address block. Logs which field fell back so we
+                // can detect incomplete Banking_Details__c records.
+                pay.beneficiaryStreet = String.isNotBlank(bank.beneficiaryStreet__c)
+                    ? bank.beneficiaryStreet__c
+                    : comp.Registered_Street__c;
+                if (String.isBlank(bank.beneficiaryStreet__c) && comp.Registered_Street__c != null) {
+                    System.debug(LoggingLevel.INFO, 'FinanceIntegration | beneficiaryStreet fallback to Registered_Street__c for compliance ' + comp.Id);
+                }
+                pay.beneficiaryCity = String.isNotBlank(bank.beneficiaryCity__c)
+                    ? bank.beneficiaryCity__c
+                    : comp.Registered_City__c;
+                if (String.isBlank(bank.beneficiaryCity__c) && comp.Registered_City__c != null) {
+                    System.debug(LoggingLevel.INFO, 'FinanceIntegration | beneficiaryCity fallback to Registered_City__c for compliance ' + comp.Id);
+                }
+                pay.beneficiaryPostCode = String.isNotBlank(bank.beneficiaryPostCode__c)
+                    ? bank.beneficiaryPostCode__c
+                    : comp.Registered_Zip_Postal_Code__c;
+                if (String.isBlank(bank.beneficiaryPostCode__c) && comp.Registered_Zip_Postal_Code__c != null) {
+                    System.debug(LoggingLevel.INFO, 'FinanceIntegration | beneficiaryPostCode fallback to Registered_Zip_Postal_Code__c for compliance ' + comp.Id);
+                }
+                pay.beneficiaryCountry = String.isNotBlank(bank.Beneficiary_Country__c)
+                    ? bank.Beneficiary_Country__c
+                    : comp.Registered_Country__c;
+                if (String.isBlank(bank.Beneficiary_Country__c) && comp.Registered_Country__c != null) {
+                    System.debug(LoggingLevel.INFO, 'FinanceIntegration | beneficiaryCountry fallback to Registered_Country__c for compliance ' + comp.Id);
+                }
                 if(pay.beneficiaryCountry!=null&&iso3bycountry.containsKey(pay.beneficiaryCountry.toLowerCase()))   pay.beneficiaryCountry = iso3bycountry.get(pay.beneficiaryCountry.toLowerCase());
                 pay.bankSwiftId = bank.swift_code__c;
                 pay.iban = bank.IBAN__c;

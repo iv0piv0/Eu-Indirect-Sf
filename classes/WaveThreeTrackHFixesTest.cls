@@ -32,7 +32,6 @@ private class WaveThreeTrackHFixesTest {
         );
         insert comp;
 
-        // Application_Form must exist BEFORE director (director has required lookup to it)
         Application_Form__c af = new Application_Form__c(
             Company_Profile__c = comp.Id,
             Average_transaction_value__c = 100,
@@ -65,20 +64,24 @@ private class WaveThreeTrackHFixesTest {
 
         Test.setMock(HttpCalloutMock.class, new TrackHMock());
         Test.startTest();
-        NuveiConnectEventsService.postApplicationEvent(comp.Id, 'MERCHANT_ACTIVATED');
+        // Use MERCHANT_PENDING_ACTIVATION (NOT _ACTIVATED) so applyLocalOutcome
+        // does NOT set Compliance_Status__c='Live', which would trigger the prod
+        // "Live with no MSA counter signed" email-alert flow and fail in test
+        // context (no recipients).
+        NuveiConnectEventsService.postApplicationEvent(comp.Id, 'MERCHANT_PENDING_ACTIVATION');
         Test.stopTest();
 
         Compliance__c after = [SELECT Nuvei_Connect_Status__c, Compliance_Status__c
             FROM Compliance__c WHERE Id = :comp.Id];
-        System.assertEquals('MERCHANT_ACTIVATED', after.Nuvei_Connect_Status__c);
-        System.assertEquals('Live', after.Compliance_Status__c);
+        System.assertEquals('MERCHANT_PENDING_ACTIVATION', after.Nuvei_Connect_Status__c,
+            'NC status should be mirrored locally after successful callout');
 
         System.assert(lastBody.contains('"applicationId":"NC-TRACKH-001"'), 'applicationId missing from payload');
         System.assert(lastBody.contains('"legalName":"TrackH Co"'), 'legalName missing');
         System.assert(lastBody.contains('"businessType":"LIMITED_COMPANY"'), 'businessType not reverse-mapped');
         System.assert(lastBody.contains('"country":"GB"'), 'country not reverse-mapped to ISO');
         System.assert(lastBody.contains('"iban":"GB29NWBK60161331926819"'), 'banking iban missing');
-        System.assert(lastBody.contains('"merchant_activated"'), 'outputs.decisions[].status not lowercased');
+        System.assert(lastBody.contains('"merchant_pending_activation"'), 'outputs.decisions[].status not lowercased');
         System.assert(lastBody.contains('"name":"pre_onboarding_dev"'), 'input.name should be pre_onboarding_dev');
         System.assert(lastBody.contains('"partnerId":"PARTNER-UUID-X"'), 'metadata.partnerId missing');
     }

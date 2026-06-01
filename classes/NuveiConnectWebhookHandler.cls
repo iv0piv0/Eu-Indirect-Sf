@@ -231,12 +231,14 @@ global static void handlePost() {
         WebhookResult result = new WebhookResult();
 
         try {
+            // Edit 5 — add City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
             List<Compliance__c> existing = [
                 SELECT Id, Name, Account__c, Compliance_Status__c,
                        Technical_Onboarding_Status__c,
                        Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c,
                        Manual_MCC_Code__c, Url__c, From_Reseller__c,
-                       EU_Indirect_Orchestration__c
+                       EU_Indirect_Orchestration__c,
+                       City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
                 FROM   Compliance__c
                 WHERE  Nuvei_Connect_Application_ID__c = :req.applicationId
                 LIMIT  1
@@ -281,6 +283,7 @@ global static void handlePost() {
             }
         }
 
+        // Edit 4 — patch City_field__c on update path
         if (req.businessInformation != null) {
             if (String.isNotBlank(req.businessInformation.legalName)) {
                 existing.Name = req.businessInformation.legalName;
@@ -291,6 +294,50 @@ global static void handlePost() {
             if (String.isNotBlank(req.businessInformation.merchantCategoryCode)) {
                 existing.Manual_MCC_Code__c = req.businessInformation.merchantCategoryCode;
             }
+            // Wave 2 fix (gap #6) — also patch update path. Only set when blank
+            // so manual OCT edits are never overwritten.
+            if (req.businessInformation.contactInformation != null
+                && String.isBlank(existing.City_field__c)
+                && String.isNotBlank(req.businessInformation.contactInformation.contactNumber)) {
+                existing.City_field__c = req.businessInformation.contactInformation.contactNumber;
+            }
+        }
+
+        // Edit 6 — idempotent fixes for Primary_Contact__c, Descriptor__c, Descriptor_Type__c
+        // Wave 2 fix (gap #7) — also patch update path. Only set when blank.
+        if (String.isBlank(existing.Primary_Contact__c)
+            && req.businessInformation != null
+            && req.businessInformation.contactInformation != null
+            && String.isNotBlank(req.businessInformation.contactInformation.businessEmail)) {
+            List<Contact> existingCons = [
+                SELECT Id FROM Contact
+                WHERE AccountId = :existing.Account__c
+                AND Email = :req.businessInformation.contactInformation.businessEmail
+                LIMIT 1
+            ];
+            if (!existingCons.isEmpty()) {
+                existing.Primary_Contact__c = existingCons[0].Id;
+            }
+        }
+
+        // Wave 2 fix (gap #8) — also patch update path. Only set when blank.
+        if (String.isBlank(existing.Descriptor__c)
+            && req.businessInformation != null
+            && String.isNotBlank(req.businessInformation.legalName)) {
+            Integer descMax = 22;
+            try {
+                Integer fieldLen = Compliance__c.Descriptor__c.getDescribe().getLength();
+                if (fieldLen > 0 && fieldLen < descMax) descMax = fieldLen;
+            } catch (Exception ignore) { /* keep 22 */ }
+            String descriptor = req.businessInformation.legalName.length() > descMax
+            ? req.businessInformation.legalName.substring(0, descMax)
+            : req.businessInformation.legalName;
+        existing.Descriptor__c = descriptor;
+        }
+
+        // Wave 2 fix (gap #9) — also patch update path. Only set when blank.
+        if (String.isBlank(existing.Descriptor_Type__c)) {
+            existing.Descriptor_Type__c = 'Static';
         }
 
         if (req.applicationStatus == 'APPROVED' && existing.From_Reseller__c != null) {
@@ -422,26 +469,26 @@ global static void handlePost() {
         return con;
     }
 
-private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountId) {
-    Opportunity opp = new Opportunity();
-    opp.Name      = req.businessInformation.legalName + ' — Merchant Onboarding';
-    opp.AccountId = accountId;
-    opp.StageName = 'Prospecting';
-    opp.CloseDate = Date.today().addDays(30);
+    private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountId) {
+        Opportunity opp = new Opportunity();
+        opp.Name      = req.businessInformation.legalName + ' — Merchant Onboarding';
+        opp.AccountId = accountId;
+        opp.StageName = 'Prospecting';
+        opp.CloseDate = Date.today().addDays(30);
 
-    List<RecordType> rts = [
-        SELECT Id FROM RecordType 
-        WHERE SObjectType = 'Opportunity' 
-        AND DeveloperName = 'Safecharge'
-        AND IsActive = true 
-        LIMIT 1
-    ];
-    if (!rts.isEmpty()) {
-        opp.RecordTypeId = rts[0].Id;
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Opportunity'
+            AND DeveloperName = 'Safecharge'
+            AND IsActive = true
+            LIMIT 1
+        ];
+        if (!rts.isEmpty()) {
+            opp.RecordTypeId = rts[0].Id;
+        }
+
+        return opp;
     }
-
-    return opp;
-}
 
     private static Compliance__c buildCompliance(
         NuveiConnectRequest req,
@@ -491,7 +538,33 @@ private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountI
 
         if (contactId != null) {
             comp.DocuSign_Recipient__c = contactId;
+            // Wave 2 fix (gap #7): seed Primary_Contact__c so MerchantPayload can
+            // resolve top-level email, paymentProcessing.email, and
+            // clientManagementDetails.contact[0].
+            comp.Primary_Contact__c = contactId;
         }
+
+        // Wave 2 fix (gap #6): seed City_field__c from NC contactNumber so
+        // MerchantPayload can populate merchant.phoneNumber and
+        // paymentProcessing.phoneNumber without manual entry.
+        if (bi.contactInformation != null && String.isNotBlank(bi.contactInformation.contactNumber)) {
+            comp.City_field__c = bi.contactInformation.contactNumber;
+        }
+
+        // Wave 2 fix (gap #8): default Descriptor__c from legal name (truncated
+        // to the field's max length) so Track G has a value to send to Finance.
+        if (String.isNotBlank(bi.legalName)) {
+            Integer descMax = 22;
+            try {
+                Integer fieldLen = Compliance__c.Descriptor__c.getDescribe().getLength();
+                if (fieldLen > 0 && fieldLen < descMax) descMax = fieldLen;
+            } catch (Exception ignore) { /* keep 22 */ }
+            String descriptor = bi.legalName.length() > descMax ? bi.legalName.substring(0, descMax) : bi.legalName;
+            comp.Descriptor__c = descriptor;
+        }
+
+        // Wave 2 fix (gap #9): default Descriptor_Type__c to 'Static'.
+        comp.Descriptor_Type__c = 'Static';
 
         return comp;
     }
@@ -502,6 +575,9 @@ private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountI
     ) {
         Application_Form__c af = new Application_Form__c();
         af.Company_Profile__c = complianceId;
+
+        Id rtId = getAppFormRecordTypeId(req);
+        if (rtId != null) af.RecordTypeId = rtId;
 
         if (req.businessInformation != null) {
             af.Company_name__c         = req.businessInformation.legalName;
@@ -561,8 +637,8 @@ private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountI
 
         return af;
     }
-    
-        private static Id getAppFormRecordTypeId(NuveiConnectRequest req) {
+
+    private static Id getAppFormRecordTypeId(NuveiConnectRequest req) {
         String country = '';
         AddressWrapper bizAddr = getAddressByType(
             req.businessInformation?.addresses, 'BUSINESS_ADDRESS'
@@ -583,10 +659,10 @@ private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountI
         }
 
         List<RecordType> rts = [
-            SELECT Id FROM RecordType 
-            WHERE SObjectType = 'Application_Form__c' 
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Application_Form__c'
             AND DeveloperName = :devName
-            AND IsActive = true 
+            AND IsActive = true
             LIMIT 1
         ];
         return rts.isEmpty() ? null : rts[0].Id;
@@ -702,6 +778,10 @@ private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountI
             bd.Compliance__c          = complianceId;
             bd.Account_Holder_Name__c = bank.accountHolderName;
             bd.bankCountry__c         = resolveCountry(bank.bankCountry);
+            // Wave 2 fix (gap #16): also seed Beneficiary_Country__c from the
+            // NC bankCountry so FinanceIntegration's payload has a value to send
+            // to Finance Admin (Track G HTTP 400 root cause).
+            bd.Beneficiary_Country__c = resolveCountry(bank.bankCountry);
             bd.Target_Currency__c     = bank.accountCurrency;
 
             if (String.isNotBlank(bank.iban)) {
@@ -771,14 +851,23 @@ private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountI
             c.Profile__c         = 'Merchant and merchantSite onboarding NCP acquiring CNP';
             c.Profile_Type__c    = 'None';
             if (!cPanelContacts.isEmpty()) {
-                c.ContactId          = cPanelContacts[0].Id;
-                c.SB_PPP_Username__c = cPanelContacts[0].Email;
+                c.ContactId              = cPanelContacts[0].Id;
+                c.SB_PPP_Username__c     = cPanelContacts[0].Email;
+                // Wave 2 fix (gap #11): seed Contact_Information__c so OCT
+                // doesn't have to fill it manually.
+                c.Contact_Information__c = cPanelContacts[0].Email;
             }
             List<ExpressConfig__c> cfgRows = [
                 SELECT SB_Template__c FROM ExpressConfig__c LIMIT 1
             ];
+            // Wave 2 fix (gap #10): SB_Template__c falls back to 'Ecommerce' when
+            // ExpressConfig is missing or its SB_Template__c is blank.
             if (!cfgRows.isEmpty() && String.isNotBlank(cfgRows[0].SB_Template__c)) {
                 c.SB_Template__c = cfgRows[0].SB_Template__c;
+            } else {
+                c.SB_Template__c = 'Ecommerce';
+                System.debug(LoggingLevel.WARN,
+                    'NuveiConnectWebhook | gap #10 fallback — ExpressConfig.SB_Template__c blank, defaulted Case.SB_Template__c to Ecommerce');
             }
             insert c;
         } catch (Exception e) {

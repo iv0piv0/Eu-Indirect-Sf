@@ -343,6 +343,14 @@ global static void handlePost() {
         if (req.applicationStatus == 'APPROVED' && existing.From_Reseller__c != null) {
             existing.EU_Indirect_Orchestration__c = true;
         }
+        
+                // ── Wave 4 (gaps #24, #25): backfill owner Contacts + junction rows
+        // when missing. Idempotent — only inserts what doesn't exist yet.
+        backfillOwnerContactsAndJunctions(existing, req);
+
+        if (req.applicationStatus == 'APPROVED' && existing.From_Reseller__c != null) {
+            existing.EU_Indirect_Orchestration__c = true;
+        }
 
         existing.Nuvei_Connect_Last_Webhook__c = DateTime.now();
         update existing;
@@ -365,29 +373,110 @@ global static void handlePost() {
 
     // ─── INSERT PATH ─────────────────────────────────────────────────────────
 
-    private static Id createAllObjects(NuveiConnectRequest req) {
+        private static Id createAllObjects(NuveiConnectRequest req) {
         Account acc = buildAccount(req);
         insert acc;
 
+        // ── Wave 4 (gap #24): build one Contact per business owner.
+        // Dedupe by lowercased email. cPanel admin merge: if portalAdminEmail
+        // matches an owner email (case-insensitive), set Is_CPanel_Admin__c=true
+        // on that single Contact (no duplicates).
         String primaryEmail = req.businessInformation?.contactInformation?.businessEmail;
         String cPanelEmail  = req.additionalInformation?.portalAdminEmail;
-        Boolean sameContact = String.isNotBlank(primaryEmail)
-                              && String.isNotBlank(cPanelEmail)
-                              && primaryEmail.equalsIgnoreCase(cPanelEmail);
+        String cPanelLower  = String.isBlank(cPanelEmail) ? null : cPanelEmail.toLowerCase();
 
-        Contact con = buildContact(req, acc.Id, sameContact);
-        insert con;
+        Map<String, Contact> ownerContactsByEmail = new Map<String, Contact>();
+        Boolean cPanelMatchedOwner = false;
 
-        if (!sameContact && String.isNotBlank(cPanelEmail)) {
-            Contact cPanelCon = buildCPanelContact(req, acc.Id);
-            insert cPanelCon;
+        if (req.businessOwnerInformation != null) {
+            for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
+                if (String.isBlank(bo.email)) continue;
+                String emailLower = bo.email.toLowerCase();
+                if (ownerContactsByEmail.containsKey(emailLower)) continue; // dedupe
+
+                Contact c = new Contact();
+                c.AccountId               = acc.Id;
+                c.FirstName               = bo.legalFirstName;
+                c.LastName                = String.isNotBlank(bo.legalLastName)
+                                              ? bo.legalLastName
+                                              : req.businessInformation.legalName;
+                c.Email                   = bo.email;
+                c.Phone                   = bo.contactNumber;
+                c.Authorized_Signature__c = bo.isAuthorizedSignatory == true; // Wave 4 (#24)
+
+                if (cPanelLower != null && emailLower == cPanelLower) {
+                    c.Is_CPanel_Admin__c = true;
+                    cPanelMatchedOwner   = true;
+                }
+                ownerContactsByEmail.put(emailLower, c);
+            }
         }
+
+        // Primary business contact (contactInformation): create if no owner
+        // shares the same email. Wave 4 keeps existing Wave 2 behaviour intact.
+        Contact primaryCon;
+        Boolean primaryMatchedOwner = false;
+        if (String.isNotBlank(primaryEmail)
+            && ownerContactsByEmail.containsKey(primaryEmail.toLowerCase())) {
+            primaryCon = ownerContactsByEmail.get(primaryEmail.toLowerCase());
+            primaryMatchedOwner = true;
+        }
+        if (primaryCon == null) {
+            // Build the legacy primary contact (existing buildContact logic).
+            Boolean primaryIsCPanel = String.isNotBlank(primaryEmail)
+                                      && String.isNotBlank(cPanelEmail)
+                                      && primaryEmail.equalsIgnoreCase(cPanelEmail);
+            primaryCon = buildContact(req, acc.Id, primaryIsCPanel);
+            if (primaryIsCPanel) cPanelMatchedOwner = true; // legacy already handled this
+        }
+
+        // Standalone cPanel contact: only if no owner AND not the primary email
+        // already matched it.
+        Contact cPanelOnlyCon;
+        if (!cPanelMatchedOwner
+            && String.isNotBlank(cPanelEmail)
+            && (String.isBlank(primaryEmail) || !primaryEmail.equalsIgnoreCase(cPanelEmail))) {
+            cPanelOnlyCon = buildCPanelContact(req, acc.Id);
+        }
+
+        // Insert all Contacts in one DML
+        List<Contact> toInsert = new List<Contact>();
+        if (!primaryMatchedOwner) toInsert.add(primaryCon); // primary is its own row
+        toInsert.addAll(ownerContactsByEmail.values());
+        if (cPanelOnlyCon != null) toInsert.add(cPanelOnlyCon);
+        if (!toInsert.isEmpty()) insert toInsert;
+
+        // Resolve the Contact Id used for DocuSign_Recipient__c / Primary_Contact__c.
+        // Preference order:
+        //   1. Authorized signatory owner (highest %ownership wins on ties)
+        //   2. Primary business contact (current default)
+        Id docuRecipientId = pickAuthorizedSignatoryId(req, ownerContactsByEmail);
+        if (docuRecipientId == null) docuRecipientId = primaryCon.Id;
 
         Opportunity opp = buildOpportunity(req, acc.Id);
         insert opp;
 
-        Compliance__c comp = buildCompliance(req, acc.Id, opp.Id, con.Id);
+        Compliance__c comp = buildCompliance(req, acc.Id, opp.Id, docuRecipientId);
         insert comp;
+
+        // ── Wave 4 (gap #25): one Compliance_Contact__c junction row per owner.
+        // Director__c is a formula on the junction → auto-fills from
+        // Contact__r.Authorized_Signature__c.
+        List<Compliance_Contact__c> junctions = new List<Compliance_Contact__c>();
+        for (Contact c : ownerContactsByEmail.values()) {
+            junctions.add(new Compliance_Contact__c(
+                Compliance__c = comp.Id,
+                Contact__c    = c.Id
+            ));
+        }
+        if (!junctions.isEmpty()) {
+            try {
+                insert junctions;
+            } catch (Exception e) {
+                logLegacyError('Wave 4 (gap #25): Compliance_Contact__c junction insert failed',
+                               e, req.applicationId);
+            }
+        }
 
         try {
             PCI__c pci = new PCI__c();
@@ -411,6 +500,32 @@ global static void handlePost() {
         copyPartnerMerchantBanks(comp.Id, req.partnerId, req.bankingInformation);
 
         return comp.Id;
+    }
+
+    /**
+     * Wave 4 helper — pick authorized signatory Contact Id from already-built
+     * owner Contact map. Tiebreaker: highest percentageOfOwnership wins.
+     * Returns null if no owner is flagged as signatory.
+     */
+    private static Id pickAuthorizedSignatoryId(
+        NuveiConnectRequest req,
+        Map<String, Contact> ownerContactsByEmail
+    ) {
+        if (req.businessOwnerInformation == null || ownerContactsByEmail.isEmpty()) return null;
+        BusinessOwnerWrapper best;
+        for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
+            if (bo.isAuthorizedSignatory != true) continue;
+            if (String.isBlank(bo.email)) continue;
+            if (best == null
+                || (bo.percentageOfOwnership != null
+                    && (best.percentageOfOwnership == null
+                        || bo.percentageOfOwnership > best.percentageOfOwnership))) {
+                best = bo;
+            }
+        }
+        if (best == null) return null;
+        Contact c = ownerContactsByEmail.get(best.email.toLowerCase());
+        return c == null ? null : c.Id;
     }
 
     // ─── OBJECT BUILDERS ─────────────────────────────────────────────────────
@@ -506,8 +621,11 @@ global static void handlePost() {
         comp.Compliance_Status__c             = NC_TO_SF_STATUS.get(
             String.isNotBlank(req.applicationStatus) ? req.applicationStatus : 'SUBMITTED'
         );
-        comp.From_Reseller__c                 = resolvePartnerId(req.partnerId);
-        comp.Nuvei_Partner_ID__c              = req.partnerId;
+        comp.From_Reseller__c    = resolvePartnerId(req.partnerId);
+        comp.Nuvei_Partner_ID__c = req.partnerId;
+        if (comp.From_Reseller__c != null) {
+            seedRolesFromPartner(comp);
+        }
         comp.Manual_MCC_Code__c               = bi.merchantCategoryCode;
         comp.Company_Type__c                  = NC_TO_SF_COMPANY_TYPE.containsKey(bi.businessType)
             ? NC_TO_SF_COMPANY_TYPE.get(bi.businessType) : bi.businessType;
@@ -822,6 +940,23 @@ global static void handlePost() {
         ];
         return partners.isEmpty() ? null : partners[0].Id;
     }
+        private static void seedRolesFromPartner(Compliance__c comp) {
+        Id partnerComplianceId = comp.From_Reseller__c;
+        List<Compliance__c> partners = [
+            SELECT Sales_Rep__c, Account_Manager__c, Underwriting_Mgr__c
+            FROM Compliance__c
+            WHERE Id = :partnerComplianceId
+            LIMIT 1
+        ];
+        if (partners.isEmpty()) {
+            return;
+        }
+        Compliance__c p = partners[0];
+
+        if (comp.Sales_Rep__c == null)         comp.Sales_Rep__c         = p.Sales_Rep__c;
+        if (comp.Account_Manager__c == null)   comp.Account_Manager__c   = p.Account_Manager__c;
+        if (comp.Underwriting_Mgr__c == null)  comp.Underwriting_Mgr__c  = p.Underwriting_Mgr__c;
+    }
 
     private static void createConfigurationCase(Compliance__c comp) {
         try {
@@ -872,6 +1007,109 @@ global static void handlePost() {
             insert c;
         } catch (Exception e) {
             logLegacyError('createConfigurationCase failed', e, comp.Nuvei_Connect_Application_ID__c);
+        }
+    }
+    
+        private static void backfillOwnerContactsAndJunctions(
+        Compliance__c existing,
+        NuveiConnectRequest req
+    ) {
+        if (req.businessOwnerInformation == null || req.businessOwnerInformation.isEmpty()) return;
+
+        // Existing junction rows for this Compliance — keyed by Contact email lowercase
+        Set<String> alreadyLinkedEmails = new Set<String>();
+        for (Compliance_Contact__c cc : [
+            SELECT Contact__c, Contact__r.Email
+            FROM Compliance_Contact__c
+            WHERE Compliance__c = :existing.Id
+        ]) {
+            if (cc.Contact__r != null && String.isNotBlank(cc.Contact__r.Email)) {
+                alreadyLinkedEmails.add(cc.Contact__r.Email.toLowerCase());
+            }
+        }
+
+        // Existing Contacts on the Account by email (lowercase key)
+        Map<String, Contact> existingByEmail = new Map<String, Contact>();
+        for (Contact c : [
+            SELECT Id, Email, Authorized_Signature__c, Is_CPanel_Admin__c
+            FROM Contact
+            WHERE AccountId = :existing.Account__c AND Email != null
+        ]) {
+            existingByEmail.put(c.Email.toLowerCase(), c);
+        }
+
+        String cPanelEmail = req.additionalInformation?.portalAdminEmail;
+        String cPanelLower = String.isBlank(cPanelEmail) ? null : cPanelEmail.toLowerCase();
+
+        List<Contact> contactsToInsert = new List<Contact>();
+        List<Contact> contactsToUpdate = new List<Contact>();
+
+        for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
+            if (String.isBlank(bo.email)) continue;
+            String emailLower = bo.email.toLowerCase();
+
+            if (existingByEmail.containsKey(emailLower)) {
+                Contact existingC = existingByEmail.get(emailLower);
+                Boolean dirty = false;
+                if (bo.isAuthorizedSignatory == true && existingC.Authorized_Signature__c != true) {
+                    existingC.Authorized_Signature__c = true;
+                    dirty = true;
+                }
+                if (cPanelLower != null && emailLower == cPanelLower
+                    && existingC.Is_CPanel_Admin__c != true) {
+                    existingC.Is_CPanel_Admin__c = true;
+                    dirty = true;
+                }
+                if (dirty) contactsToUpdate.add(existingC);
+            } else {
+                Contact c = new Contact();
+                c.AccountId               = existing.Account__c;
+                c.FirstName               = bo.legalFirstName;
+                c.LastName                = String.isNotBlank(bo.legalLastName)
+                                              ? bo.legalLastName
+                                              : (req.businessInformation != null
+                                                    ? req.businessInformation.legalName : 'Unknown');
+                c.Email                   = bo.email;
+                c.Phone                   = bo.contactNumber;
+                c.Authorized_Signature__c = bo.isAuthorizedSignatory == true;
+                if (cPanelLower != null && emailLower == cPanelLower) {
+                    c.Is_CPanel_Admin__c = true;
+                }
+                contactsToInsert.add(c);
+            }
+        }
+
+        if (!contactsToUpdate.isEmpty()) {
+            try { update contactsToUpdate; }
+            catch (Exception e) { logLegacyError('Wave 4: contact update failed', e, req.applicationId); }
+        }
+        if (!contactsToInsert.isEmpty()) {
+            try { insert contactsToInsert; }
+            catch (Exception e) { logLegacyError('Wave 4: contact insert failed', e, req.applicationId); }
+        }
+
+        Map<String, Id> emailToId = new Map<String, Id>();
+        for (Contact c : [
+            SELECT Id, Email FROM Contact
+            WHERE AccountId = :existing.Account__c AND Email != null
+        ]) {
+            emailToId.put(c.Email.toLowerCase(), c.Id);
+        }
+
+        List<Compliance_Contact__c> junctions = new List<Compliance_Contact__c>();
+        for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
+            if (String.isBlank(bo.email)) continue;
+            String emailLower = bo.email.toLowerCase();
+            if (alreadyLinkedEmails.contains(emailLower)) continue;
+            if (!emailToId.containsKey(emailLower)) continue;
+            junctions.add(new Compliance_Contact__c(
+                Compliance__c = existing.Id,
+                Contact__c    = emailToId.get(emailLower)
+            ));
+        }
+        if (!junctions.isEmpty()) {
+            try { insert junctions; }
+            catch (Exception e) { logLegacyError('Wave 4: junction insert failed', e, req.applicationId); }
         }
     }
 
@@ -964,6 +1202,7 @@ global static void handlePost() {
         public String  contactNumber;
         public Decimal percentageOfOwnership;
         public String  ownerRole;
+        public Boolean isAuthorizedSignatory;   // ← Wave 4 (gap #23)
         public AddressWrapper homeAddress;
     }
 

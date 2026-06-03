@@ -9,6 +9,15 @@
  *
  * See IndirectBoardingRouter.isOrchestrationSelfFailureTransition for the
  * exact transitions that are suppressed and why.
+ *
+ * Wave 3 fix (gap #11): the previous blanket "inAsync" block also suppressed
+ * legitimate SUCCESS transitions (Track F → Track G, Track G → Track H) when
+ * the previous track's success DML happened inside Queueable / @future. The
+ * per-record isOrchestrationSelfFailureTransition guard above is sufficient
+ * for failure-loop protection on its own, so the blanket async block is
+ * removed. Each per-track circuit breaker (Track_F_Retry_Count__c /
+ * Track_G_Retry_Count__c in IndirectBoardingRouter) provides a second layer
+ * of defense against runaway retries.
  */
 trigger IndirectBoardingComplianceTrigger on Compliance__c (after update) {
     Set<Id> toRun = new Set<Id>();
@@ -29,27 +38,7 @@ trigger IndirectBoardingComplianceTrigger on Compliance__c (after update) {
             toRun.add(n.Id);
         }
     }
-        // Wave 1 fix (gap #3): skip enqueue when we're already in an async
-    // context. From @future / Queueable / Batch, Salesforce allows only ONE
-    // System.enqueueJob per transaction. If the orchestration's @future
-    // updated this Compliance to a terminal status, the field-update DML
-    // re-fires this trigger inside that same async transaction — and the
-    // @future itself (or a sibling DML it triggered) may have already
-    // enqueued one queueable. Suppressing the second enqueue prevents
-    // "Too many queueable jobs added to the queue: 2" without losing the
-    // orchestration semantics, because the transition that mattered has
-    // already been written by the code that initiated the async work.
-    Boolean inAsync = System.isFuture() || System.isQueueable() || System.isBatch();
-    if (inAsync) {
-        for (Id complianceId : toRun) {
-            System.debug(LoggingLevel.INFO,
-                'IndirectBoardingComplianceTrigger | suppressing enqueue for ' + complianceId
-                + ' — already in async context (future=' + System.isFuture()
-                + ', queueable=' + System.isQueueable()
-                + ', batch=' + System.isBatch() + ')');
-        }
-        return;
-    }
+
     for (Id complianceId : toRun) {
         System.enqueueJob(new IndirectBoardingQueueable(complianceId));
     }

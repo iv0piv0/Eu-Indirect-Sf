@@ -4,20 +4,34 @@ public with sharing class NuveiConnectEventsService {
     @TestVisible private static final String CLASS_NAME = 'NuveiConnectEventsService';
 
     // ─── REVERSE MAPS (SF picklist → NC enum) ────────────────────────────────
+    // Wave 3 fix (gap #12): aligned to current Nuvei Connect API swagger spec
+    // for `BusinessType`. Outbound (Track H MERCHANT_ACTIVATED notification)
+    // now sends only values NC's own validator accepts. Stale SF labels are
+    // mapped to the closest-match NC enum so legacy records still round-trip
+    // until those picklist values are deactivated by the SF admin.
     private static final Map<String, String> SF_TO_NC_COMPANY_TYPE = new Map<String, String>{
-        'Limited'                       => 'LIMITED_COMPANY',
-        'Public Limited'                => 'PUBLIC_LIMITED_COMPANY',
-        'Limited Liability Partnership' => 'LIMITED_LIABILITY_PARTNERSHIP',
-        'Sole Trader'                   => 'SOLE_TRADER',
-        'Sole Proprietorship'           => 'SOLE_PROPRIETORSHIP',
-        'Partnership'                   => 'PARTNERSHIP',
-        'Corporation'                   => 'CORPORATION',
-        'Non-profit'                    => 'NON_PROFIT',
-        'Publicly Traded'               => 'PUBLICLY_TRADED',
-        'Government/Local Authority'    => 'GOVERNMENT',
-        'Other'                         => 'OTHER'
-    };
+        'Individual / Sole Proprietorship' => 'INDIVIDUAL_OR_SOLE_PROPRIETORSHIP',
+        'Limited'                          => 'LIMITED_COMPANY',
+        'Public Limited'                   => 'PUBLIC_LIMITED_COMPANY',
+        'Partnership'                      => 'PARTNERSHIP',
+        'Limited Liability Partnership'    => 'LIMITED_LIABILITY_PARTNERSHIP',
+        'Government/Local Authority'       => 'GOVERNMENT_LOCAL_AUTHORITY',
+        'Non-profit'                       => 'NON_PROFIT_ASSOCIATION_FOUNDATION',
+        'Trust'                            => 'TRUST',
+        'Club or Society'                  => 'CLUB_OR_SOCIETY',
+        'Unincorporated Association'       => 'UNINCORPORATED_ASSOCIATION',
+        'Scottish Limited Partnership'     => 'SCOTTISH_LIMITED_PARTNERSHIP',
+        'Other'                            => 'OTHER',
 
+        // Stale SF labels (pre-Wave-3) — map to closest-match NC enum so any
+        // existing live merchants still produce a valid Track H payload.
+        // Deactivate these picklist values after data audit confirms zero use.
+        'Sole Trader'                      => 'INDIVIDUAL_OR_SOLE_PROPRIETORSHIP',
+        'Sole Proprietorship'              => 'INDIVIDUAL_OR_SOLE_PROPRIETORSHIP',
+        'Corporation'                      => 'OTHER',
+        'Publicly Traded'                  => 'PUBLIC_LIMITED_COMPANY'
+    };
+    
     private static final Map<String, String> SF_TO_NC_UK_STATE = new Map<String, String>{
         'England and Wales' => 'GB-ENG',
         'Scotland'          => 'GB-SCT',

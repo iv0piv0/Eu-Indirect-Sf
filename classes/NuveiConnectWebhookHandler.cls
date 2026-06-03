@@ -45,22 +45,49 @@ global static void handlePost() {
         'WITHDRAWN'                => 'Oscilar Withdrawn'
     };
 
-    // ─── COMPANY TYPE: NC enum → SF picklist ────────────────────────────────────
+        // ─── COMPANY TYPE: NC enum → SF picklist ────────────────────────────────────
+    // Wave 3 fix (gap #12): aligned to current Nuvei Connect API swagger spec
+    // for `BusinessType`. Source of truth: NC OpenAPI schema.
+    //
+    // SAFE-PICKLIST mode: 5 NC enum values do not yet have matching SF picklist
+    // entries (Compliance__c.Company_Type__c). To avoid INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST
+    // errors on insert, those 5 are temporarily mapped to the closest existing
+    // SF label. Round-trip is lossy for those 5 — they will outbound as `OTHER`
+    // (or `LIMITED_LIABILITY_PARTNERSHIP` for Scottish LP) on Track H.
+    //
+    // SF admin follow-up — add these picklist values to both
+    // Compliance__c.Company_Type__c and Application_Form__c.Company_Type__c,
+    // then change the 5 lines below to use them:
+    //   * Individual / Sole Proprietorship  → currently 'Sole Proprietorship'
+    //   * Trust                              → currently 'Other'
+    //   * Club or Society                    → currently 'Other'
+    //   * Unincorporated Association         → currently 'Other'
+    //   * Scottish Limited Partnership       → currently 'Limited Liability Partnership'
     private static final Map<String, String> NC_TO_SF_COMPANY_TYPE =
         new Map<String, String>{
-            'LIMITED_COMPANY'               => 'Limited',
-            'PUBLIC_LIMITED_COMPANY'        => 'Public Limited',
-            'LIMITED_LIABILITY_PARTNERSHIP' => 'Limited Liability Partnership',
-            'SOLE_TRADER'                   => 'Sole Trader',
-            'SOLE_PROPRIETORSHIP'           => 'Sole Proprietorship',
-            'PARTNERSHIP'                   => 'Partnership',
-            'CORPORATION'                   => 'Corporation',
-            'NON_PROFIT'                    => 'Non-profit',
-            'PUBLICLY_TRADED'               => 'Publicly Traded',
-            'GOVERNMENT'                    => 'Government/Local Authority',
-            'OTHER'                         => 'Other'
-        };
+            'INDIVIDUAL_OR_SOLE_PROPRIETORSHIP' => 'Sole Proprietorship',           // TODO: 'Individual / Sole Proprietorship'
+            'LIMITED_COMPANY'                   => 'Limited',
+            'PUBLIC_LIMITED_COMPANY'            => 'Public Limited',
+            'PARTNERSHIP'                       => 'Partnership',
+            'LIMITED_LIABILITY_PARTNERSHIP'     => 'Limited Liability Partnership',
+            'GOVERNMENT_LOCAL_AUTHORITY'        => 'Government/Local Authority',
+            'NON_PROFIT_ASSOCIATION_FOUNDATION' => 'Non-profit',
+            'TRUST'                             => 'Other',                         // TODO: 'Trust'
+            'CLUB_OR_SOCIETY'                   => 'Other',                         // TODO: 'Club or Society'
+            'UNINCORPORATED_ASSOCIATION'        => 'Other',                         // TODO: 'Unincorporated Association'
+            'SCOTTISH_LIMITED_PARTNERSHIP'      => 'Limited Liability Partnership', // TODO: 'Scottish Limited Partnership'
+            'OTHER'                             => 'Other',
 
+            // Legacy NC values — kept read-only for any historical webhooks
+            // that still send the old enums. Outbound (SF → NC) does not use these.
+            'SOLE_TRADER'                       => 'Sole Trader',
+            'SOLE_PROPRIETORSHIP'               => 'Sole Proprietorship',
+            'CORPORATION'                       => 'Corporation',
+            'PUBLICLY_TRADED'                   => 'Publicly Traded',
+            'GOVERNMENT'                        => 'Government/Local Authority',
+            'NON_PROFIT'                        => 'Non-profit'
+        };
+        
     // ─── FULFILLMENT TIME: NC enum → SF picklist ─────────────────────────────
     private static final Map<String, String> NC_TO_SF_FULFILLMENT =
     new Map<String, String>{

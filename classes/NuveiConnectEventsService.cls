@@ -206,18 +206,43 @@ public with sharing class NuveiConnectEventsService {
         ];
         return afs.isEmpty() ? null : afs[0];
     }
+    
+    /**
+     * Wave 5 fix — populate `merchantId` on outbound NC events (Track H).
+     * GW_Name__c.Merchant_ID__c is set by MerchantOnboardingController after a
+     * successful NCP callout. PayAut flagged that MERCHANT_ACTIVATED events
+     * arrive without merchantId — without it they cannot reconcile the merchant.
+     */
+    private static GW_Name__c loadGwName(Id complianceId) {
+        List<GW_Name__c> gws = [
+            SELECT Id, Merchant_ID__c
+            FROM GW_Name__c
+            WHERE Compliance__c = :complianceId
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+        return gws.isEmpty() ? null : gws[0];
+    }
 
     // ─── PAYLOAD BUILD ───────────────────────────────────────────────────────
 
-    @TestVisible
+       @TestVisible
     private static String buildFullPayload(Compliance__c comp, String applicationStatus) {
         List<Banking_Details__c> banks = loadBankingDetails(comp.Id);
         List<Directors_or_Ultimate_Beneficial_Owner__c> directors = loadDirectors(comp.Id);
         Application_Form__c af = loadAppForm(comp.Id);
+        GW_Name__c gw = loadGwName(comp.Id);
 
         Map<String, Object> payload = new Map<String, Object>();
         payload.put('applicationId', comp.Nuvei_Connect_Application_ID__c);
         payload.put('externalReferenceId', String.valueOf(comp.Id));
+
+        // Track H fix — include merchantId for PayAut reconciliation.
+        // GW_Name__c is created by MerchantOnboardingController during Track F (NCP)
+        // and may not exist for MERCHANT_PENDING (Track F failed before NCP responded).
+        if (gw != null && String.isNotBlank(gw.Merchant_ID__c)) {
+            payload.put('merchantId', gw.Merchant_ID__c);
+        }
 
         payload.put('businessInformation', buildBusinessInfo(comp));
         payload.put('businessOwnerInformation', buildOwners(directors));

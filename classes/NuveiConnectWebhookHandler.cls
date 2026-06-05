@@ -284,43 +284,50 @@ private static Boolean isApprovedStatus(String ncStatus) {
     // ─── PUBLIC ENTRY POINT ──────────────────────────────────────────────────
 
     global static WebhookResult processWebhook(NuveiConnectRequest req) {
-        WebhookResult result = new WebhookResult();
+    WebhookResult result = new WebhookResult();
 
-        try {
-            // Edit 5 — add City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
-            List<Compliance__c> existing = [
-                SELECT Id, Name, Account__c, Compliance_Status__c,
-                       Technical_Onboarding_Status__c,
-                       Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c,
-                       Manual_MCC_Code__c, Url__c, From_Reseller__c,
-                       EU_Indirect_Orchestration__c,
-                       City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
-                FROM   Compliance__c
-                WHERE  Nuvei_Connect_Application_ID__c = :req.applicationId
-                LIMIT  1
-            ];
+    try {
+        // Edit 5 — add City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
+        List<Compliance__c> existing = [
+            SELECT Id, Name, Account__c, Compliance_Status__c,
+                   Technical_Onboarding_Status__c,
+                   Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c,
+                   Manual_MCC_Code__c, Url__c, From_Reseller__c,
+                   EU_Indirect_Orchestration__c,
+                   City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
+            FROM   Compliance__c
+            WHERE  Nuvei_Connect_Application_ID__c = :req.applicationId
+            LIMIT  1
+        ];
 
-            if (!existing.isEmpty()) {
-                handleStatusUpdate(existing[0], req);
+        if (!existing.isEmpty()) {
+            Boolean ok = handleStatusUpdate(existing[0], req);
+            result.complianceId = String.valueOf(existing[0].Id);
+            if (ok) {
                 result.success = true;
                 result.message = 'Status updated to: ' + req.applicationStatus;
             } else {
-                Id complianceId = createAllObjects(req);
-                result.success = true;
-                result.message = 'Application created. Compliance Id: ' + complianceId;
-                result.complianceId = String.valueOf(complianceId);
+                result.success = false;
+                result.message = 'Unknown NC status: ' + req.applicationStatus;
+                result.errorDetail = 'Status "' + req.applicationStatus
+                    + '" is not in NC_TO_SF_STATUS map. Compliance not updated.';
             }
-
-        } catch (Exception e) {
-            result.success = false;
-            result.message = 'Processing error: ' + e.getMessage();
-            result.errorDetail = e.getStackTraceString();
-            logLegacyError('NC Webhook Processing Error', e, req.applicationId);
+        } else {
+            Id complianceId = createAllObjects(req);
+            result.success = true;
+            result.message = 'Application created. Compliance Id: ' + complianceId;
+            result.complianceId = String.valueOf(complianceId);
         }
 
-        return result;
+    } catch (Exception e) {
+        result.success = false;
+        result.message = 'Processing error: ' + e.getMessage();
+        result.errorDetail = e.getStackTraceString();
+        logLegacyError('NC Webhook Processing Error', e, req.applicationId);
     }
 
+    return result;
+}
         // ─── UPSERT PATH ────────────────────────────────────────────────────────
 
     private static Boolean handleStatusUpdate(

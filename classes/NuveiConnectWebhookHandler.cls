@@ -1,49 +1,78 @@
 @RestResource(urlMapping='/nuveiConnectWebhook')
 global without sharing class NuveiConnectWebhookHandler {
-   @HttpPost
-global static void handlePost() {
-    RestRequest req = RestContext.request;
-    RestResponse res = RestContext.response;
-    res.addHeader('Content-Type', 'application/json');
-    try {
-        String body = req.requestBody.toString();
-        Map<String, Object> envelope = (Map<String, Object>) JSON.deserializeUntyped(body);
+    @HttpPost
+    global static void handlePost() {
+        RestRequest req = RestContext.request;
+        RestResponse res = RestContext.response;
+        res.addHeader('Content-Type', 'application/json');
+        try {
+            String body = req.requestBody == null ? '' : req.requestBody.toString();
 
-        // NC sends applicationData as an escaped JSON string — parse it twice
-        String appDataStr = (String) envelope.get('applicationData');
-        Map<String, Object> appData = (Map<String, Object>) JSON.deserializeUntyped(appDataStr);
+            // ── Inbound payload logging (always, regardless of outcome) ──
+            try {
+                insert new Execution_Log__c(
+                    Class_Name__c  = 'NuveiConnectWebhookHandler',
+                    Method_Name__c = 'handlePost',
+                    Type__c        = 'Info',
+                    Note__c        = 'NC Webhook Inbound Payload',
+                    Payload__c     = String.isBlank(body) ? '(empty body)' : body.left(131072)
+                );
+            } catch (Exception logEx) {
+                System.debug('Inbound log failed: ' + logEx.getMessage());
+            }
+            // ─────────────────────────────────────────────────────────────
 
-        // Merge applicationId and applicationStatus from envelope into appData
-        appData.put('applicationId', envelope.get('applicationId'));
-        appData.put('applicationStatus', envelope.get('applicationStatus'));
+            Map<String, Object> envelope = (Map<String, Object>) JSON.deserializeUntyped(body);
 
-        NuveiConnectRequest ncReq = (NuveiConnectRequest) JSON.deserialize(
-            JSON.serialize(appData), NuveiConnectRequest.class
-        );
-        WebhookResult result = processWebhook(ncReq);
-        res.statusCode = result.success ? 200 : 422;
-        res.responseBody = Blob.valueOf(JSON.serialize(result));
-    } catch (Exception e) {
-        res.statusCode = 500;
-        res.responseBody = Blob.valueOf('{"success":false,"message":"' + e.getMessage().replace('"','\\"') + '"}');
+            // NC sends applicationData as an escaped JSON string — parse it twice
+            String appDataStr = (String) envelope.get('applicationData');
+            Map<String, Object> appData = (Map<String, Object>) JSON.deserializeUntyped(appDataStr);
+
+            // Merge applicationId and applicationStatus from envelope into appData
+            appData.put('applicationId', envelope.get('applicationId'));
+            appData.put('applicationStatus', envelope.get('applicationStatus'));
+
+            NuveiConnectRequest ncReq = (NuveiConnectRequest) JSON.deserialize(
+                JSON.serialize(appData), NuveiConnectRequest.class
+            );
+            WebhookResult result = processWebhook(ncReq);
+            res.statusCode = result.success ? 200 : 422;
+            res.responseBody = Blob.valueOf(JSON.serialize(result));
+        } catch (Exception e) {
+            res.statusCode = 500;
+            res.responseBody = Blob.valueOf('{"success":false,"message":"' + e.getMessage().replace('"','\\"') + '"}');
+        }
     }
-}
 
     private static final Id RT_EL_NC = RecordTypeHelper.getRecordTypeIdByName('Execution_Log__c', 'NuveiConnect');
 
     // ─── STATUS MAP: Nuvei Connect → Salesforce ─────────────────────────────
-    private static final Map<String, String> NC_TO_SF_STATUS = new Map<String, String>{
-        'SUBMITTED'                => 'Oscilar Submitted',
-        'PENDING_REVIEW'           => 'Oscilar Pending Review',
-        'IN_PROGRESS'              => 'Oscilar In Progress',
-        'IN_REVIEW'                => 'Oscilar In Review',
-        'ADDITIONAL_INFO_REQUESTED'=> 'Oscilar Additional Info Requested',
-        'PENDING_APPROVAL'         => 'Oscilar Pending Approval',
-        'CONDITIONALLY_APPROVED'   => 'Oscilar Conditionally Approved',
-        'APPROVED'                 => 'Oscilar Approved',
-        'DECLINED'                 => 'Oscilar Declined',
-        'WITHDRAWN'                => 'Oscilar Withdrawn'
-    };
+private static final Map<String, String> NC_TO_SF_STATUS = new Map<String, String>{
+    // ── Legacy / short keys (kept for backward compatibility) ──────────
+    'SUBMITTED'                          => 'Oscilar Submitted',
+    'PENDING_REVIEW'                     => 'Oscilar Pending Review',
+    'IN_PROGRESS'                        => 'Oscilar In Progress',
+    'IN_REVIEW'                          => 'Oscilar In Review',
+    'ADDITIONAL_INFO_REQUESTED'          => 'Oscilar Additional Info Requested',
+    'PENDING_APPROVAL'                   => 'Oscilar Pending Approval',
+    'CONDITIONALLY_APPROVED'             => 'Oscilar Conditionally Approved',
+    'APPROVED'                           => 'Oscilar Approved',
+    'DECLINED'                           => 'Oscilar Declined',
+    'WITHDRAWN'                          => 'Oscilar Withdrawn',
+
+    // ── NC's actual outbound event names (per NC channel config) ───────
+    'APPLICATION_SUBMITTED'              => 'Oscilar Submitted',
+    'APPLICATION_UPDATED'                => 'Oscilar In Review',
+    'APPLICATION_APPROVED'               => 'Oscilar Approved',
+    'APPLICATION_CONDITIONALLY_APPROVED' => 'Oscilar Conditionally Approved',
+    'APPLICATION_DECLINED'               => 'Oscilar Declined',
+    'ADDITIONAL_INFORMATION_REQUIRED'    => 'Oscilar Additional Info Requested'
+};
+
+// Helper: treat both old (APPROVED) and new (APPLICATION_APPROVED) as approval triggers
+private static Boolean isApprovedStatus(String ncStatus) {
+    return ncStatus == 'APPROVED' || ncStatus == 'APPLICATION_APPROVED';
+}
 
         // ─── COMPANY TYPE: NC enum → SF picklist ────────────────────────────────────
     // Wave 3 fix (gap #12): aligned to current Nuvei Connect API swagger spec
@@ -292,17 +321,18 @@ global static void handlePost() {
         return result;
     }
 
-    // ─── UPSERT PATH ────────────────────────────────────────────────────────
+        // ─── UPSERT PATH ────────────────────────────────────────────────────────
 
-    private static void handleStatusUpdate(
+    private static Boolean handleStatusUpdate(
         Compliance__c existing,
         NuveiConnectRequest req
     ) {
+        // ─── Status mapping ──────────────────────────────────────────────
         if (String.isNotBlank(req.applicationStatus)) {
             String sfStatus = NC_TO_SF_STATUS.get(req.applicationStatus);
             if (sfStatus == null) {
                 logLegacyError('Unknown NC status: ' + req.applicationStatus, null, req.applicationId);
-                return;
+                return false;  // ← signal failure so caller returns 422 to NC
             }
             existing.Nuvei_Connect_Status__c = req.applicationStatus;
             if (sfStatus != existing.Compliance_Status__c) {
@@ -357,9 +387,9 @@ global static void handlePost() {
                 if (fieldLen > 0 && fieldLen < descMax) descMax = fieldLen;
             } catch (Exception ignore) { /* keep 22 */ }
             String descriptor = req.businessInformation.legalName.length() > descMax
-            ? req.businessInformation.legalName.substring(0, descMax)
-            : req.businessInformation.legalName;
-        existing.Descriptor__c = descriptor;
+                ? req.businessInformation.legalName.substring(0, descMax)
+                : req.businessInformation.legalName;
+            existing.Descriptor__c = descriptor;
         }
 
         // Wave 2 fix (gap #9) — also patch update path. Only set when blank.
@@ -367,22 +397,20 @@ global static void handlePost() {
             existing.Descriptor_Type__c = 'Static';
         }
 
-        if (req.applicationStatus == 'APPROVED' && existing.From_Reseller__c != null) {
+        // CHANGED: use isApprovedStatus() so this also fires for APPLICATION_APPROVED
+        if (isApprovedStatus(req.applicationStatus) && existing.From_Reseller__c != null) {
             existing.EU_Indirect_Orchestration__c = true;
         }
-        
-                // ── Wave 4 (gaps #24, #25): backfill owner Contacts + junction rows
+
+        // ── Wave 4 (gaps #24, #25): backfill owner Contacts + junction rows
         // when missing. Idempotent — only inserts what doesn't exist yet.
         backfillOwnerContactsAndJunctions(existing, req);
-
-        if (req.applicationStatus == 'APPROVED' && existing.From_Reseller__c != null) {
-            existing.EU_Indirect_Orchestration__c = true;
-        }
 
         existing.Nuvei_Connect_Last_Webhook__c = DateTime.now();
         update existing;
 
-        if (req.applicationStatus == 'APPROVED') {
+        // CHANGED: use isApprovedStatus() so this also fires for APPLICATION_APPROVED
+        if (isApprovedStatus(req.applicationStatus)) {
             List<Banking_Details__c> bankDetails = [
                 SELECT Id FROM Banking_Details__c
                 WHERE Compliance__c = :existing.Id
@@ -396,8 +424,10 @@ global static void handlePost() {
             }
             createConfigurationCase(existing);
         }
-    }
 
+        return true;
+    }
+    
     // ─── INSERT PATH ─────────────────────────────────────────────────────────
 
         private static Id createAllObjects(NuveiConnectRequest req) {

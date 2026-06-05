@@ -1,1 +1,1217 @@
+Apex Debug Log Detail
+User	Dimitar Panayotov	Date	05/06/2026, 10:41:34 EEST
+Status	Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)	Application	Unknown
+Request Type	Api	Operation	FutureHandler
+Duration (ms)	4,739	Log Size (bytes)	100,969
+Log	
+63.0 APEX_CODE,DEBUG;APEX_PROFILING,INFO;CALLOUT,INFO;DATA_ACCESS,INFO;DB,INFO;NBA,INFO;SYSTEM,DEBUG;VALIDATION,INFO;VISUALFORCE,INFO;WAVE,INFO;WORKFLOW,INFO
+10:41:30.0 (237144)|USER_INFO|[EXTERNAL]|0051O00000CupBm|dimitar.panayotov@nuvei.com|(GMT+03:00) Eastern European Summer Time (Europe/Sofia)|GMT+03:00
+10:41:30.0 (315927)|EXECUTION_STARTED
+10:41:30.0 (335114)|CODE_UNIT_STARTED|[EXTERNAL]|FutureHandler - state load
+10:41:30.0 (2679727)|CODE_UNIT_FINISHED|FutureHandler - state load
+10:41:30.0 (2698282)|EXECUTION_FINISHED
+10:41:30.32 (32334901)|USER_INFO|[EXTERNAL]|0051O00000CupBm|dimitar.panayotov@nuvei.com|(GMT+03:00) Eastern European Summer Time (Europe/Sofia)|GMT+03:00
+10:41:30.32 (32355491)|EXECUTION_STARTED
+10:41:30.32 (32374128)|CODE_UNIT_STARTED|[EXTERNAL]|01pPj00000KlNIb|MerchantOnboardingController.sendMerchantRequest(String, Boolean, Boolean)
+10:41:30.32 (34502513)|SYSTEM_MODE_ENTER|false
+10:41:30.32 (34842272)|SYSTEM_MODE_EXIT|false
+10:41:30.32 (34874608)|SYSTEM_MODE_ENTER|false
+10:41:30.32 (34978918)|USER_DEBUG|[104]|DEBUG|===> Inside sendMerchantRequest, caseId: 500Pj000016Of4U
+10:41:30.32 (35068024)|USER_DEBUG|[343]|DEBUG|===> Inside fetchCase, caseId: 500Pj000016Of4U
+10:41:30.32 (37976776)|SOQL_EXECUTE_BEGIN|[346]|Aggregations:0|SELECT Id, Company_Profile__c, Integration_Channel__c, ContactId, SB_PPP_Username__c, SB_PPP_Password__c, SB_Template__c, Profile__c, Location__c, Location__r.Name, Location__r.Email_Address__c, Location__r.Street__c, Location__r.City__c, Location__r.Country__c, Location__r.Postal_Code__c, Location__r.Phone_Number__c, Platform_Integration__c, Contact.FirstName, Contact.LastName, Contact.Email, Contact.Phone FROM Case WHERE Id = :tmpVar1 LIMIT 1
+10:41:30.32 (72562086)|SOQL_EXECUTE_END|[346]|Rows:1
+10:41:30.32 (72978257)|USER_DEBUG|[359]|DEBUG|===> Case fetched: Case:{Id=500Pj000016Of4UIAS, Company_Profile__c=a0m1O000008j6nNQAQ, Integration_Channel__c=Fasttrack, ContactId=0031O00003H2k1nQAB, SB_PPP_Username__c=dimitar.panayotov02570633, SB_Template__c=Merchant and merchantSite NCP acquiring CNP REST 2 fast track, Platform_Integration__c=- none -}
+10:41:30.32 (73450234)|SOQL_EXECUTE_BEGIN|[363]|Aggregations:0|SELECT Id, Name, FirstName, LastName, Email, MailingStreet, MailingCity, MailingCountry, MailingPostalCode, Phone FROM Contact WHERE Id = :tmpVar1
+10:41:30.32 (84826751)|SOQL_EXECUTE_END|[363]|Rows:1
+10:41:30.32 (85470650)|USER_DEBUG|[368]|DEBUG|===> Contact fetched: Contact:{Id=0031O00003H2k1nQAB, Name=David Hazan, FirstName=David, LastName=Hazan, Email=dimitarpanayotov@gmail.com, Phone=44876756457986}
+10:41:30.32 (88803728)|SOQL_EXECUTE_BEGIN|[373]|Aggregations:0|SELECT Id, Name, Registered_Country_Code2__c, Registered_Zip_Postal_Code__c, MCC_Code__c, VAT_Number__c, Registered_Street__c, Registered_City__c, Primary_Contact__r.Phone, Primary_Contact__r.Id, Primary_Contact__r.Email, Primary_Contact__r.FirstName, Primary_Contact__r.LastName, Primary_Contact__r.MailingStreet, Primary_Contact__r.MailingCity, Primary_Contact__r.MailingCountry, Primary_Contact__r.MailingPostalCode, MSA_Effective_Date__c, City_field__c, Merchant_Tier__c, State_USA__c, Registered_Country__c, Primary_Contact__c, Account__r.Id, Account__r.Name, Sales_Rep__c, Sales_Rep__r.FirstName, Sales_Rep__r.LastName, Sales_Rep__r.Email, Account_Manager__c, Account_Manager__r.FirstName, Account_Manager__r.LastName, Account_Manager__r.Email, Account_Operational_Manager_CP__c, Account_Operational_Manager_CP__r.FirstName, Account_Operational_Manager_CP__r.LastName, Account_Operational_Manager_CP__r.Email, From_Reseller__r.Id, From_Reseller__r.Name, From_Reseller__r.Nuvei_Partner_ID__c, From_Reseller__r.Credentials_URL__c, From_Reseller__r.Overwrite_Financial_Vertical__c, Overwrite_Financial_Vertical__c, Origin_Region__c, Visa_Payfac_ID__c, Mastercard_Payfac_ID__c, Nuvei_Connect_Application_ID__c, EU_Indirect_Orchestration__c FROM Compliance__c WHERE Id = :tmpVar1
+10:41:30.32 (174683978)|SOQL_EXECUTE_END|[373]|Rows:1
+10:41:30.32 (175245568)|USER_DEBUG|[392]|DEBUG|===> Compliance Profile fetched: Compliance__c:{Id=a0m1O000008j6nNQAQ, Name=REST 2.0 onboarding test LTD, Registered_Country_Code2__c=GBR, Registered_Zip_Postal_Code__c=7654654, MCC_Code__c=5817, VAT_Number__c=N/A, Registered_Street__c=baker street 22, Registered_City__c=London, Primary_Contact__c=0031O00003H2k1nQAB, City_field__c=davidh.com, Merchant_Tier__c=5, State_USA__c=England and Wales, Registered_Country__c=United Kingdom, Account__c=0011O000029FeRMQA0, EU_Indirect_Orchestration__c=false}
+10:41:30.32 (177314524)|SOQL_EXECUTE_BEGIN|[124]|Aggregations:0|SELECT MO_SB_endpoint__c, MO_prod_endpoint__c, MO_SB_token_endpoint__c, MO_prod_token_endpoint__c, Exception_email__c, MO_SB_secret__c, MO_prod_secret__c FROM ExpressConfig__c LIMIT 1
+10:41:30.32 (214845055)|SOQL_EXECUTE_END|[124]|Rows:1
+10:41:30.32 (215932918)|SOQL_EXECUTE_BEGIN|[132]|Aggregations:0|SELECT Name FROM Website__c WHERE Compliance__c = :tmpVar1 ORDER BY Primary_URL__c DESC NULLS FIRST, CreatedDate ASC NULLS FIRST LIMIT 1
+10:41:30.32 (233617564)|SOQL_EXECUTE_END|[132]|Rows:1
+10:41:30.32 (233906976)|USER_DEBUG|[144]|DEBUG|endpoint: https://sandbox.nuvei.com/selfconfiguration/api/merchants
+10:41:30.32 (233923138)|USER_DEBUG|[145]|DEBUG|tokenEndpoint: https://accounts.preproduction.nuvei.com/connect/token?client_credentials
+10:41:30.32 (233931012)|USER_DEBUG|[146]|DEBUG|clientSecret: rSO25LKrOysdKjwB1G5p4UKIvAK4FkNRyECPDlGqWGogx6qZqyzjbrbRx9mEZInU
+10:41:30.32 (237608954)|CALLOUT_REQUEST|[584]|System.HttpRequest[Endpoint=https://accounts.preproduction.nuvei.com/connect/token?client_credentials, Method=POST]
+10:41:30.32 (825512216)|CALLOUT_RESPONSE|[584]|System.HttpResponse[Status=OK, StatusCode=200]
+10:41:30.32 (826570802)|USER_DEBUG|[150]|DEBUG|accessToken: eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3ODVCQ0Q3RTYzQjc4MUE2QzRCQkY2NjlERkYzMTEzMTcxMDNGNDRSUzI1NiIsIng1dCI6Iko0VzgxLVk3ZUJwc1M3OW1uZjh4RXhjUVAwUSIsInR5cCI6ImF0K2p3dCJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLnByZXByb2R1Y3Rpb24ubnV2ZWkuY29tIiwibmJmIjoxNzgwNjQ1MjkwLCJpYXQiOjE3ODA2NDUyOTAsImV4cCI6MTc4MTAwNTI5MCwiYXVkIjpbImRpZ2l0YWwuZ2F0ZXdheS5ib2FyZGluZy5hcGkiLCJoYWwubmNwLm1pY3Jvc2VydmljZSIsInFhX25hX2JhY2tvZmZpY2UuYXBpIl0sInNjb3BlIjpbImRpZ2l0YWwuZ2F0ZXdheS5ib2FyZGluZy5hcGkuc2NvcGUiXSwiY2xpZW50X2lkIjoicHJvY2Vzc21hbmFnZXIiLCJpbmZvc2VjX2RlY3J5cHRfaWZfc291cmNlX2lzIjoiaGFsLmFwcGxpbmsuYXBpIiwianRpIjoiQjhDMDg4MTRENjhFRDdGQjlGODU2NzIzMDJFMDVFQkIifQ.LOWtu-RPOlozlVIhoplJ96MBgSQA4x-nzn9h5qVTtCqSUwj7AAnwmGpoRno9GRTvs769T2RA3hzC0BKrcbKPNUrDI1LkackI3tZByD5xxgcdABXGDqtQ6UNVuQM0ss_1PZ0m6KB1G29IbgEXeAf-fDpL0ZhjDkHwz0f_snS-yFIzYyJ9tRr-SMHCLczl7EDnzu7oRiyGRZHOCsLrYmgRNTn-4AytlTk-kPdgUaASSkrgkrm5QBNrcQumQygFu6l4lyIT4IXBtyfC1oFxLQlIgE439M4pVt32IxeceURdMJQ70sQ58qbYIgHIlJwjg2FaMA41C_5VzsE-WLj0S0C_QA
+10:41:30.32 (836823789)|SOQL_EXECUTE_BEGIN|[65]|Aggregations:0|SELECT Code__c FROM States__c WHERE Name = :tmpVar1 LIMIT 1
+10:41:30.32 (910392372)|SOQL_EXECUTE_END|[65]|Rows:1
+10:41:30.32 (913663334)|SOQL_EXECUTE_BEGIN|[91]|Aggregations:0|SELECT ISO_2__c FROM Countries__c WHERE Name = :tmpVar1 LIMIT 1
+10:41:30.32 (959579911)|SOQL_EXECUTE_END|[91]|Rows:1
+10:41:30.32 (960466553)|USER_DEBUG|[195]|DEBUG|cas.Contact: Contact:{Id=0031O00003H2k1nQAB, Name=David Hazan, FirstName=David, LastName=Hazan, Email=dimitarpanayotov@gmail.com, Phone=44876756457986}
+10:41:30.32 (962346250)|SOQL_EXECUTE_BEGIN|[428]|Aggregations:0|SELECT Name FROM Website__c WHERE Compliance__c = :tmpVar1 ORDER BY Primary_URL__c DESC NULLS FIRST, CreatedDate ASC NULLS FIRST LIMIT 1
+10:41:30.32 (975529105)|SOQL_EXECUTE_END|[428]|Rows:1
+10:41:30.32 (976321065)|SOQL_EXECUTE_BEGIN|[65]|Aggregations:0|SELECT Code__c FROM States__c WHERE Name = :tmpVar1 LIMIT 1
+10:41:30.32 (988022732)|SOQL_EXECUTE_END|[65]|Rows:1
+10:41:30.32 (988599389)|SOQL_EXECUTE_BEGIN|[91]|Aggregations:0|SELECT ISO_2__c FROM Countries__c WHERE Name = :tmpVar1 LIMIT 1
+10:41:30.32 (999332530)|SOQL_EXECUTE_END|[91]|Rows:1
+10:41:30.32 (1000470438)|SOQL_EXECUTE_BEGIN|[65]|Aggregations:0|SELECT Code__c FROM States__c WHERE Name = :tmpVar1 LIMIT 1
+10:41:30.32 (1008844293)|SOQL_EXECUTE_END|[65]|Rows:1
+10:41:30.32 (1016715955)|USER_DEBUG|[199]|DEBUG|payload: {
+  "address" : {
+    "city" : "London",
+    "country" : "gb",
+    "line1" : "baker street 22",
+    "postalCode" : "7654654",
+    "state" : "ENG"
+  },
+  "clientManagementDetails" : {
+    "account" : {
+      "id" : "0011O000029FeRMQA0",
+      "name" : "DavidH LTD"
+    },
+    "businessOriginRegion" : { },
+    "company" : {
+      "id" : "a0m1O000008j6nNQAQ",
+      "name" : "REST 2.0 onboarding test LTD"
+    },
+    "contact" : [ { } ],
+    "customerIntegrationChannel" : "Fasttrack",
+    "industryIndication" : { },
+    "integrationCaseId" : "500Pj000016Of4UIAS",
+    "introducer" : { },
+    "platform" : "- none -"
+  },
+  "email" : "dimitarpanayotov@gmail.com",
+  "externalId" : "a0m1O000008j6nNQAQ",
+  "isPayFac" : false,
+  "merchantCategoryCode" : "5817",
+  "name" : "REST 2.0 onboarding test LTD",
+  "paymentProcessing" : {
+    "address" : {
+      "city" : "London",
+      "country" : "gb",
+      "line1" : "baker street 22",
+      "postalCode" : "7654654",
+      "state" : "ENG"
+    },
+    "contacts" : [ {
+      "email" : "dimitarpanayotov@gmail.com",
+      "name" : {
+        "first" : "David",
+        "last" : "Hazan"
+      },
+      "roles" : [ "Contact" ]
+    } ],
+    "email" : "dimitarpanayotov@gmail.com",
+    "name" : "REST 2.0 onboarding test LTD",
+    "phoneNumber" : "davidh.com",
+    "website" : "www.davidh.com"
+  },
+  "phoneNumber" : "davidh.com",
+  "profile" : "Merchant and merchantSite NCP acquiring CNP REST 2 fast track",
+  "taxId" : "N/A",
+  "tier" : 5,
+  "users" : [ {
+    "email" : "dimitarpanayotov@gmail.com",
+    "name" : {
+      "first" : "David",
+      "last" : "Hazan"
+    },
+    "password" : "Sk8Fn6r3",
+    "roles" : [ "management" ],
+    "username" : "dimitar.panayotov02570633"
+  } ]
+}
+10:41:30.32 (1017411265)|CALLOUT_REQUEST|[211]|System.HttpRequest[Endpoint=https://sandbox.nuvei.com/selfconfiguration/api/merchants, Method=POST]
+10:41:33.554 (3554013368)|CALLOUT_RESPONSE|[211]|System.HttpResponse[Status=Internal Server Error, StatusCode=500]
+10:41:33.554 (3554150762)|USER_DEBUG|[213]|DEBUG|=== Request Sent ===
+10:41:33.554 (3554278840)|USER_DEBUG|[214]|DEBUG|Request URL: https://sandbox.nuvei.com/selfconfiguration/api/merchants
+10:41:33.554 (3554291331)|USER_DEBUG|[215]|DEBUG|Request Method: POST
+10:41:33.554 (3554342366)|USER_DEBUG|[216]|DEBUG|Request Headers: application/json
+10:41:33.554 (3554410255)|USER_DEBUG|[217]|DEBUG|Request Body: {"users":[{"username":"dimitar.panayotov02570633","roles":["management"],"password":"Sk8Fn6r3","name":{"last":"Hazan","first":"David"},"email":"dimitarpanayotov@gmail.com"}],"tier":5,"taxId":"N/A","profile":"Merchant and merchantSite NCP acquiring CNP REST 2 fast track","phoneNumber":"davidh.com","paymentProcessing":{"website":"www.davidh.com","phoneNumber":"davidh.com","name":"REST 2.0 onboarding test LTD","email":"dimitarpanayotov@gmail.com","contacts":[{"roles":["Contact"],"name":{"last":"Hazan","first":"David"},"email":"dimitarpanayotov@gmail.com"}],"address":{"state":"ENG","postalCode":"7654654","line1":"baker street 22","country":"gb","city":"London"}},"name":"REST 2.0 onboarding test LTD","merchantCategoryCode":"5817","isPayFac":false,"externalId":"a0m1O000008j6nNQAQ","email":"dimitarpanayotov@gmail.com","clientManagementDetails":{"platform":"- none -","introducer":{},"integrationCaseId":"500Pj000016Of4UIAS","industryIndication":{},"customerIntegrationChannel":"Fasttrack","contact":[{}],"company":{"name":"REST 2.0 onboarding test LTD","id":"a0m1O000008j6nNQAQ"},"businessOriginRegion":{},"account":{"name":"DavidH LTD","id":"0011O000029FeRMQA0"}},"address":{"state":"ENG","postalCode":"7654654","line1":"baker street 22","country":"gb","city":"London"}}
+10:41:33.554 (3554427627)|USER_DEBUG|[218]|DEBUG|===================
+10:41:33.554 (3554434184)|USER_DEBUG|[220]|DEBUG|=== Response Received ===
+10:41:33.554 (3554776094)|USER_DEBUG|[221]|DEBUG|Response Status Code: 500
+10:41:33.554 (3554824533)|USER_DEBUG|[222]|DEBUG|Response Body: {"status":500,"code":"SE.InternalErrors","title":"Expected internal server error","detail":"Undefined array key \"roles\"","type":"https:\/\/nuvei.atlassian.net\/wiki\/spaces\/SA\/pages\/5593629554\/Error+Management+Standard#SE.InternalErrors"}
+10:41:33.554 (3554854334)|USER_DEBUG|[238]|DEBUG|Response Status is not successful, saving response to Case...
+10:41:33.554 (3555361597)|SOQL_EXECUTE_BEGIN|[243]|Aggregations:0|SELECT Id, Configuration_Issue_Details__c FROM Compliance__c WHERE Id = :tmpVar1 LIMIT 1
+10:41:33.554 (3575903125)|SOQL_EXECUTE_END|[243]|Rows:1
+10:41:33.554 (3576263394)|DML_BEGIN|[250]|Op:Update|Type:Compliance__c|Rows:1
+10:41:33.554 (3607114129)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:01I300000027f4c
+10:41:33.554 (3608377096)|CODE_UNIT_FINISHED|Flow:01I300000027f4c
+10:41:33.554 (3619017381)|CODE_UNIT_STARTED|[EXTERNAL]|01q1O000000k9fA|ComplianceTrigger on Compliance trigger event BeforeUpdate|__sfdc_trigger/ComplianceTrigger
+10:41:33.554 (3623309370)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3623337293)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (3623410328)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3623450432)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (3623453968)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3623456369)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (3623505223)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3623636480)|SYSTEM_MODE_EXIT|false
+10:41:33.623 (3623652590)|CUMULATIVE_LIMIT_USAGE
+10:41:33.623 (3623652590)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 12 out of 200
+  Number of query rows: 12 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 150 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
 
+10:41:33.623 (3623652590)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:33.554 (3623923100)|CODE_UNIT_FINISHED|ComplianceTrigger on Compliance trigger event BeforeUpdate|__sfdc_trigger/ComplianceTrigger
+10:41:33.554 (3777602740)|CODE_UNIT_STARTED|[EXTERNAL]|Validation:Compliance:a0m1O000008j6nN
+10:41:33.554 (3777633825)|VALIDATION_RULE|03dPj0000000wvF|AUD_available_for_Nuvei_Australia_Pty_Li
+10:41:33.554 (3777905481)|VALIDATION_FORMULA|TEXT(Managing_Company__c) <> "Nuvei Australia Pty Limited" &&   TEXT(Fees_Currency__c) = "AUD"|Managing_Company__c=null , Fees_Currency__c=EUR
+10:41:33.554 (3777912970)|VALIDATION_PASS
+10:41:33.554 (3777915208)|VALIDATION_RULE|03d1O0000009Nve|Buy_rates_for_percent_above_buy_blended
+10:41:33.554 (3778076387)|VALIDATION_FORMULA|AND(TEXT (Introducer_Commission_Model__c) = "% above buy rate (blended)", ISBLANK(Buy_Rate_actually_received_by_Safecharge__c))|Introducer_Commission_Model__c=null , Buy_Rate_actually_received_by_Safecharge__c=null
+10:41:33.554 (3778083944)|VALIDATION_PASS
+10:41:33.554 (3778085501)|VALIDATION_RULE|03d1O0000009Nvj|Buy_rates_for_percent_above_buy_IC
+10:41:33.554 (3778140585)|VALIDATION_FORMULA|AND(TEXT (Introducer_Commission_Model__c) = "% above buy rate (IC)", ISBLANK(Buy_Rate_actually_received_by_Safecharge__c) )|Introducer_Commission_Model__c=null , Buy_Rate_actually_received_by_Safecharge__c=null
+10:41:33.554 (3778143709)|VALIDATION_PASS
+10:41:33.554 (3778144759)|VALIDATION_RULE|03dPj000000jukP|CAD_available_for_Nuvei_Tech_Corp
+10:41:33.554 (3778242789)|VALIDATION_FORMULA|TEXT(Managing_Company__c) <> "Nuvei Technologies Corp" &&
+TEXT(Managing_Company__c) <> "Nuvei Corporation" &&   TEXT(Fees_Currency__c) = "CAD"|Managing_Company__c=null , Fees_Currency__c=EUR
+10:41:33.554 (3778246262)|VALIDATION_PASS
+10:41:33.554 (3778247407)|VALIDATION_RULE|03d5Y000001m4Ew|Cashier_Fee_cannot_be_empty
+10:41:33.554 (3778422496)|VALIDATION_FORMULA|ISBLANK(Cashier_fee__c) && CONTAINS(RecordType.Name, "Nuvei")  && DateValue(CreatedDate) > Date(2020,01,01)|CreatedDate=2019-01-15 15:17:27 , Cashier_fee__c=0.03 , RecordType.Name=Express
+10:41:33.554 (3778426165)|VALIDATION_PASS
+10:41:33.554 (3778427336)|VALIDATION_RULE|03d5Y000000Adke|Close_Date_Required
+10:41:33.554 (3778484525)|VALIDATION_FORMULA|AND(ISPICKVAL(Compliance_Status__c, "Closed"),
+   ISBLANK(Close_Date__c))|Compliance_Status__c=In Pre-Approval , Close_Date__c=null
+10:41:33.554 (3778487331)|VALIDATION_PASS
+10:41:33.554 (3778488257)|VALIDATION_RULE|03d1O000001DZae|Commission_cannot_be_0
+10:41:33.554 (3778525181)|VALIDATION_FORMULA|Reseller_Commission__c = 0|Reseller_Commission__c=null
+10:41:33.554 (3778527591)|VALIDATION_PASS
+10:41:33.554 (3778528636)|VALIDATION_RULE|03dPj0000001PM9|Company_name_to_be_changed_only_UW
+10:41:33.554 (3797568603)|VALIDATION_FORMULA|ISCHANGED(Name) && 
+CONTAINS( TEXT(Compliance_Status__c) , "Live") && 
+NOT(CONTAINS( Name , "demo")) && 
+$Profile.Id <> "00e30000001wPru" && 
+$Profile.Id <> "00e14000001x8p0" && 
+$Profile.Id <> "00e14000001dsrM" && 
+$Profile.Id <> "00e1O000001x9YU" && 
+$Profile.Id <> "00ea0000000jQe2"&& 
+$User.Username <> 'david.hazan@nuvei.com' && 
+$User.Username <> 'dimitar.delchev@nuvei.com' && 
+$User.Username <> 'ivaylo.nikolov@nuvei.com' &&
+NOT(ISPICKVAL(Managing_Company__c, "Nuvei Technologies Inc.")) &&
+NOT(ISPICKVAL(Managing_Company__c, "Nuvei Technologies Corp"))|Compliance_Status__c=In Pre-Approval , $Profile.Id=00ea0000000jQe2 , $User.Username=dimitar.panayotov@nuvei.com , Managing_Company__c=null , Name=REST 2.0 onboarding test LTD
+10:41:33.554 (3797592006)|VALIDATION_PASS
+10:41:33.554 (3797593968)|VALIDATION_RULE|03d1O000001Luzu|CP_Edit_Open_Date
+10:41:33.554 (3797947079)|VALIDATION_FORMULA|ISCHANGED( Open_Date__c) &&
+($User.ProfileId <> '00e30000001wPru' &&
+$User.ProfileId <> '00e30000001g4RQ'&&
+$User.ProfileId <> '00e14000000jVHa' &&
+$User.ProfileId <> '00e14000001x8p0' &&
+$User.ProfileId <> '00e1O000002GVB5' &&
+$User.ProfileId <> '00ea0000000jQ06' &&
+$User.ProfileId <> '00e30000001MQiE' &&
+$User.ProfileId <> '00ea0000000jQe2' &&
+$User.ProfileId <> '00e5Y000002Gz1w' &&
+$User.ProfileId <> '00e5Y000003bPY2')|Open_Date__c=null , $User.ProfileId=00ea0000000jQe2
+10:41:33.554 (3797955637)|VALIDATION_PASS
+10:41:33.554 (3797957139)|VALIDATION_RULE|03d1O000001LwOR|DCC_max_value
+10:41:33.554 (3798027404)|VALIDATION_FORMULA|DCC__c > 0.50|DCC__c=0
+10:41:33.554 (3798030892)|VALIDATION_PASS
+10:41:33.554 (3798032219)|VALIDATION_RULE|03d1O000001Q8So|Declined_Reason_mandatory
+10:41:33.554 (3798141326)|VALIDATION_FORMULA|AND ( 
+TEXT( Compliance_Status__c ) = 'Declined',
+ISBLANK(TEXT( Declined_Reason__c ))
+)|Compliance_Status__c=In Pre-Approval , Declined_Reason__c=null
+10:41:33.554 (3798144745)|VALIDATION_PASS
+10:41:33.554 (3798146063)|VALIDATION_RULE|03dPj000000cIgf|Dormant_Compliance_status_by_Risk
+10:41:33.554 (3798431022)|VALIDATION_FORMULA|OR(
+AND(
+ISCHANGED(Compliance_Status__c),
+ISPICKVAL(Compliance_Status__c, "Dormant") ,
+$Profile.Id <> "00e14000001ZgIZ",
+$Profile.Id <> "00e14000001dtZP",
+$Profile.Id <> "00e1O000001ZgvW",
+$Profile.Id <> "00e1O000002Kho7",
+$Profile.Id <> "00e30000001wPru",
+OR(
+ISPICKVAL(Managing_Company__c, "Safecharge HK Limited"),
+ISPICKVAL(Managing_Company__c, "Safecharge PTE Limited"),
+ISPICKVAL(Managing_Company__c, "Nuvei Australia Pty Limited"))),
+AND(
+ISCHANGED(Compliance_Status__c),
+ISPICKVAL(Compliance_Status__c, "Dormant") ,
+NOT(ISPICKVAL(Managing_Company__c, "Safecharge HK Limited")),
+NOT(ISPICKVAL(Managing_Company__c, "Safecharge PTE Limited")),
+NOT(ISPICKVAL(Managing_Company__c, "Nuvei Australia Pty Limited")),
+$Profile.Id <> "00e14000001ZgIZ",
+$Profile.Id <> "00e14000001dtZP",
+$Profile.Id <> "00e1O000001ZgvW",
+$Profile.Id <> "00e1O000002Kho7"))|Compliance_Status__c=In Pre-Approval , $Profile.Id=00ea0000000jQe2 , Managing_Company__c=null
+10:41:33.554 (3798440433)|VALIDATION_PASS
+10:41:33.554 (3798441890)|VALIDATION_RULE|03d5Y000001MOSz|GW_Processing_Fee_cannot_be_empty
+10:41:33.554 (3798543100)|VALIDATION_FORMULA|ISBLANK(GW_Processing_Fee__c ) && CONTAINS(RecordType.Name, "Nuvei")|RecordType.Name=Express , GW_Processing_Fee__c=0.15
+10:41:33.554 (3798548789)|VALIDATION_PASS
+10:41:33.554 (3798550839)|VALIDATION_RULE|03d14000000thRk|Holdback_for_APMs_edited_only_by_Risk
+10:41:33.554 (3798758940)|VALIDATION_FORMULA|ISCHANGED(Holdback_for_APMs__c) &&  
+($User.ProfileId <> '00e1O000001Zgwo' &&
+$User.ProfileId <> '00e1O000002KhoR' &&
+$User.ProfileId <> '00e30000001g4RQ' && 
+$User.Id <> '0055Y00000Gd389'
+&& $User.Id <> '0055Y00000HxVGa'
+&& $User.Id <> '0055Y00000I7146'
+&& $User.Id <> '005Pj00000Faent'
+)|Holdback_for_APMs__c=5.00 , $User.Id=0051O00000CupBm , $User.ProfileId=00ea0000000jQe2
+10:41:33.554 (3798764359)|VALIDATION_PASS
+10:41:33.554 (3798783184)|VALIDATION_RULE|03d14000000qLX3|Industry_Validation
+10:41:33.554 (3800485943)|VALIDATION_FORMULA|Bank_Count__c > 0 && $Profile.Id  != '00e30000001g4RQ' && $Profile.Id  != '00e30000001wPru' && (PRIORVALUE( Industry_For_Pricing__c )) <>"" && ISCHANGED(Industry_For_Pricing__c ) && NOT(ISCHANGED(  Integration_Status__c  ))|$Profile.Id=00ea0000000jQe2 , Integration_Status__c=New , Bank_Count__c=3 , Industry_For_Pricing__c=ECOMMERCE
+10:41:33.554 (3800499044)|VALIDATION_PASS
+10:41:33.554 (3800501191)|VALIDATION_RULE|03d14000000qJAC|Minimum_monthly_Limit_logic_2
+10:41:33.554 (3800618547)|VALIDATION_FORMULA|OR( NOT(ISBLANK(Minimum_monthly_fee_Limit_1__c)) && ISBLANK(Minimum_monthly_fee_Value_2__c), 
+		ISBLANK(Minimum_monthly_fee_Limit_1__c) && NOT(ISBLANK(Minimum_monthly_fee_Value_2__c)), 
+			Minimum_monthly_fee_Value_2__c <= Minimum_monthly_fee_Value_1__c 
+		)|Minimum_monthly_fee_Value_2__c=null , Minimum_monthly_fee_Value_1__c=120 , Minimum_monthly_fee_Limit_1__c=null
+10:41:33.554 (3800623845)|VALIDATION_PASS
+10:41:33.554 (3800625626)|VALIDATION_RULE|03d14000000qJAH|Minimum_monthly_Limit_logic_3
+10:41:33.554 (3800732230)|VALIDATION_FORMULA|OR( NOT(ISBLANK(Minimum_monthly_fee_Limit_2__c)) && ISBLANK(Minimum_monthly_fee_Value_3__c), 
+		ISBLANK(Minimum_monthly_fee_Limit_2__c) && NOT(ISBLANK(Minimum_monthly_fee_Value_3__c)), 
+			Minimum_monthly_fee_Value_3__c <= Minimum_monthly_fee_Value_2__c 
+		)|Minimum_monthly_fee_Value_2__c=null , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Limit_2__c=null
+10:41:33.554 (3800736650)|VALIDATION_PASS
+10:41:33.554 (3800738180)|VALIDATION_RULE|03d14000000qJAM|Minimum_monthly_Limit_logic_4
+10:41:33.554 (3800810218)|VALIDATION_FORMULA|OR( NOT(ISBLANK(Minimum_monthly_fee_Limit_3__c)) && ISBLANK(Minimum_monthly_fee_Value_4__c), 
+		ISBLANK(Minimum_monthly_fee_Limit_3__c) && NOT(ISBLANK(Minimum_monthly_fee_Value_4__c)), 
+			Minimum_monthly_fee_Value_4__c <= Minimum_monthly_fee_Value_3__c 
+		)|Minimum_monthly_fee_Value_4__c=null , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Limit_3__c=null
+10:41:33.554 (3800813877)|VALIDATION_PASS
+10:41:33.554 (3800815132)|VALIDATION_RULE|03d140000009L0v|NON_Minimum_and_term_HARD_limits
+10:41:33.554 (3801078517)|VALIDATION_FORMULA|AND( 
+	Non_standard_terms__c = true,
+        Remittance_Currency_old__c = "Euro",
+        TEXT(Remittance_Cycle__c) = "Weekly with 1 week delay",
+	NOT(OR( 
+		ISBLANK(Minimum_monthly_fee_Value_1__c), 
+		(Minimum_monthly_fee_Value_1__c == 0 && (Minimum_monthly_fee_Limit_1__c > 9 &#124;&#124; ISBLANK(Minimum_monthly_fee_Limit_1__c )) ), 
+		(Minimum_monthly_fee_Value_1__c < 2000 && ISBLANK(Minimum_monthly_fee_Limit_1__c ) ), 
+		(Minimum_monthly_fee_Value_1__c < 2000 && Minimum_monthly_fee_Limit_1__c > 9 ), 
+
+		(NOT(ISBLANK(Minimum_monthly_fee_Value_2__c)) && Minimum_monthly_fee_Value_2__c < 2000 && (Minimum_monthly_fee_Limit_1__c >= 9 &#124;&#124; ISBLANK(Minimum_monthly_fee_Value_3__c) ) ), 
+		(NOT(ISBLANK(Minimum_monthly_fee_Value_3__c)) && Minimum_monthly_fee_Value_3__c < 2000 && (Minimum_monthly_fee_Limit_2__c >= 9 &#124;&#124; ISBLANK(Minimum_monthly_fee_Value_4__c) ) ), 
+		(NOT(ISBLANK(Minimum_monthly_fee_Value_4__c)) && Minimum_monthly_fee_Value_4__c < 2000 && Minimum_monthly_fee_Limit_3__c >= 9 ), 
+		(NOT(ISBLANK(Minimum_monthly_fee_Value_4__c)) && Minimum_monthly_fee_Value_4__c < 2000 ), 
+
+		(ISNULL(Contract_Term__c) &#124;&#124; Contract_Term__c < 12) 
+	))
+)|Remittance_Currency_old__c=EUR, GBP, USD , Minimum_monthly_fee_Value_2__c=null , Contract_Term__c=36 , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Value_4__c=null , Minimum_monthly_fee_Limit_3__c=null , Non_standard_terms__c=1 , Minimum_monthly_fee_Value_1__c=120 , Remittance_Cycle__c=Weekly with 3 business days delay , Minimum_monthly_fee_Limit_1__c=null , Minimum_monthly_fee_Limit_2__c=null
+10:41:33.554 (3801091983)|VALIDATION_PASS
+10:41:33.554 (3801093576)|VALIDATION_RULE|03dPj0000004raP|No_deletion_of_Settlement_threshold
+10:41:33.554 (3801200746)|VALIDATION_FORMULA|ISCHANGED( Settlement_threshold__c)   &&   ISBLANK(TEXT(Settlement_threshold__c))|Settlement_threshold__c=null
+10:41:33.554 (3801205015)|VALIDATION_PASS
+10:41:33.554 (3801206387)|VALIDATION_RULE|03d14000000thPt|on_finance_admin_issue_set_the_details
+10:41:33.554 (3802560673)|VALIDATION_FORMULA|TEXT( Finance_admin_status__c )  = 'Issue' &&
+ISBLANK(    finance_Issue_details__c )|finance_Issue_details__c=Set it to no payout until further notice from UW for banking details. , Finance_admin_status__c=Installed
+10:41:33.554 (3802570694)|VALIDATION_PASS
+10:41:33.554 (3802572585)|VALIDATION_RULE|03d14000000thPo|on_RSI_issue_set_the_details
+10:41:33.554 (3802714905)|VALIDATION_FORMULA|TEXT(MRSI_status__c )  = 'Issue' &&
+ISBLANK(   MRSI_Issue_details__c )|MRSI_status__c=null , MRSI_Issue_details__c=null
+10:41:33.554 (3802718160)|VALIDATION_PASS
+10:41:33.554 (3802719369)|VALIDATION_RULE|03d14000001Hz7D|Rebilling_system_Setup_fee
+10:41:33.554 (3802757609)|VALIDATION_FORMULA|ISBLANK(Rebilling_system_Setup__c)|Rebilling_system_Setup__c=0
+10:41:33.554 (3802759993)|VALIDATION_PASS
+10:41:33.554 (3802761176)|VALIDATION_RULE|03d5Y000001MOP8|Remittance_cycle_required
+10:41:33.554 (3802968589)|VALIDATION_FORMULA|OR(RecordType.Name = "Nuvei APAC", 
+RecordType.Name = "Nuvei Global",
+RecordType.Name = "Nuvei LATAM",
+RecordType.Name = "Nuvei Mexico",
+RecordType.Name = "Nuvei UAE",
+RecordType.Name = "Nuvei UK") 
+
+&& ISBLANK(TEXT(MSA_Status__c))
+
+&& ISBLANK(TEXT(Remittance_Cycle__c))
+
+&& DATEVALUE(CreatedDate) > DATE(2022,01,01)
+
+&& NOT(ISBLANK(TEXT(Managing_Company__c)))|Remittance_Cycle__c=Weekly with 3 business days delay , MSA_Status__c=signed , CreatedDate=2019-01-15 15:17:27 , RecordType.Name=Express , Managing_Company__c=null
+10:41:33.554 (3802974037)|VALIDATION_PASS
+10:41:33.554 (3802975398)|VALIDATION_RULE|03d14000000qJCw|Risk_status_manual_set
+10:41:33.554 (3803250458)|VALIDATION_FORMULA|AND(    NOT(CONTAINS($Profile.Name, 'Administrator')),
+         ISCHANGED(Processing_History__c) ,
+        NOT(CONTAINS($Profile.Name, 'Risk')),
+        NOT(CONTAINS($Profile.Name, 'automation')),
+		OR(ISPICKVAL( Processing_History__c, 'Approved') , ISPICKVAL( Processing_History__c, 'Complete'))
+ )|$Profile.Name=Integration Team , Processing_History__c=null
+10:41:33.554 (3803258505)|VALIDATION_PASS
+10:41:33.554 (3803260338)|VALIDATION_RULE|03d5Y000001MOIP|State_required_for_US_Canada
+10:41:33.554 (3803384818)|VALIDATION_FORMULA|TEXT(Jurisdiction__c) = "USA" &&  (TEXT(Registered_Country__c) = "Canada"  &#124;&#124;  TEXT(Registered_Country__c) = "United States") &&   TEXT ( State_USA__c ) = "" && TEXT(Industry__c) <> "Reseller" && TEXT(Industry__c) <> "ISO" && TEXT(Industry__c) <> "PayFac"|Industry__c=Digital Goods - Software Applications (Excluding Games) , Jurisdiction__c=null , Registered_Country__c=United Kingdom , State_USA__c=England and Wales
+10:41:33.554 (3803390191)|VALIDATION_PASS
+10:41:33.554 (3803391670)|VALIDATION_RULE|03d14000001Hz7w|Tokenization_Recurring_fee
+10:41:33.554 (3803427565)|VALIDATION_FORMULA|ISBLANK(Tokenization_recurring__c)|Tokenization_recurring__c=0
+10:41:33.554 (3803429931)|VALIDATION_PASS
+10:41:33.554 (3803431187)|VALIDATION_RULE|03d5Y000001QvWj|Gaming_not_allowed_for_Safecharge_PTE_Li
+10:41:33.554 (3803554230)|VALIDATION_FORMULA|OR(TEXT(Managing_Company__c) = "Safecharge PTE Limited", TEXT(Managing_Company__c) = "Nuvei Singapore Pte. Ltd")  &&  Industry_For_Pricing__c = "Gaming"|Industry_For_Pricing__c=ECOMMERCE , Managing_Company__c=null
+10:41:33.554 (3803558520)|VALIDATION_PASS
+10:41:33.554 (3803559779)|VALIDATION_RULE|03dPj000000bhu1|MSA_status_change_for_NA
+10:41:33.554 (3803784659)|VALIDATION_FORMULA|RecordType.Id = "012Pj000000JUOz" && 
+ISCHANGED(MSA_Status__c) && 
+$Profile.Id <> "00e30000001wPru" &&
+$Profile.Id <> "00e30000001g4RQ" &&
+$Profile.Id <> "00e5Y000003bPY2" &&
+$Profile.Id <> "00e1O000002GVB0" &&
+$User.Username <> 'siobhan.harlow@nuvei.com' && 
+$User.Username <> 'brandi.kidd@nuvei.com' && 
+$User.Username <> 'jared.murphy@nuvei.com' && 
+$User.Username <> 'patrick.wormus@nuvei.com' && 
+$User.Username <> 'natalie.hammar@nuvei.com' && 
+$User.Username <> 'anna.farrell@nuvei.com' && 
+$User.Username <> 'nikola.valchev@nuvei.com' &&
+$User.Username <> 'marta.lambova@nuvei.com' &&
+$User.Username <> 'svetoslava.mihova@nuvei.com' &&
+$User.Username <> 'naamad@safecharge.com' &&
+$User.Username <> 'keren.kruyswyk@nuvei.com' &&
+$User.Username <> 'nikola.valchev@nuvei.com' &&
+$User.Username <> 'silviya.valkova@nuvei.com'|$Profile.Id=00ea0000000jQe2 , MSA_Status__c=signed , $User.Username=dimitar.panayotov@nuvei.com , RecordType.Id=01214000000AWY7
+10:41:33.554 (3803793407)|VALIDATION_PASS
+10:41:33.554 (3803794702)|VALIDATION_RULE|03d1O000001LwOW|No_changes_in_AVS_after_approval
+10:41:33.554 (3804027083)|VALIDATION_FORMULA|( ISCHANGED(Mastercard_Automatic_Billing_Updater_ABU__c) &#124;&#124;
+ISCHANGED(DCC__c) &#124;&#124;
+ISCHANGED(Smart_3D_Secure_Fee__c) &#124;&#124;
+ISCHANGED(X3D_Transactions_Fee__c)  
+  )
+&&
+NOT(ISPICKVAL(MSA_Status__c,'Counter Signed'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Pending'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Send PQ for signing'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Started'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Approved'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Declined'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,''))
+&&  $User.Id  <> '00530000003nPYh'|X3D_Transactions_Fee__c=null , Price_Quote_Status__c=Settled , Mastercard_Automatic_Billing_Updater_ABU__c=null , Smart_3D_Secure_Fee__c=null , $User.Id=0051O00000CupBm , MSA_Status__c=signed , DCC__c=0
+10:41:33.554 (3804035616)|VALIDATION_PASS
+10:41:33.554 (3804036977)|VALIDATION_RULE|03d14000000mfKN|No_changes_in_PQ_after_approval
+10:41:33.554 (3804525382)|VALIDATION_FORMULA|( ISCHANGED(Minimum_monthly_fee_Value_1__c) &#124;&#124;
+ISCHANGED(Minimum_monthly_fee_Value_2__c) &#124;&#124;
+ISCHANGED(Minimum_monthly_fee_Value_3__c) &#124;&#124;
+ISCHANGED(Minimum_monthly_fee_Value_4__c) &#124;&#124;
+ISCHANGED(Minimum_monthly_fee_Limit_1__c) &#124;&#124;
+ISCHANGED(Minimum_monthly_fee_Limit_2__c) &#124;&#124;
+ISCHANGED(Minimum_monthly_fee_Limit_3__c) &#124;&#124;
+ISCHANGED(Service_Level_Standards__c) &#124;&#124;
+(ISCHANGED(GW_Processing_Fee__c) && NOT(ISNULL(PRIORVALUE(GW_Processing_Fee__c)))) &#124;&#124;
+ISCHANGED(Contract_Term__c) &#124;&#124;
+ISCHANGED(Remittance_Currency__c) &#124;&#124;
+ISCHANGED(X3D_Secure_setup__c) &#124;&#124;
+ISCHANGED(Rebilling_system_Setup__c) &#124;&#124;
+ISCHANGED(Rebilling_system_transaction__c) &#124;&#124;
+ISCHANGED(Remittance_Cycle__c) &#124;&#124;
+ISCHANGED(Wire_Fee__c) &#124;&#124;
+ISCHANGED(Settlement_threshold__c) &#124;&#124;
+ISCHANGED(Tokenization_recurring__c) 
+  )
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Pending'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Send PQ for signing'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Started'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,'Declined'))
+&&
+NOT(ISPICKVAL(Price_Quote_Status__c,''))
+&&  $User.Id  <> '00530000003nPYh'|Minimum_monthly_fee_Value_2__c=null , Contract_Term__c=36 , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Limit_3__c=null , Rebilling_system_Setup__c=0 , Minimum_monthly_fee_Value_1__c=120 , Rebilling_system_transaction__c=0.00 , Remittance_Cycle__c=Weekly with 3 business days delay , Remittance_Currency__c=0AAB0AAG0AAP , $User.Id=0051O00000CupBm , Minimum_monthly_fee_Limit_1__c=null , Tokenization_recurring__c=0 , Service_Level_Standards__c=0 , Minimum_monthly_fee_Value_4__c=null , X3D_Secure_setup__c=250 , Wire_Fee__c=null , Price_Quote_Status__c=Settled , Settlement_threshold__c=null , Minimum_monthly_fee_Limit_2__c=null , GW_Processing_Fee__c=0.15
+10:41:33.554 (3804591618)|VALIDATION_PASS
+10:41:33.554 (3804593426)|VALIDATION_RULE|03dPj000002Y1tN|No_change_after_Live_apart_from_UW_Risk
+10:41:33.554 (3805099135)|VALIDATION_FORMULA|( ISCHANGED( Name )  &#124;&#124; 
+ ISCHANGED( Company_name__c )  &#124;&#124; 
+ ISCHANGED( Incorporation_number__c  )  &#124;&#124; 
+ ISCHANGED( ABN_Australia__c )  &#124;&#124; 
+ ISCHANGED( Registered_City__c )  &#124;&#124; 
+ ISCHANGED( Registered_Zip_Postal_Code__c )  &#124;&#124; 
+ ISCHANGED( Registered_Address_New__c )  &#124;&#124; 
+ ISCHANGED( Registered_Street__c )  &#124;&#124; 
+ ISCHANGED( Registered_Country__c )  &#124;&#124; 
+ ISCHANGED( Address_Operation_Location_2_New__c )  &#124;&#124; 
+ ISCHANGED( Foundation_date__c )  &#124;&#124; 
+ ISCHANGED( Industry__c )  &#124;&#124; 
+ ISCHANGED( VAT_Number__c )  &#124;&#124; 
+ ISCHANGED( Tax_ID_Type__c ))
+
+ && RecordType.DeveloperName = "Nuvei_APAC"
+ && TEXT(Compliance_Status__c) = "Live"
+ 
+&& ( $Profile.Id  <>  "00e30000001wPru" &&
+$Profile.Id  <>  "00e14000001dtaI" &&
+$Profile.Id  <>  "00e1O000002GVo7" &&
+$Profile.Id  <>  "00e1O000002Khqc" &&
+$Profile.Id  <>  "00e14000001ZgIZ" &&
+$Profile.Id  <>  "00e1O000001ZgvW" &&
+$Profile.Id  <>  "00e1O000002Kho7" &&
+$Profile.Id  <>  "00e14000001dtYg" &&
+$Profile.Id  <>  "00e1O000001Zgwo" &&
+$Profile.Id  <>  "00e1O000002KhoR" &&
+
+$Profile.Id  <>  "00e30000001g4RQ" &&
+$Profile.Id  <>  "00e14000001dsrM" &&
+$Profile.Id  <>  "00e5Y000003bPY2")|Registered_Street__c=baker street 22 , Tax_ID_Type__c=null , Registered_Address_New__c=baker street 22, London, 7654654, United Kingdom , $Profile.Id=00ea0000000jQe2 , Foundation_date__c=2019-01-15 00:00:00 , Address_Operation_Location_2_New__c=, , , , VAT_Number__c=N/A , Company_name__c=null , Name=REST 2.0 onboarding test LTD , Registered_Zip_Postal_Code__c=7654654 , Incorporation_number__c=865874298 , Industry__c=Digital Goods - Software Applications (Excluding Games) , Compliance_Status__c=In Pre-Approval , RecordType.DeveloperName=OLD , ABN_Australia__c=null , Registered_Country__c=United Kingdom , Registered_City__c=London
+10:41:33.554 (3805114230)|VALIDATION_PASS
+10:41:33.554 (3805115790)|VALIDATION_RULE|03dPj0000014AOP|PQ_status_change_for_NA
+10:41:33.554 (3805302731)|VALIDATION_FORMULA|RecordType.Id = "012Pj000000JUOz" && 
+ISCHANGED (Price_Quote_Status__c) && 
+TEXT (Price_Quote_Status__c) <> "Pending" && 
+TEXT (Price_Quote_Status__c) <> "In Approval" && 
+TEXT (Price_Quote_Status__c) <> "Started" && 
+TEXT (Price_Quote_Status__c) <> "Declined" && 
+$Profile.Id <> "00e30000001wPru" &&
+$Profile.Id <> "00e30000001g4RQ" &&
+$Profile.Id <> "00e5Y000003bPY2" &&
+$Profile.Id <> "00e1O000002GVB0" &&
+$User.Username <> 'siobhan.harlow@nuvei.com' && 
+$User.Username <> 'brandi.kidd@nuvei.com' && 
+$User.Username <> 'jared.murphy@nuvei.com' && 
+$User.Username <> 'patrick.wormus@nuvei.com' && 
+$User.Username <> 'natalie.hammar@nuvei.com' && 
+$User.Username <> 'anna.farrell@nuvei.com' && 
+$User.Username <> 'nikola.valchev@nuvei.com' &&
+$User.Username <> 'marta.lambova@nuvei.com' &&
+$User.Username <> 'svetoslava.mihova@nuvei.com' &&
+$User.Username <> 'naamad@safecharge.com' &&
+$User.Username <> 'keren.kruyswyk@nuvei.com' &&
+$User.Username <> 'nikola.valchev@nuvei.com'|Price_Quote_Status__c=Settled , $Profile.Id=00ea0000000jQe2 , $User.Username=dimitar.panayotov@nuvei.com , RecordType.Id=01214000000AWY7
+10:41:33.554 (3805310791)|VALIDATION_PASS
+10:41:33.554 (3805312159)|VALIDATION_RULE|03d1O0000011gOV|Reserve_and_Fixed_edit_only_by_Risk
+10:41:33.554 (3805412190)|VALIDATION_FORMULA|(ISCHANGED(Reserve_Tier__c) &#124;&#124; ISCHANGED(Fixed_Reserve__c))
+&& 
+(CASESAFEID($User.Id) <> '0051400000BcSlUAAV' && 
+CASESAFEID($User.ProfileId) <> '00e30000001g4RQAAY' 
+)|Fixed_Reserve__c=null , $User.Id=0051O00000CupBm , Reserve_Tier__c=null , $User.ProfileId=00ea0000000jQe2
+10:41:33.554 (3805415985)|VALIDATION_PASS
+10:41:33.554 (3805417286)|VALIDATION_RULE|03d1O0000011gOQ|Reserve_tier_and_Fixed_reserve_set
+10:41:33.554 (3805510863)|VALIDATION_FORMULA|(ISBLANK( Reserve_Tier__c )&& NOT(ISBLANK( Fixed_Reserve__c )))
+&#124;&#124;
+(ISBLANK( Fixed_Reserve__c )&& NOT(ISBLANK( Reserve_Tier__c )))|Fixed_Reserve__c=null , Reserve_Tier__c=null
+10:41:33.554 (3805514597)|VALIDATION_PASS
+10:41:33.554 (3805515842)|VALIDATION_RULE|03d14000000qJ2I|risk_level_is_set_to_high_Low_risk_Forex
+10:41:33.554 (3805616128)|VALIDATION_FORMULA|AND((ISPICKVAL(PRIORVALUE(Risk_Level__c), "Low")&#124;&#124;(ISPICKVAL(PRIORVALUE(Risk_Level__c), "Medium"))), ISPICKVAL(Risk_Level__c, 'High') , ISPICKVAL(Processing_History__c  , 'Low Risk forex'))|Processing_History__c=null , Risk_Level__c=null
+10:41:33.554 (3805620044)|VALIDATION_PASS
+10:41:33.554 (3805621193)|VALIDATION_RULE|03d14000000qIre|Settled_PQ_Non_Standad
+10:41:33.554 (3805694554)|VALIDATION_FORMULA|ISPICKVAL( Price_Quote_Type__c , 'Non-Standard') &&
+ ISPICKVAL( PRIORVALUE( Price_Quote_Status__c) , 'Declined')&& ISPICKVAL(  Price_Quote_Status__c , 'Settled')|Price_Quote_Status__c=Settled , Price_Quote_Type__c=Non-Standard
+10:41:33.554 (3805697738)|VALIDATION_PASS
+10:41:33.554 (3805705223)|CODE_UNIT_FINISHED|Validation:Compliance:a0m1O000008j6nN
+10:41:33.554 (3821795328)|CODE_UNIT_STARTED|[EXTERNAL]|01q1400000064lt|NotifyMerchantAndCompliance on Compliance trigger event AfterUpdate|__sfdc_trigger/NotifyMerchantAndCompliance
+10:41:33.822 (3822463385)|CUMULATIVE_LIMIT_USAGE
+10:41:33.822 (3822463385)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 12 out of 200
+  Number of query rows: 12 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 150 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
+
+10:41:33.822 (3822463385)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:33.554 (3822753369)|CODE_UNIT_FINISHED|NotifyMerchantAndCompliance on Compliance trigger event AfterUpdate|__sfdc_trigger/NotifyMerchantAndCompliance
+10:41:33.554 (3826058838)|CODE_UNIT_STARTED|[EXTERNAL]|01q1O000000k9fA|ComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/ComplianceTrigger
+10:41:33.554 (3826226283)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3826264313)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (3826268409)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3826271124)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (3826287747)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (3828161637)|SOQL_EXECUTE_BEGIN|[8]|Aggregations:0|SELECT Id, Update_Date__c, Bank_Update_Status_Date_Live__c FROM Merchant_Bank__c WHERE Compliance__c = :tmpVar1
+10:41:33.554 (3833935422)|SOQL_EXECUTE_END|[8]|Rows:0
+10:41:33.554 (3834173248)|SYSTEM_MODE_EXIT|false
+10:41:33.834 (3834196472)|CUMULATIVE_LIMIT_USAGE
+10:41:33.834 (3834196472)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 13 out of 200
+  Number of query rows: 12 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 190 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
+
+10:41:33.834 (3834196472)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:33.554 (3834362637)|CODE_UNIT_FINISHED|ComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/ComplianceTrigger
+10:41:33.554 (3839743123)|CODE_UNIT_STARTED|[EXTERNAL]|01qPj00000BLBzq|IndirectBoardingComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/IndirectBoardingComplianceTrigger
+10:41:33.842 (3842231701)|CUMULATIVE_LIMIT_USAGE
+10:41:33.842 (3842231701)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 13 out of 200
+  Number of query rows: 12 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 190 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
+
+10:41:33.842 (3842231701)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:33.554 (3842384511)|CODE_UNIT_FINISHED|IndirectBoardingComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/IndirectBoardingComplianceTrigger
+10:41:33.554 (3845827349)|CODE_UNIT_STARTED|[EXTERNAL]|Workflow:01I300000027f4c
+10:41:33.554 (3857722030)|WF_RULE_EVAL_BEGIN|Workflow
+10:41:33.554 (3857821957)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk Assessment date|01Q5Y000000q5Y2|ON_ALL_CHANGES|0
+10:41:33.554 (3858198774)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N5Y00000OKGLn} )|Values:Risk_Assessment__c=null
+10:41:33.554 (3858206900)|WF_CRITERIA_END|false
+10:41:33.554 (3858258889)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Open Date for Live status|01Q1O000000u9KC|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3864433847)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live-SC Express, Live (No Payout)] 
+AND [Company Profile : Open Date equals ]
+10:41:33.554 (3864454933)|WF_RULE_EVAL_VALUE|4
+10:41:33.554 (3864457999)|WF_CRITERIA_END|false
+10:41:33.554 (3864469081)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Customer Due Diligence update on Risk Level Low|01Q1O000000E3Oy|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3864845414)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL({!ID:00Na0000002h9ce}, "Low")|Values:Risk_Level__c=null
+10:41:33.554 (3864851393)|WF_CRITERIA_END|false
+10:41:33.554 (3864859485)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|PQ Type is Set|01Q14000000HdWG|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3865001644)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3865008384)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|AMLCO_approval3011O000000kMD7|01Q5Y000000WZFK|ON_ALL_CHANGES|0
+10:41:33.554 (3865044555)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3865047621)|WF_CRITERIA_END|true
+10:41:33.554 (3866830625)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Funds Release in 14 Days|01Q1O000000SCG2|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3867233204)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]IF( TODAY() =  {!ID:00N1O00000BV8k8} - ( ( 365 / 365 ) * 14), true, false)|Values:Funds_Release_Date__c=null
+10:41:33.554 (3867240230)|WF_CRITERIA_END|false
+10:41:33.554 (3867249174)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|New UW manager|01Q1O000000hcSM|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3876132328)|WF_RULE_FILTER|[Company Profile : Underwriting Mgr Name does not contain Cyprus] 
+AND [Company Profile : Compliance Status not equal to ] 
+AND [Company Profile : Underwriting Mgr Name not equal to ] 
+AND [Company Profile : Managing Company equals Safecharge Limited, Safecharge International, Safecharge Financial Services, Nuvei Payments DMCC, Safecharge (USA) Inc.] 
+AND [Company Profile : Industry does not contain Internal]
+10:41:33.554 (3876211826)|WF_RULE_EVAL_VALUE|Stanimira Trencheva (UW)
+10:41:33.554 (3876223280)|WF_RULE_EVAL_VALUE|4
+10:41:33.554 (3876273442)|WF_RULE_EVAL_VALUE|Stanimira Trencheva (UW)
+10:41:33.554 (3876277304)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3876278594)|WF_CRITERIA_END|false
+10:41:33.554 (3876289627)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Notify AM on MSA signed by merchant|01Q14000000Ds3G|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3876370092)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3876375082)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|From_Approval_to_Live3011O00000093PI|01Q5Y000000q6Uk|ON_ALL_CHANGES|0
+10:41:33.554 (3876446230)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3876449642)|WF_CRITERIA_END|true
+10:41:33.554 (3876463388)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Merchant_Segregation_PB_Account_Manager301140000004Y2v|01QPj000004164H|ON_RECURSIVE_UPDATE|0
+10:41:33.554 (3876485528)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3876487670)|WF_CRITERIA_END|true
+10:41:33.554 (3876492998)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Merchant_Segregation_PB_Internal_Sales30114000000LFES|01Q5Y000000KGdw|ON_RECURSIVE_UPDATE|0
+10:41:33.554 (3876509368)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3876511419)|WF_CRITERIA_END|true
+10:41:33.554 (3876516571)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|VIP Merchant set to VIP (CP)|01Q14000000JeV6|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3876542983)|WF_RULE_FILTER|[Company Profile : VIP equals Yes]
+10:41:33.554 (3876545808)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3876546869)|WF_CRITERIA_END|false
+10:41:33.554 (3876550639)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC 3|01QPj00000061O1|ON_ALL_CHANGES|0
+10:41:33.554 (3877473028)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000008rJPO}) && ( 
+TEXT({!ID:00N30000008rJPO}) = "Automobile and Truck Dealers - Sales, Service, Repairs, Parts, and Leasing" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Pawn Shops" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Durable Goods (not elsewhere classified)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Nondurable Goods (not elsewhere classified)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Contractors, Special Trade (not elsewhere classified)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Dentists, Orthodontists" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Package Stores, Beer, Wine, and Liquor" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Construction Materials (not elsewhere classified)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Miscellaneous Publishing and Printing" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Clubs - Country Clubs, Membership (Athletic, Recreation, Sports), Private Golf Courses" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Automotive Body Repair Shops" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Attorneys, Legal Services" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Floor Covering Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Swimming Pools - Sales and Supplies" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "General Contractors, residential and commercial" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Commercial Equipment (not elsewhere classified)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Gateway Services" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Religious Goods Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Home Supply Warehouse Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Cleaning, Maintenance, and Janitorial Services" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Elementary and Secondary Schools" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Colleges, Universities, Professional Schools, and Junior Colleges" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Consulting, Management, and Public Relations Services" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Bands, Orchestras, and Miscellaneous Entertainers (not elsewhere classified)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Freezer, Locker Meat Provisioners" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Bridge and Road Fees, Tolls" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "POS PayFac" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Cruise Lines" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - Avianca" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Sweeps" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Video Amusement Game Supplies" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "On Ramp Provider" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Sweepstakes" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Travel Agencies and Tour Operators" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "MPG" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Proprietary Trading" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - Air France" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - Aeromexico" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - Royal Dutch Airlines (KLM)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - Emirates Airlines" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Local and Suburban Commuter Passenger Transportation, Including Ferries" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Motor Vehicle Supplies and New Parts" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Motorcycle Shops and Dealers" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Air Conditioning, Heating, and Plumbing Contractors")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
+10:41:33.554 (3877503755)|WF_CRITERIA_END|false
+10:41:33.554 (3877514643)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|New addition/ change of VAT Number|01Q5Y000001AqMV|ON_ALL_CHANGES|0
+10:41:33.554 (3877702200)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]AND(ISCHANGED( {!ID:00N3000000A5MyX} ), OR(TEXT( {!ID:00N1400000BBvX1} ) = "Live", TEXT( {!ID:00N1400000BBvX1} ) = "Live (No Payout)", TEXT( {!ID:00N1400000BBvX1} ) = "Live-SC Express"))|Values:Compliance_Status__c=In Pre-Approval, VAT_Number__c=N/A
+10:41:33.554 (3877706732)|WF_CRITERIA_END|false
+10:41:33.554 (3877712567)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Director_approval3011O000000kMDP|01Q5Y000001SK0V|ON_ALL_CHANGES|0
+10:41:33.554 (3877740915)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3877745229)|WF_CRITERIA_END|true
+10:41:33.554 (3877755864)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Holdback 0|01Q1O000000hczB|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3878152236)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL ({!ID:00N30000008rJPO}, "Barber and Beauty Shops")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Cigar stores and stands") &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Duty Free Stores")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Eating Places, Restaurants")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Fast Food Restaurants")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Pubs and Bars")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Restaurants") &#124;&#124;
+ISPICKVAL ({!ID:00N30000008rJPO}, "Taxicabs and Limousines")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
+10:41:33.554 (3878161341)|WF_CRITERIA_END|false
+10:41:33.554 (3878168370)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|FI Approval|01Q1O000000u87R|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3878216782)|WF_RULE_FILTER|[Company Profile : FI Approval equals true]
+10:41:33.554 (3878221880)|WF_RULE_EVAL_VALUE|false
+10:41:33.554 (3878223453)|WF_CRITERIA_END|false
+10:41:33.554 (3878227224)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Settle PQ for live merchant|01Q14000000DsBA|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3889573767)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]TEXT({!ID:00N30000007uAMQ.StageName}) = 'Live' &&  TEXT({!ID:00N1400000BBsNP}) = 'Approved'|Values:Opportunity__r.StageName=Live, Price_Quote_Status__c=Settled
+10:41:33.554 (3889586137)|WF_CRITERIA_END|false
+10:41:33.554 (3889610258)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|FATCA Check|01Q14000000Haxj|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3889696408)|WF_RULE_FILTER|[Company Profile : Does the company have a U.S. Address? equals Yes] OR
+ [Company Profile : Does the account have a U.S. phone num? equals Yes] OR
+ [Company Profile : Do any owners have a U.S. Passport? equals Yes] OR
+ [Company Profile : It this a U.S. Reportable Account? equals Yes]
+10:41:33.554 (3889704425)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3889706014)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3889707304)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3889708578)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3889709661)|WF_CRITERIA_END|false
+10:41:33.554 (3889714306)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|VIP Merchant set to LIVE -VIP|01Q14000000JeVG|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3889739141)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live (VIP)]
+10:41:33.554 (3889757376)|WF_RULE_EVAL_VALUE|4
+10:41:33.554 (3889759094)|WF_CRITERIA_END|false
+10:41:33.554 (3889763754)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|FI Comment|01Q1O000000u87W|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3889779375)|WF_RULE_FILTER|[Company Profile : FI Notes not equal to ]
+10:41:33.554 (3889781669)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3889782526)|WF_CRITERIA_END|false
+10:41:33.554 (3889786169)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|above the monthly minimum HARD limit|01Q14000000DsxT|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3889824359)|WF_RULE_FILTER|[Company Profile : Non standard terms equals false]
+10:41:33.554 (3889828081)|WF_RULE_EVAL_VALUE|true
+10:41:33.554 (3889829583)|WF_CRITERIA_END|false
+10:41:33.554 (3889833197)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Registration Address Change for an existing client for Merchant Finance|01Q5Y000001AqMf|ON_ALL_CHANGES|0
+10:41:33.554 (3890259067)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]AND( OR(ISCHANGED(  {!ID:00N1O00000BV4mZ}   ), ISCHANGED(  {!ID:00N1O00000BV4mj}  ), ISCHANGED(  {!ID:00N1O00000BV4mo}  ), ISCHANGED(  {!ID:00N1O00000BV4me}  )), 
+OR(TEXT( {!ID:00N1400000BBvX1} ) = "Live", TEXT( {!ID:00N1400000BBvX1} ) = "Live (No Payout)", TEXT( {!ID:00N1400000BBvX1} ) = "Live-SC Express"))|Values:Registered_Street__c=baker street 22, Registered_Zip_Postal_Code__c=7654654, Compliance_Status__c=In Pre-Approval, Registered_Country__c=United Kingdom, Registered_City__c=London
+10:41:33.554 (3890267740)|WF_CRITERIA_END|false
+10:41:33.554 (3890274775)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Notify when Integration Status Done|01Q1O000000SDbG|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3891766977)|WF_RULE_FILTER|[Company Profile : Integration Status equals Done]
+10:41:33.554 (3891784002)|WF_RULE_EVAL_VALUE|1
+10:41:33.554 (3891786221)|WF_CRITERIA_END|false
+10:41:33.554 (3891793212)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Payout alert for AM|01Q1O000000u8Cg|ON_ALL_CHANGES|0
+10:41:33.554 (3892028861)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N1O00000Bduh1} )|Values:Payouts__c=null
+10:41:33.554 (3892033676)|WF_CRITERIA_END|false
+10:41:33.554 (3892039853)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk Assessment reminder|01Q5Y000000q5YC|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3892088750)|WF_RULE_FILTER|[Company Profile : Risk Assessment Date not equal to ] 
+AND [Company Profile : Compliance Status contains Live]
+10:41:33.554 (3892092746)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3892093777)|WF_CRITERIA_END|false
+10:41:33.554 (3892097817)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Checklist for Introducers|01Q1O000000uANM|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3892162668)|WF_RULE_FILTER|[Company Profile : Record Type equals Reseller]
+10:41:33.554 (3892169137)|WF_RULE_EVAL_VALUE|01214000000AWY7
+10:41:33.554 (3892173565)|WF_CRITERIA_END|false
+10:41:33.554 (3892178260)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Primary_contact_update3011O000000c8Ar|01Q1O000000hcuR|ON_RECURSIVE_UPDATE|0
+10:41:33.554 (3892245290)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3892248115)|WF_CRITERIA_END|true
+10:41:33.554 (3892262982)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Holdback 5|01Q1O000000hcz6|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3892753728)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL ({!ID:00N30000008rJPO}, "Antiques dealer")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Art") &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Art Dealers and Galleries")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Binary Options")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Caterers")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Consumer Credit Reporting Agencies")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Customer Financial Institution (Quasi Cash)") &#124;&#124;
+ISPICKVAL ({!ID:00N30000008rJPO}, "Gaming")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Insurance")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Organizations, Charitable and Social Service")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Regulated online casinos")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Security brokers") &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Tax Payments")  &#124;&#124; 
+ISPICKVAL ({!ID:00N30000008rJPO}, "Telecommunication Service")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
+10:41:33.554 (3892777705)|WF_CRITERIA_END|false
+10:41:33.554 (3892785469)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|SalesRep_Update301140000004Y3x|01Q1O000000yHl2|ON_CREATE_ONLY|0
+10:41:33.554 (3892799874)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3892803624)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Account Opening Risk & Finance Finished|01Q14000000lqSW|ON_ALL_CHANGES|0
+10:41:33.554 (3893584281)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]AND( 
+	ISCHANGED(  {!ID:00N1400000BRwpx} ) &#124;&#124; ISCHANGED(   {!ID:00N1400000BRwq2}) ,
+	TEXT({!ID:00N1400000BRwpx}) = 'Installed',
+	TEXT({!ID:00N1400000BRwq2}) = 'Installed'
+ )|Values:MRSI_status__c=null, Finance_admin_status__c=Installed
+10:41:33.554 (3893594148)|WF_CRITERIA_END|false
+10:41:33.554 (3893603470)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Camden POS Device Sent|01Q1O000000yHkT|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3893635953)|WF_RULE_FILTER|[Company Profile : PoS Status equals Initiated]
+10:41:33.554 (3893639398)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3893640438)|WF_CRITERIA_END|false
+10:41:33.554 (3893661532)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC created 2|01Q5Y000001SJmT|ON_CREATE_ONLY|0
+10:41:33.554 (3893668826)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3893672117)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Segragation: Default Roles|01Q14000000Dsmk|ON_CREATE_ONLY|0
+10:41:33.554 (3893675963)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3893678931)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC created 3|01QPj00000061MP|ON_CREATE_ONLY|0
+10:41:33.554 (3893682471)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3893685491)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk Decline to update Compliance Status|01Q1O000000u8SP|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3893706145)|WF_RULE_FILTER|[Company Profile : Credit Risk Status equals Declined]
+10:41:33.554 (3893708571)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3893709515)|WF_CRITERIA_END|false
+10:41:33.554 (3893713121)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Closed_CP_Launch_Flow3011O000000kP03|01QPj000003oMzh|ON_ALL_CHANGES|0
+10:41:33.554 (3893779200)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3893782159)|WF_CRITERIA_END|true
+10:41:33.554 (3893793530)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Customer Due Diligence update on Risk Level Medium|01Q1O000000E3P3|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3893919010)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL({!ID:00Na0000002h9ce}, "Medium")|Values:Risk_Level__c=null
+10:41:33.554 (3893922868)|WF_CRITERIA_END|false
+10:41:33.554 (3893927985)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk_Handling30114000000TUoZ|01Q140000007DqP|ON_ALL_CHANGES|0
+10:41:33.554 (3893987045)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3893989709)|WF_CRITERIA_END|true
+10:41:33.554 (3893997538)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Below the monthly minimum HARD limit|01Q14000000Drpd|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3895749443)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3895771056)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Deal_PQ30114000000Cvth|01Q14000000JfkR|ON_ALL_CHANGES|0
+10:41:33.554 (3895878184)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3895882656)|WF_CRITERIA_END|true
+10:41:33.554 (3895910512)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|G2S Company Profile created|01Q14000000JdNV|ON_CREATE_ONLY|0
+10:41:33.554 (3895917064)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3895920493)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC 2|01Q5Y000001SJmO|ON_ALL_CHANGES|0
+10:41:33.554 (3898074181)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000008rJPO}) && ( 
+TEXT({!ID:00N30000008rJPO}) = "Associations - Civic, Social and Fraternal" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Schools and Educational Services - not elsewhere classified" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Non-financial Institutions – Stored Value Card Purchase/Load" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Accounting, Auditing, and Bookkeeping Services" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Variety Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (Travel-Related Arrangement Services)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - All Nippon Airways" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Online Retail"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Pet Shops - Pet Food and Supplies" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Cable, Satellite, and Other Pay Television and Radio Services" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Daily Fantasy Gaming" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Firearms/ammunition (no gun parts)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Warranties" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "CBD based products" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Antiques dealer" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Music" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Radio" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Card, Gift, Novelty, and Souvenir Shops" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Equipment, Furniture, and Home Furnishings Stores (except Appliances)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Automotive Parts, Accessories Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Health and Beauty Spas" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Game, Toy, and Hobby Shops" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Electrical Parts and Equipment" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Real Estate Agents and Managers - Rentals" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Nursing and Personal Care Facilities" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Womens Accessory and Specialty Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Collection Agencies" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Miscellaneous House Furnishing Specialty Shops" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Stamp and Coin Stores: Philatelic and Numismatic Supplies" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Grocery Stores, Supermarkets" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Electronic Stores/Electronic Sales" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Health Practitioners, Medical Services - not elsewhere classified" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Online marketplaces")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
+10:41:33.554 (3898168916)|WF_CRITERIA_END|false
+10:41:33.554 (3898227590)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk pre-approved Fraud Prevention Team Descriptor & City field|01Q1O000000JjKm|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3898310402)|WF_RULE_FILTER|[Company Profile : Credit Risk Status equals Pre-Approved]
+10:41:33.554 (3898315617)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3898317527)|WF_CRITERIA_END|false
+10:41:33.554 (3898322487)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Open_Finance_Admin_automation301Pj00000cELxy|01QPj000002DiJp|ON_ALL_CHANGES|0
+10:41:33.554 (3898392714)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3898396565)|WF_CRITERIA_END|true
+10:41:33.554 (3898407350)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Merchant_Segregation_PB_Sales_Rep30114000000LFEU|01Q5Y000000q6Z6|ON_RECURSIVE_UPDATE|0
+10:41:33.554 (3898432700)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3898435672)|WF_CRITERIA_END|true
+10:41:33.554 (3898449538)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Application_filling_Status_notification301Pj000006VuAZ|01QPj000000ATf3|ON_ALL_CHANGES|0
+10:41:33.554 (3898473499)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3898477611)|WF_CRITERIA_END|true
+10:41:33.554 (3898485833)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC created|01Q1O000000hctD|ON_CREATE_ONLY|0
+10:41:33.554 (3898495410)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3898500559)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|notify AM on MSA status|01Q14000000DsGt|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3898539605)|WF_RULE_NOT_EVALUATED
+10:41:33.554 (3898544356)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Account Opening Finance installed/issue|01Q14000000HiHa|ON_ALL_CHANGES|0
+10:41:33.554 (3898725380)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N1400000BRwpx}) &&   TEXT({!ID:00N1400000BRwpx}) = "Installed"|Values:Finance_admin_status__c=Installed
+10:41:33.554 (3898731803)|WF_CRITERIA_END|false
+10:41:33.554 (3898737949)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Account Opening Risk installed/issue|01Q1O000000yHzd|ON_ALL_CHANGES|0
+10:41:33.554 (3898834607)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N1400000BRwq2} )|Values:MRSI_status__c=null
+10:41:33.554 (3898840078)|WF_CRITERIA_END|false
+10:41:33.554 (3898848122)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Primary Contact email|01Q1O000000uB4a|ON_ALL_CHANGES|0
+10:41:33.554 (3898952419)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000007uAMf})|Values:Primary_Contact__c=0031O00003H2k1n
+10:41:33.554 (3898957725)|WF_CRITERIA_END|false
+10:41:33.554 (3898963581)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|M&A Expiration|01Q14000000Hame|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3899023431)|WF_RULE_FILTER|[Company Profile : M&A Expiration not equal to ] 
+AND [Company Profile : Notification Contact Email not equal to ] 
+AND [Company Profile : Notification Contact Name not equal to ]
+10:41:33.554 (3899030481)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3899032189)|WF_CRITERIA_END|false
+10:41:33.554 (3899036659)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|M&A Expiration 2|01Q14000000Hamf|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3899055444)|WF_RULE_FILTER|[Company Profile : M&A Expiration not equal to ] 
+AND [Company Profile : Notification Contact Email not equal to ] 
+AND [Company Profile : Notification Contact Name not equal to ]
+10:41:33.554 (3899058742)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3899060179)|WF_CRITERIA_END|false
+10:41:33.554 (3899064232)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|VIP Start 30 days countdown|01Q14000000JeVk|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3899092152)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live (VIP)]
+10:41:33.554 (3899099362)|WF_RULE_EVAL_VALUE|4
+10:41:33.554 (3899101587)|WF_CRITERIA_END|false
+10:41:33.554 (3899105682)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Customer Due Diligence update on Risk Level High|01Q1O000000E3P8|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3899229584)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL({!ID:00Na0000002h9ce}, "High")|Values:Risk_Level__c=null
+10:41:33.554 (3899234836)|WF_CRITERIA_END|false
+10:41:33.554 (3899240204)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Compliance status no payouts|01Q1O000000uAY0|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3899259987)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live (No Payout)]
+10:41:33.554 (3899266461)|WF_RULE_EVAL_VALUE|4
+10:41:33.554 (3899268501)|WF_CRITERIA_END|false
+10:41:33.554 (3899272528)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC 1|01Q1O000000E3PS|ON_ALL_CHANGES|0
+10:41:33.554 (3901483557)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000008rJPO}) && ( 
+TEXT({!ID:00N30000008rJPO}) = "Caterers"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Automobile Parking Lots and Garages"  &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Womens Ready to Wear Stores"  &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Mens and Boys Clothing and Accessories Stores" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Sports Apparel, Riding Apparel Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Shoe Stores" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Mens and Womens Clothing Stores" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Sporting Goods Stores" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "PayFac" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Airline - TAP Portugal" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Customer Financial Institution (Quasi Cash)"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Barber and Beauty Shops"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Industrial Supplies"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Airline - Turkish Airlines (THY)"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Digital Goods - Multi-Category"  &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Second hand Books"  &#124;&#124;  
+TEXT({!ID:00N30000008rJPO}) = "Carpool services"  &#124;&#124;  
+TEXT({!ID:00N30000008rJPO}) = "Second hand Clothes / Shoes / Accessories"  &#124;&#124;  
+TEXT({!ID:00N30000008rJPO}) = "Second hand Records" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Art Dealers and Galleries" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Cosmetic Stores" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Bus Lines" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (not elsewhere classified)" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Run online lotteries" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Regulated online casinos" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Consumer Credit Reporting Agencies" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Regulated events for online horse and dog racing" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (Combination Catalog and Retail Merchants)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (Continuity/Subscription Merchants)" &#124;&#124;
+TEXT({!ID:00N30000008rJPO}) = "Clinics" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Buying/Shopping Club, Services" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Duty Free Stores" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Lodging - Hotels, Motels, Resorts, Central Reservation Service" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Dietary Supplements" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Courier Services - Air and Ground, Freight Forwarders" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Accessory and Apparel Stores - Miscellaneous" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Utilities - Electric, Gas, Heating Oil, Sanitary, Water" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Drugstores and Druggists" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "ISO" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Miscellaneous And Specialty Retail Stores" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Dental and Medical Laboratories" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Reseller" &#124;&#124; 
+TEXT({!ID:00N30000008rJPO}) = "Marketplace")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
+10:41:33.554 (3901532497)|WF_CRITERIA_END|false
+10:41:33.554 (3901547500)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Camden Submit Application Form|01Q1O000000yHja|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3902123286)|WF_RULE_FILTER|[Company Profile : Application Status equals Completed] 
+AND [Company Profile : Partner equals Camden]
+10:41:33.554 (3902139854)|WF_RULE_EVAL_VALUE|9
+10:41:33.554 (3902143166)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3902149181)|WF_CRITERIA_END|false
+10:41:33.554 (3902157251)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Update_UW_manager_in_AI3011O0000004hjJ|01Q1O000000yGz8|ON_ALL_CHANGES|0
+10:41:33.554 (3902234967)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
+10:41:33.554 (3902238890)|WF_CRITERIA_END|true
+10:41:33.554 (3902248940)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Update Introducer Commission Approval Status to Needed|01Q1O000000SDJv|ON_ALL_CHANGES|0
+10:41:33.554 (3902579444)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N1O00000BVFXc} ) &#124;&#124; ISCHANGED( {!ID:00N1O00000B9nt9} ) &#124;&#124; ISCHANGED(  {!ID:00N1O00000B9r8q} ) &#124;&#124; ISCHANGED(  {!ID:00N1O00000B9r8v} ) &#124;&#124; ISCHANGED ( {!ID:00N1O00000AuFwF} )|Values:Reseller_Commission__c=null, Revenue_Share_Term__c=null, Introducer_Commission_Model__c=null, Buy_Rate_received_by_Safecharge_other__c=null, Buy_Rate_actually_received_by_Safecharge__c=null
+10:41:33.554 (3902603988)|WF_CRITERIA_END|false
+10:41:33.554 (3902614077)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|ISO Checklist|01Q1O000000px2a|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3902916493)|WF_RULE_FILTER|[Company Profile : Industry equals ISO]
+10:41:33.554 (3902927227)|WF_RULE_EVAL_VALUE|74
+10:41:33.554 (3902930071)|WF_CRITERIA_END|false
+10:41:33.554 (3902940665)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Strategic High Profitability merchant|01Q1O000000pxKU|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3902975132)|WF_RULE_FILTER|[Company Profile : Strategic / High Profitability equals 1, 2] 
+AND [Company Profile : Company Name does not contain test]
+10:41:33.554 (3902978856)|WF_RULE_EVAL_VALUE|
+10:41:33.554 (3902980410)|WF_CRITERIA_END|false
+10:41:33.554 (3902984522)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Express account configured for Merchant|01Q1O000000yIXV|ON_CREATE_OR_TRIGGERING_UPDATE|0
+10:41:33.554 (3903025805)|WF_RULE_FILTER|[Company Profile : Record Type equals SafeCharge Express] 
+AND [Company Profile : Configuration Status equals Done]
+10:41:33.554 (3903037560)|WF_RULE_EVAL_VALUE|01214000000AWY7
+10:41:33.554 (3903040643)|WF_CRITERIA_END|false
+10:41:33.554 (3903063590)|WF_SPOOL_ACTION_BEGIN|Workflow
+10:41:33.554 (3903123524)|WF_ACTION| Flow Trigger: 13;
+10:41:33.554 (3903140192)|WF_RULE_EVAL_END
+10:41:33.905 (3905281088)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CJrR|301Pj000006VuAZ
+10:41:33.905 (3906496630)|FLOW_CREATE_INTERVIEW_END|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
+10:41:33.554 (3906547565)|WF_FLOW_ACTION_BEGIN|09LPj0000000MgT
+10:41:33.908 (3908298945)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:33.908 (3908339787)|FLOW_START_INTERVIEW_BEGIN|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
+10:41:33.908 (3909199787)|FLOW_START_INTERVIEW_END|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
+10:41:33.908 (3909216632)|FLOW_START_INTERVIEWS_END|1
+10:41:33.908 (3909245908)|FLOW_INTERVIEW_FINISHED|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
+10:41:33.554 (3912964502)|WF_FLOW_ACTION_END|09LPj0000000MgT
+10:41:33.915 (3915120547)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000YRvu|3011O0000004hjJ
+10:41:33.915 (3917049535)|FLOW_CREATE_INTERVIEW_END|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
+10:41:33.554 (3917082862)|WF_FLOW_ACTION_BEGIN|09L1O000000L57s
+10:41:33.918 (3918772023)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:33.918 (3918821461)|FLOW_START_INTERVIEW_BEGIN|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
+10:41:33.918 (4050985217)|FLOW_START_INTERVIEW_END|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
+10:41:33.918 (4051010275)|FLOW_START_INTERVIEWS_END|1
+10:41:33.918 (4051036490)|FLOW_INTERVIEW_FINISHED|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
+10:41:33.554 (4054392501)|WF_FLOW_ACTION_END|09L1O000000L57s
+10:41:34.55 (4055935258)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKdr|30114000000LFEU
+10:41:34.55 (4056919379)|FLOW_CREATE_INTERVIEW_END|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
+10:41:33.554 (4056951778)|WF_FLOW_ACTION_BEGIN|09L5Y000000ZPGW
+10:41:34.58 (4058680697)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.58 (4058713412)|FLOW_START_INTERVIEW_BEGIN|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
+10:41:34.58 (4073651193)|FLOW_START_INTERVIEW_END|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
+10:41:34.58 (4073674425)|FLOW_START_INTERVIEWS_END|1
+10:41:34.58 (4073699918)|FLOW_INTERVIEW_FINISHED|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
+10:41:33.554 (4077152824)|WF_FLOW_ACTION_END|09L5Y000000ZPGW
+10:41:34.79 (4079412197)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000wo9p|3011O000000kP03
+10:41:34.79 (4080591298)|FLOW_CREATE_INTERVIEW_END|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
+10:41:33.554 (4080621769)|WF_FLOW_ACTION_BEGIN|09LPj0000002ELR
+10:41:34.82 (4082404604)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.82 (4082435174)|FLOW_START_INTERVIEW_BEGIN|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
+10:41:34.82 (4093373374)|FLOW_START_INTERVIEW_END|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
+10:41:34.82 (4093393750)|FLOW_START_INTERVIEWS_END|1
+10:41:34.82 (4093418131)|FLOW_INTERVIEW_FINISHED|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
+10:41:33.554 (4096693122)|WF_FLOW_ACTION_END|09LPj0000002ELR
+10:41:34.98 (4098932216)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001400000086YG|30114000000TUoZ
+10:41:34.98 (4101023201)|FLOW_CREATE_INTERVIEW_END|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
+10:41:33.554 (4101058971)|WF_FLOW_ACTION_BEGIN|09L14000000PBuU
+10:41:34.102 (4102775571)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.102 (4102809206)|FLOW_START_INTERVIEW_BEGIN|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
+10:41:34.102 (4113618105)|FLOW_START_INTERVIEW_END|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
+10:41:34.102 (4113638947)|FLOW_START_INTERVIEWS_END|1
+10:41:34.102 (4113665684)|FLOW_INTERVIEW_FINISHED|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
+10:41:33.554 (4116903306)|WF_FLOW_ACTION_END|09L14000000PBuU
+10:41:34.119 (4119319285)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKdp|301140000004Y2v
+10:41:34.119 (4121403223)|FLOW_CREATE_INTERVIEW_END|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
+10:41:33.554 (4121439791)|WF_FLOW_ACTION_BEGIN|09LPj0000002NJt
+10:41:34.123 (4123177346)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.123 (4123211857)|FLOW_START_INTERVIEW_BEGIN|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
+10:41:34.123 (4140080462)|FLOW_START_INTERVIEW_END|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
+10:41:34.123 (4140103578)|FLOW_START_INTERVIEWS_END|1
+10:41:34.123 (4140130369)|FLOW_INTERVIEW_FINISHED|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
+10:41:33.554 (4143357998)|WF_FLOW_ACTION_END|09LPj0000002NJt
+10:41:34.145 (4145562738)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000wnvs|3011O000000kMDP
+10:41:34.145 (4147466368)|FLOW_CREATE_INTERVIEW_END|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
+10:41:33.554 (4147501215)|WF_FLOW_ACTION_BEGIN|09L5Y0000002WEQ
+10:41:34.149 (4149082759)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.149 (4149115848)|FLOW_START_INTERVIEW_BEGIN|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
+10:41:34.149 (4159933891)|FLOW_START_INTERVIEW_END|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
+10:41:34.149 (4159954646)|FLOW_START_INTERVIEWS_END|1
+10:41:34.149 (4159981216)|FLOW_INTERVIEW_FINISHED|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
+10:41:33.554 (4163223755)|WF_FLOW_ACTION_END|09L5Y0000002WEQ
+10:41:34.164 (4164464033)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000sdIN|301Pj00000cELxy
+10:41:34.164 (4165985863)|FLOW_CREATE_INTERVIEW_END|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
+10:41:33.554 (4166010872)|WF_FLOW_ACTION_BEGIN|09LPj0000001Ym1
+10:41:34.167 (4167546528)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.167 (4167575620)|FLOW_START_INTERVIEW_BEGIN|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
+10:41:34.167 (4168230393)|FLOW_START_INTERVIEW_END|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
+10:41:34.167 (4168248435)|FLOW_START_INTERVIEWS_END|1
+10:41:34.167 (4168271651)|FLOW_INTERVIEW_FINISHED|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
+10:41:33.554 (4171318079)|WF_FLOW_ACTION_END|09LPj0000001Ym1
+10:41:34.173 (4173070865)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKdq|30114000000LFES
+10:41:34.173 (4174347872)|FLOW_CREATE_INTERVIEW_END|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
+10:41:33.554 (4174370477)|WF_FLOW_ACTION_BEGIN|09L5Y000001IwjB
+10:41:34.175 (4175951487)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.175 (4175984287)|FLOW_START_INTERVIEW_BEGIN|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
+10:41:34.175 (4190090818)|FLOW_START_INTERVIEW_END|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
+10:41:34.175 (4190113971)|FLOW_START_INTERVIEWS_END|1
+10:41:34.175 (4190140189)|FLOW_INTERVIEW_FINISHED|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
+10:41:33.554 (4193389027)|WF_FLOW_ACTION_END|09L5Y000001IwjB
+10:41:34.195 (4195045517)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000wnvx|3011O000000kMD7
+10:41:34.195 (4196492006)|FLOW_CREATE_INTERVIEW_END|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
+10:41:33.554 (4196522594)|WF_FLOW_ACTION_BEGIN|09L5Y000001EkQQ
+10:41:34.198 (4198226479)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.198 (4198264545)|FLOW_START_INTERVIEW_BEGIN|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
+10:41:34.198 (4210489557)|FLOW_START_INTERVIEW_END|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
+10:41:34.198 (4210511437)|FLOW_START_INTERVIEWS_END|1
+10:41:34.198 (4210538491)|FLOW_INTERVIEW_FINISHED|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
+10:41:33.554 (4213955576)|WF_FLOW_ACTION_END|09L5Y000001EkQQ
+10:41:34.215 (4215381342)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000sdH0|3011O000000c8Ar
+10:41:34.215 (4216219390)|FLOW_CREATE_INTERVIEW_END|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
+10:41:33.554 (4216254177)|WF_FLOW_ACTION_BEGIN|09L1O000000g3fr
+10:41:34.218 (4218259304)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.218 (4218329272)|FLOW_START_INTERVIEW_BEGIN|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
+10:41:34.218 (4234432434)|FLOW_START_INTERVIEW_END|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
+10:41:34.218 (4234456835)|FLOW_START_INTERVIEWS_END|1
+10:41:34.218 (4234488686)|FLOW_INTERVIEW_FINISHED|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
+10:41:33.554 (4237958693)|WF_FLOW_ACTION_END|09L1O000000g3fr
+10:41:34.240 (4240611201)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKfH|3011O00000093PI
+10:41:34.240 (4242519108)|FLOW_CREATE_INTERVIEW_END|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
+10:41:33.554 (4242548224)|WF_FLOW_ACTION_BEGIN|09L5Y000000ZP9A
+10:41:34.244 (4244376696)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.244 (4244410005)|FLOW_START_INTERVIEW_BEGIN|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
+10:41:34.244 (4256890997)|FLOW_START_INTERVIEW_END|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
+10:41:34.244 (4256911512)|FLOW_START_INTERVIEWS_END|1
+10:41:34.244 (4256935664)|FLOW_INTERVIEW_FINISHED|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
+10:41:33.554 (4260387058)|WF_FLOW_ACTION_END|09L5Y000000ZP9A
+10:41:34.262 (4262691792)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001400000086Ui|30114000000Cvth
+10:41:34.262 (4264942992)|FLOW_CREATE_INTERVIEW_END|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
+10:41:33.554 (4264973070)|WF_FLOW_ACTION_BEGIN|09L14000000Cd7Z
+10:41:34.266 (4266785212)|FLOW_START_INTERVIEWS_BEGIN|1
+10:41:34.266 (4266817510)|FLOW_START_INTERVIEW_BEGIN|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
+10:41:34.266 (4278824122)|FLOW_START_INTERVIEW_END|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
+10:41:34.266 (4278845033)|FLOW_START_INTERVIEWS_END|1
+10:41:34.266 (4278869500)|FLOW_INTERVIEW_FINISHED|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
+10:41:33.554 (4282315874)|WF_FLOW_ACTION_END|09L14000000Cd7Z
+10:41:33.554 (4282363355)|WF_TIME_TRIGGERS_BEGIN
+10:41:33.554 (4284823433)|WF_ACTIONS_END| Flow Trigger: 13;
+10:41:33.554 (4284839593)|CODE_UNIT_FINISHED|Workflow:01I300000027f4c
+10:41:33.554 (4286394536)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:01I300000027f4c
+10:41:33.554 (4293063230)|CODE_UNIT_FINISHED|Flow:01I300000027f4c
+10:41:33.554 (4296734681)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:01I300000027f4c
+10:41:33.554 (4301104387)|CODE_UNIT_FINISHED|Flow:01I300000027f4c
+10:41:33.554 (4306613927)|DML_END|[250]
+10:41:33.554 (4340681287)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:EmailMessage
+10:41:33.554 (4340710466)|CODE_UNIT_FINISHED|Flow:EmailMessage
+10:41:33.554 (4347509793)|CODE_UNIT_STARTED|[EXTERNAL]|01qPj00000AKA2H|EmailMessageHandlerTrigger on EmailMessage trigger event BeforeInsert|__sfdc_trigger/EmailMessageHandlerTrigger
+10:41:33.554 (4348106308)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4348738484)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4388394128)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4389265754)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4394309024)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4394879947)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4399131477)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4399590556)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4403556018)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4403993817)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4407931813)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4408302171)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4412068189)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4412419416)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4416268302)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4416629280)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4420238578)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4420660293)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4424797798)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4425145422)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4429129552)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4429479290)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4433154331)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4433496690)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4437314032)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4437659040)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
+10:41:33.554 (4441362087)|SOQL_EXECUTE_END|[13]|Rows:1
+10:41:33.554 (4444596605)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (4444665877)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4444716632)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (4444720076)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4444722683)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (4444756110)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4444889708)|SYSTEM_MODE_EXIT|false
+10:41:34.444 (4444903201)|CUMULATIVE_LIMIT_USAGE
+10:41:34.444 (4444903201)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 26 out of 200
+  Number of query rows: 25 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 423 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 1 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
+
+10:41:34.444 (4444903201)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:33.554 (4445074771)|CODE_UNIT_FINISHED|EmailMessageHandlerTrigger on EmailMessage trigger event BeforeInsert|__sfdc_trigger/EmailMessageHandlerTrigger
+10:41:33.554 (4490195207)|CODE_UNIT_STARTED|[EXTERNAL]|01qPj00000AKA2H|EmailMessageHandlerTrigger on EmailMessage trigger event AfterInsert|__sfdc_trigger/EmailMessageHandlerTrigger
+10:41:33.554 (4490521449)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4490563005)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (4490567474)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4490570153)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (4490589355)|SYSTEM_MODE_ENTER|false
+10:41:33.554 (4490780378)|USER_DEBUG|[37]|DEBUG|EmailMessageHandler-afterInsert before
+10:41:33.554 (4493691861)|EXCEPTION_THROWN|[54]|System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
+10:41:33.554 (4493798978)|SYSTEM_MODE_EXIT|false
+10:41:33.554 (4493869512)|FATAL_ERROR|System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
+
+Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
+Class.EmailMessageHandler.afterInsert: line 40, column 1
+Class.ITriggerHandlerImpl.execute: line 31, column 1
+Trigger.EmailMessageHandlerTrigger: line 11, column 1
+10:41:33.554 (4493879578)|FATAL_ERROR|System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
+
+Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
+Class.EmailMessageHandler.afterInsert: line 40, column 1
+Class.ITriggerHandlerImpl.execute: line 31, column 1
+Trigger.EmailMessageHandlerTrigger: line 11, column 1
+10:41:34.493 (4493903407)|CUMULATIVE_LIMIT_USAGE
+10:41:34.493 (4493903407)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 26 out of 200
+  Number of query rows: 25 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 423 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 1 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
+
+10:41:34.493 (4493903407)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:33.554 (4494057216)|CODE_UNIT_FINISHED|EmailMessageHandlerTrigger on EmailMessage trigger event AfterInsert|__sfdc_trigger/EmailMessageHandlerTrigger
+10:41:33.554 (4532109724)|EXCEPTION_THROWN|[333]|System.EmailException: SendEmail failed. First exception on row 0; first error: UNKNOWN_EXCEPTION, EmailMessageHandlerTrigger: execution of AfterInsert
+
+caused by: System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
+
+Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
+Class.EmailMessageHandler.afterInsert: line 40, column 1
+Class.ITriggerHandlerImpl.execute: line 31, column 1
+Trigger.EmailMessageHandlerTrigger: line 11, column 1: []
+10:41:33.554 (4534577865)|USER_DEBUG|[288]|DEBUG|General Exception in sendMerchantRequest: SendEmail failed. First exception on row 0; first error: UNKNOWN_EXCEPTION, EmailMessageHandlerTrigger: execution of AfterInsert
+
+caused by: System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
+
+Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
+Class.EmailMessageHandler.afterInsert: line 40, column 1
+Class.ITriggerHandlerImpl.execute: line 31, column 1
+Trigger.EmailMessageHandlerTrigger: line 11, column 1: []
+10:41:33.554 (4534623461)|USER_DEBUG|[343]|DEBUG|===> Inside fetchCase, caseId: 500Pj000016Of4U
+10:41:33.554 (4535268911)|SOQL_EXECUTE_BEGIN|[346]|Aggregations:0|SELECT Id, Company_Profile__c, Integration_Channel__c, ContactId, SB_PPP_Username__c, SB_PPP_Password__c, SB_Template__c, Profile__c, Location__c, Location__r.Name, Location__r.Email_Address__c, Location__r.Street__c, Location__r.City__c, Location__r.Country__c, Location__r.Postal_Code__c, Location__r.Phone_Number__c, Platform_Integration__c, Contact.FirstName, Contact.LastName, Contact.Email, Contact.Phone FROM Case WHERE Id = :tmpVar1 LIMIT 1
+10:41:34.554 (4554633784)|SOQL_EXECUTE_END|[346]|Rows:1
+10:41:34.554 (4554882363)|USER_DEBUG|[359]|DEBUG|===> Case fetched: Case:{Id=500Pj000016Of4UIAS, Company_Profile__c=a0m1O000008j6nNQAQ, Integration_Channel__c=Fasttrack, ContactId=0031O00003H2k1nQAB, SB_PPP_Username__c=dimitar.panayotov02570633, SB_Template__c=Merchant and merchantSite NCP acquiring CNP REST 2 fast track, Platform_Integration__c=- none -}
+10:41:34.554 (4555212143)|SOQL_EXECUTE_BEGIN|[363]|Aggregations:0|SELECT Id, Name, FirstName, LastName, Email, MailingStreet, MailingCity, MailingCountry, MailingPostalCode, Phone FROM Contact WHERE Id = :tmpVar1
+10:41:34.554 (4559466398)|SOQL_EXECUTE_END|[363]|Rows:1
+10:41:34.554 (4559691702)|USER_DEBUG|[368]|DEBUG|===> Contact fetched: Contact:{Id=0031O00003H2k1nQAB, Name=David Hazan, FirstName=David, LastName=Hazan, Email=dimitarpanayotov@gmail.com, Phone=44876756457986}
+10:41:34.554 (4560650309)|SOQL_EXECUTE_BEGIN|[373]|Aggregations:0|SELECT Id, Name, Registered_Country_Code2__c, Registered_Zip_Postal_Code__c, MCC_Code__c, VAT_Number__c, Registered_Street__c, Registered_City__c, Primary_Contact__r.Phone, Primary_Contact__r.Id, Primary_Contact__r.Email, Primary_Contact__r.FirstName, Primary_Contact__r.LastName, Primary_Contact__r.MailingStreet, Primary_Contact__r.MailingCity, Primary_Contact__r.MailingCountry, Primary_Contact__r.MailingPostalCode, MSA_Effective_Date__c, City_field__c, Merchant_Tier__c, State_USA__c, Registered_Country__c, Primary_Contact__c, Account__r.Id, Account__r.Name, Sales_Rep__c, Sales_Rep__r.FirstName, Sales_Rep__r.LastName, Sales_Rep__r.Email, Account_Manager__c, Account_Manager__r.FirstName, Account_Manager__r.LastName, Account_Manager__r.Email, Account_Operational_Manager_CP__c, Account_Operational_Manager_CP__r.FirstName, Account_Operational_Manager_CP__r.LastName, Account_Operational_Manager_CP__r.Email, From_Reseller__r.Id, From_Reseller__r.Name, From_Reseller__r.Nuvei_Partner_ID__c, From_Reseller__r.Credentials_URL__c, From_Reseller__r.Overwrite_Financial_Vertical__c, Overwrite_Financial_Vertical__c, Origin_Region__c, Visa_Payfac_ID__c, Mastercard_Payfac_ID__c, Nuvei_Connect_Application_ID__c, EU_Indirect_Orchestration__c FROM Compliance__c WHERE Id = :tmpVar1
+10:41:34.554 (4603983081)|SOQL_EXECUTE_END|[373]|Rows:1
+10:41:34.554 (4604334393)|USER_DEBUG|[392]|DEBUG|===> Compliance Profile fetched: Compliance__c:{Id=a0m1O000008j6nNQAQ, Name=REST 2.0 onboarding test LTD, Registered_Country_Code2__c=GBR, Registered_Zip_Postal_Code__c=7654654, MCC_Code__c=5817, VAT_Number__c=N/A, Registered_Street__c=baker street 22, Registered_City__c=London, Primary_Contact__c=0031O00003H2k1nQAB, City_field__c=davidh.com, Merchant_Tier__c=5, State_USA__c=England and Wales, Registered_Country__c=United Kingdom, Account__c=0011O000029FeRMQA0, EU_Indirect_Orchestration__c=false}
+10:41:34.554 (4604395798)|SYSTEM_MODE_EXIT|false
+10:41:34.604 (4604424282)|CUMULATIVE_LIMIT_USAGE
+10:41:34.604 (4604424282)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 16 out of 200
+  Number of query rows: 15 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 1 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 1 out of 10000
+  Maximum CPU time: 559 out of 60000
+  Maximum heap size: 0 out of 12000000
+  Number of callouts: 2 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 1
+  Number of Mobile Apex push calls: 0 out of 10
+
+10:41:34.604 (4604424282)|CUMULATIVE_LIMIT_USAGE_END
+
+10:41:34.554 (4604525977)|CODE_UNIT_FINISHED|MerchantOnboardingController.sendMerchantRequest(String, Boolean, Boolean)
+10:41:34.554 (4604561674)|EXECUTION_FINISHED

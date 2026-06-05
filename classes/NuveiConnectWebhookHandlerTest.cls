@@ -193,12 +193,31 @@ private class NuveiConnectWebhookHandlerTest {
         List<Account> accs = [SELECT Id FROM Account WHERE Name = 'Tech Innovations EU Ltd'];
         System.assertEquals(1, accs.size(), 'Should create Account');
 
-        // Verify Contact created with EU name fields
-        List<Contact> cons = [SELECT Id, FirstName, LastName, Email FROM Contact WHERE AccountId = :accs[0].Id];
-        System.assertEquals(1, cons.size(), 'Should create Contact');
-        System.assertEquals('John', cons[0].FirstName, 'EU contact first name should be set');
-        System.assertEquals('Doe', cons[0].LastName, 'EU contact last name should be set');
+                // Verify Contacts: Wave 4 now creates one Contact per business owner
+        // in addition to the primary contact. Primary email (info@techeu.com)
+        // ≠ owner email (johndoe@techeu.com), so 2 distinct Contacts.
+        List<Contact> cons = [
+            SELECT Id, FirstName, LastName, Email, Authorized_Signature__c
+            FROM Contact WHERE AccountId = :accs[0].Id
+            ORDER BY Email
+        ];
+        System.assertEquals(2, cons.size(),
+            'Wave 4: primary contact + 1 owner contact (different emails)');
 
+        // Primary contact (info@techeu.com) — also cPanel admin (matches portalAdminEmail)
+        Contact primary;
+        Contact owner;
+        for (Contact c : cons) {
+            if (c.Email == 'info@techeu.com') primary = c;
+            if (c.Email == 'johndoe@techeu.com') owner = c;
+        }
+        System.assertNotEquals(null, primary, 'Primary contact should exist');
+        System.assertNotEquals(null, owner,   'Owner contact should exist');
+        System.assertEquals('John', primary.FirstName, 'EU primary first name');
+        System.assertEquals('Doe',  primary.LastName,  'EU primary last name');
+        System.assertEquals('John', owner.FirstName,   'Owner first name');
+        System.assertEquals('Doe',  owner.LastName,    'Owner last name');
+        
         // Verify Directors_or_Ultimate_Beneficial_Owner__c with EU fields
         List<Directors_or_Ultimate_Beneficial_Owner__c> dirs = [
             SELECT Organization_Role__c, Nationality__c, Phone__c
@@ -393,9 +412,15 @@ private class NuveiConnectWebhookHandlerTest {
         }
     }
 
-    @isTest
+       @isTest
     static void testStatusUpdate_UnknownStatus_LogsError() {
         NuveiConnectWebhookHandler.processWebhook(buildEURequest());
+
+        // Capture status BEFORE unknown event arrives
+        Compliance__c before = [
+            SELECT Compliance_Status__c
+            FROM Compliance__c WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
+        ];
 
         NuveiConnectWebhookHandler.NuveiConnectRequest req =
             new NuveiConnectWebhookHandler.NuveiConnectRequest();
@@ -410,9 +435,22 @@ private class NuveiConnectWebhookHandlerTest {
             NuveiConnectWebhookHandler.processWebhook(req);
         Test.stopTest();
 
-        // Should not crash — result success depends on implementation preference
-        // but log entry should exist with the unknown status
+        // ── Hard contract: unknown status must fail loudly so NC retries ──
         System.assertNotEquals(null, result, 'Should always return a result, never throw');
+        System.assertEquals(false, result.success,
+            'Unknown NC status must return success=false (was a bug — used to silently 200)');
+        System.assert(
+            result.message != null && result.message.contains('Unknown NC status'),
+            'Response message must explain the failure. Got: ' + result.message
+        );
+
+        // ── Status must not have been touched ──
+        Compliance__c after = [
+            SELECT Compliance_Status__c
+            FROM Compliance__c WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
+        ];
+        System.assertEquals(before.Compliance_Status__c, after.Compliance_Status__c,
+            'Compliance_Status__c must NOT change when NC sends unknown event');
     }
 
     @isTest
@@ -464,6 +502,111 @@ private class NuveiConnectWebhookHandlerTest {
 
         // Should not throw an unhandled exception
         System.assertNotEquals(null, result, 'Should always return result object');
+    }
+    
+        @isTest
+    static void testStatusUpdate_ApplicationApproved_NormalizesAndLocksBanking() {
+        // ── Arrange: insert base record (creates Banking_Details__c too) ──
+        NuveiConnectWebhookHandler.processWebhook(buildEURequest());
+
+        // ── Act: send the NC event name NC actually delivers ──
+        NuveiConnectWebhookHandler.NuveiConnectRequest req =
+            new NuveiConnectWebhookHandler.NuveiConnectRequest();
+        req.applicationId     = 'EU-APP-001';
+        req.applicationStatus = 'APPLICATION_APPROVED';   // ← long form NC sends
+        req.rawPayload        = '{}';
+        req.businessOwnerInformation = new List<NuveiConnectWebhookHandler.BusinessOwnerWrapper>();
+        req.bankingInformation       = new List<NuveiConnectWebhookHandler.BankingInfoWrapper>();
+
+        Test.startTest();
+        NuveiConnectWebhookHandler.WebhookResult result =
+            NuveiConnectWebhookHandler.processWebhook(req);
+        Test.stopTest();
+
+        // ── Assert: webhook accepted ──
+        System.assert(result.success,
+            'APPLICATION_APPROVED must succeed (was a bug — used to return Unknown NC status). Got: ' + result.message);
+
+        // ── Assert: Compliance status mapped to Oscilar Approved ──
+        Compliance__c comp = [
+            SELECT Compliance_Status__c, Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c
+            FROM Compliance__c WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
+        ];
+        System.assertEquals('Oscilar Approved', comp.Compliance_Status__c,
+            'APPLICATION_APPROVED → Oscilar Approved');
+
+        // ── Assert: Nuvei_Connect_Status__c normalized to short form ──
+        // (picklist only accepts APPROVED, not APPLICATION_APPROVED — would throw INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST otherwise)
+        System.assertEquals('APPROVED', comp.Nuvei_Connect_Status__c,
+            'NC status must be normalized to the short picklist value (APPROVED), not the raw NC event name');
+
+        System.assertNotEquals(null, comp.Nuvei_Connect_Last_Webhook__c,
+            'Last webhook timestamp must be stamped');
+
+        // ── Assert: approval side-effects fired (Banking lock) ──
+        List<Banking_Details__c> banks = [
+            SELECT UW_Approval__c, Locked__c
+            FROM Banking_Details__c WHERE Compliance__c = :comp.Id
+        ];
+        System.assert(!banks.isEmpty(), 'Setup should have created at least one Banking_Details__c');
+        for (Banking_Details__c bd : banks) {
+            System.assertEquals('Verified', bd.UW_Approval__c,
+                'Banking must be set to Verified on APPLICATION_APPROVED');
+            System.assertEquals(true, bd.Locked__c,
+                'Banking must be locked on APPLICATION_APPROVED');
+        }
+    }
+    
+            @isTest
+    static void testStatusUpdate_AllApplicationEventMappings() {
+        // Create base record OUTSIDE the metered block to keep its SOQL out of the budget
+        NuveiConnectWebhookHandler.processWebhook(buildEURequest());
+
+        // NC's actual outbound event names → expected SF picklist values
+        Map<String, String> expectedSfStatus = new Map<String, String>{
+            'APPLICATION_SUBMITTED'              => 'Oscilar Submitted',
+            'APPLICATION_UPDATED'                => 'Oscilar In Review',
+            'APPLICATION_APPROVED'               => 'Oscilar Approved',
+            'APPLICATION_CONDITIONALLY_APPROVED' => 'Oscilar Conditionally Approved',
+            'APPLICATION_DECLINED'               => 'Oscilar Declined',
+            'ADDITIONAL_INFORMATION_REQUIRED'    => 'Oscilar Additional Info Requested'
+        };
+
+        Map<String, String> expectedNcShort = new Map<String, String>{
+            'APPLICATION_SUBMITTED'              => 'SUBMITTED',
+            'APPLICATION_UPDATED'                => 'IN_REVIEW',
+            'APPLICATION_APPROVED'               => 'APPROVED',
+            'APPLICATION_CONDITIONALLY_APPROVED' => 'CONDITIONALLY_APPROVED',
+            'APPLICATION_DECLINED'               => 'DECLINED',
+            'ADDITIONAL_INFORMATION_REQUIRED'    => 'ADDITIONAL_INFO_REQUESTED'
+        };
+
+        // Test.startTest() resets governor limits so the 6-iteration loop has a fresh budget
+        Test.startTest();
+        for (String ncEvent : expectedSfStatus.keySet()) {
+            NuveiConnectWebhookHandler.NuveiConnectRequest req =
+                new NuveiConnectWebhookHandler.NuveiConnectRequest();
+            req.applicationId     = 'EU-APP-001';
+            req.applicationStatus = ncEvent;
+            req.rawPayload        = '{}';
+            req.businessOwnerInformation = new List<NuveiConnectWebhookHandler.BusinessOwnerWrapper>();
+            req.bankingInformation       = new List<NuveiConnectWebhookHandler.BankingInfoWrapper>();
+
+            NuveiConnectWebhookHandler.WebhookResult result =
+                NuveiConnectWebhookHandler.processWebhook(req);
+            System.assert(result.success,
+                'NC event ' + ncEvent + ' must succeed (was Unknown NC status). Got: ' + result.message);
+
+            Compliance__c comp = [
+                SELECT Compliance_Status__c, Nuvei_Connect_Status__c
+                FROM Compliance__c WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
+            ];
+            System.assertEquals(expectedSfStatus.get(ncEvent), comp.Compliance_Status__c,
+                'SF status mapping failed for NC event: ' + ncEvent);
+            System.assertEquals(expectedNcShort.get(ncEvent), comp.Nuvei_Connect_Status__c,
+                'NC short-form normalization failed for: ' + ncEvent);
+        }
+        Test.stopTest();
     }
 
     // NOTE: testBoardingLogCreated_OnInsert is disabled pending Track I deployment.

@@ -1,0 +1,357 @@
+/**
+ * Track D — EU Indirect MSA generation (Conga) + DocuSign send, fully server-side.
+ *
+ * Flow (spec §6):
+ *   tryAdvance()
+ *     ├─ eligibility gate     (APPROVED + Configuration Case + status rerunnable)
+ *     ├─ pricing gate (§18)   → no Merchant_Bank__c pricing yet ⇒ stay Pending, return false
+ *     ├─ signatory (§17)      → resolve R1 from Compliance_Contact__c (Director__c=true);
+ *     │                         hard-fail (Failed + Execution_Log) if none — NO silent fallback
+ *     ├─ Step 1: Conga        → server-side PDF via Composer Qmode=12 (Option B)
+ *     ├─ Step 2: DocuSign      → MsaDocuSignService.sendMsaEnvelope (eSignature REST)
+ *     └─ Step 3: persist       → DocuSign_Envelope_Id__c + MSA_Status__c = 'sent'
+ *   On any error: MSA_Status__c = 'Failed' + Execution_Log__c row.
+ *
+ * Callout ordering:
+ *   No DML is performed before the Conga / DocuSign callouts. All gate checks
+ *   are SOQL-only; the status/envelope write happens only after both callouts
+ *   return. (Same "no DML before callout" rule that applies to Track F.)
+ *
+ * Status values are the Compliance__c.MSA_Status__c picklist API names — note
+ * 'started'/'sent'/'signed' are lowercase. Track D writes 'sent' after a
+ * successful DocuSign send; DocuSignStatusToMsa later advances 'sent' →
+ * 'Counter Signed' from the dsfs webhook, which gates Track F.
+ *
+ * Conga session note (Option B):
+ *   Composer Qmode=12 needs a Salesforce session to read the merge data. In
+ *   asynchronous Apex (this runs inside IndirectBoardingQueueable)
+ *   UserInfo.getSessionId() may not return an API-capable session, so
+ *   resolveCongaSessionId() first mints an OAuth client-credentials token from
+ *   the Conga_Setting__c credentials (fixed integration user) and only falls
+ *   back to the running-user session. This keeps Option B context-independent.
+ */
+public with sharing class TrackDMsaConga implements IMsaTrack {
+
+    public class TrackDException extends Exception {}
+
+    @TestVisible private static final String COMPOSER_ENDPOINT =
+        'https://composer.congamerge.com/composer8/index.html';
+    @TestVisible private static final String TRACK_LABEL = 'Track D: MSA Generation (Conga + DocuSign)';
+
+    // MSA_Status__c picklist API names (note the lowercase 'sent' — the picklist
+    // value is lowercase and DocuSignStatusToMsa maps the dsfs webhook to it).
+    @TestVisible private static final String STATUS_SENT    = 'sent';
+    @TestVisible private static final String STATUS_FAILED  = 'Failed';
+    @TestVisible private static final String STATUS_PENDING = 'Pending';
+
+
+    public Boolean tryAdvance(Id complianceId) {
+        if (complianceId == null) {
+            return false;
+        }
+
+        Compliance__c c = loadCompliance(complianceId);
+        if (c == null || c.EU_Indirect_Orchestration__c != true) {
+            return false;
+        }
+        if (!isEligible(c)) {
+            return false;
+        }
+
+        // §18 — pricing gate. Expected wait state: do NOT fail, just hold.
+        if (!hasMerchantPricing(c.Id)) {
+            return false;
+        }
+
+        try {
+            // §17 — resolve R1 (authorized signatory). Hard-fail on none.
+            Id signerContactId = resolveAuthorizedSignatory(c.Id);
+            if (signerContactId == null) {
+                failWithLog(c,
+                    'No authorized signatory found on Compliance — no Compliance_Contact__c row '
+                    + 'with Director__c=true. Populate Authorized_Signature__c on the relevant '
+                    + 'Contact(s) if needed.', null);
+                return true;
+            }
+
+            String templateId = readEuIndirectTemplateId();
+            if (String.isBlank(templateId)) {
+                failWithLog(c,
+                    'Conga_Setting__c.EU_Indirect_Template_ID__c is not configured', null);
+                return true;
+            }
+
+            // Step 1 — Conga server-side PDF (callout, no DML before this point)
+            Blob pdf = generateMsaPdf(c, templateId);
+
+            // Step 2 — DocuSign send via eSignature REST API (callout)
+            String envelopeId = MsaDocuSignService.sendMsaEnvelope(c, pdf, signerContactId);
+
+            // Step 3 — persist success (DML only after both callouts)
+            Compliance__c upd = new Compliance__c(
+                Id = c.Id,
+                DocuSign_Envelope_Id__c = envelopeId,
+                MSA_Status__c = STATUS_SENT
+            );
+            if (c.MSA_Started_At__c == null) {
+                upd.MSA_Started_At__c = DateTime.now();
+            }
+            if (c.MSA_Effective_Date__c == null) {
+                upd.MSA_Effective_Date__c = Date.today();
+            }
+            update upd;
+            return true;
+
+        } catch (Exception e) {
+            failWithLog(c, 'Track D send failed: ' + e.getMessage(), e);
+            return true;
+        }
+    }
+
+    // ─── Loaders / gating ────────────────────────────────────────────────────
+
+    private Compliance__c loadCompliance(Id complianceId) {
+        List<Compliance__c> rows = [
+            SELECT
+                Id,
+                Name,
+                EU_Indirect_Orchestration__c,
+                Nuvei_Connect_Status__c,
+                Nuvei_Connect_Application_ID__c,
+                MSA_Status__c,
+                MSA_Effective_Date__c,
+                MSA_Started_At__c,
+                Underwriting_Mgr__c,
+                OwnerId
+            FROM Compliance__c
+            WHERE Id = :complianceId
+            LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0];
+    }
+
+    private Boolean isEligible(Compliance__c c) {
+        if (c.Nuvei_Connect_Status__c != 'APPROVED') {
+            return false;
+        }
+        Integer cfgCount = [
+            SELECT COUNT()
+            FROM Case
+            WHERE Company_Profile__c = :c.Id
+            AND RecordType.DeveloperName = 'Configuration'
+        ];
+        if (cfgCount == 0) {
+            return false;
+        }
+        String s = c.MSA_Status__c;
+        // Track D fires only when status is unset / Pending / Failed (rerun).
+        return String.isBlank(s) || s == STATUS_PENDING || s == STATUS_FAILED;
+    }
+
+    /**
+     * §18 — at least one merchant-level pricing row must exist. Track D does not
+     * care whether it was auto-copied from the partner template or supplied via
+     * custom intake — only that a Merchant_Bank__c with Partner_Template_Pricing__c=false
+     * exists for this Compliance.
+     */
+    @TestVisible
+    private Boolean hasMerchantPricing(Id complianceId) {
+        Integer pricingCount = [
+            SELECT COUNT()
+            FROM Merchant_Bank__c
+            WHERE Compliance__c = :complianceId
+            AND Partner_Template_Pricing__c = false
+        ];
+        return pricingCount > 0;
+    }
+
+    /**
+     * §17 — R1 = the authorized signatory. Junction rows are populated upstream
+     * by the webhook handler; Track D only consumes them. Highest ownership
+     * percentage wins when more than one owner is flagged.
+     */
+    @TestVisible
+    private Id resolveAuthorizedSignatory(Id complianceId) {
+        List<Compliance_Contact__c> signers = [
+            SELECT Contact__c
+            FROM Compliance_Contact__c
+            WHERE Compliance__c = :complianceId
+            AND Director__c = true
+            AND Contact__r.Email != null
+            ORDER BY If_Owner_Percentage_held__c DESC NULLS LAST
+            LIMIT 1
+        ];
+        return signers.isEmpty() ? null : signers[0].Contact__c;
+    }
+
+    private String readEuIndirectTemplateId() {
+        Conga_Setting__c cfg = readCongaSetting();
+        return cfg == null ? null : cfg.EU_Indirect_Template_ID__c;
+    }
+
+    @TestVisible
+    private Conga_Setting__c readCongaSetting() {
+        List<Conga_Setting__c> rows = [
+            SELECT EU_Indirect_Template_ID__c,
+                   Session_Token_Endpoint__c,
+                   Session_Client_Id__c,
+                   Session_Client_Secret__c
+            FROM Conga_Setting__c
+            LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0];
+    }
+
+    // ─── Step 1: Conga Composer (Option B — Qmode=12 background PDF) ──────────
+
+    /**
+     * Calls Conga Composer in background mode (Qmode=12) and returns the MSA PDF
+     * blob. Reuses the existing Conga template (template id from Conga_Setting__c).
+     */
+    private Blob generateMsaPdf(Compliance__c c, String templateId) {
+        String sessionId = resolveCongaSessionId();
+        if (String.isBlank(sessionId)) {
+            // Neither the Conga_Setting__c OAuth credentials nor the running-user
+            // session yielded a usable token. Surface clearly instead of letting
+            // Conga fail opaquely.
+            throw new TrackDException(
+                'No API session available for Conga Composer. Set the OAuth '
+                + 'client-credentials fields on Conga_Setting__c (Session_Token_Endpoint__c / '
+                + 'Session_Client_Id__c / Session_Client_Secret__c) or run Conga '
+                + 'via Conga Trigger (Option A).');
+        }
+
+        String endpoint = COMPOSER_ENDPOINT
+            + '?sessionId=' + EncodingUtil.urlEncode(sessionId, 'UTF-8')
+            + '&serverUrl=' + EncodingUtil.urlEncode(buildPartnerServerUrl(), 'UTF-8')
+            + '&id=' + c.Id
+            + '&TemplateId=' + EncodingUtil.urlEncode(templateId, 'UTF-8')
+            + '&QMode=12'
+            + '&DefaultPDF=1';
+
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('GET');
+        req.setTimeout(120000);
+
+        HttpResponse res = new Http().send(req);
+        if (res.getStatusCode() < 200 || res.getStatusCode() >= 300) {
+            throw new TrackDException(
+                'Conga Composer returned HTTP ' + res.getStatusCode()
+                + (res.getBody() == null ? '' : ' | ' + res.getBody().abbreviate(500)));
+        }
+        Blob pdf = res.getBodyAsBlob();
+        if (pdf == null || pdf.size() == 0) {
+            throw new TrackDException('Conga Composer returned an empty document');
+        }
+        return pdf;
+    }
+
+    /**
+     * Conga session token.
+     *
+     * Prefers an OAuth client-credentials access token minted from the
+     * Connected App credentials stored on Conga_Setting__c (same config-driven
+     * pattern as MerchantOnboardingController/ExpressConfig__c). The Connected
+     * App runs as a fixed integration user, so the token is a real API session
+     * regardless of whether Track D runs synchronously or inside the queueable —
+     * where UserInfo.getSessionId() is not API-capable.
+     *
+     * Falls back to the running user's session when the credentials are not
+     * configured, so nothing breaks before the admin sets them.
+     */
+    @TestVisible
+    private String resolveCongaSessionId() {
+        try {
+            String token = fetchOAuthSessionToken();
+            if (String.isNotBlank(token)) {
+                return token;
+            }
+        } catch (Exception e) {
+            // Credentials not configured / token endpoint unreachable — degrade to
+            // the running-user session rather than hard-failing here.
+            System.debug(LoggingLevel.WARN,
+                'TrackDMsaConga | Conga OAuth session unavailable: '
+                + e.getTypeName() + ': ' + e.getMessage());
+        }
+        return UserInfo.getSessionId();
+    }
+
+    /**
+     * Mint a Salesforce session via OAuth client-credentials using the
+     * Conga_Setting__c credentials. Returns null (not an exception) when the
+     * credentials are absent or no token comes back, so the caller can fall back.
+     */
+    @TestVisible
+    private String fetchOAuthSessionToken() {
+        Conga_Setting__c cfg = readCongaSetting();
+        if (cfg == null
+            || String.isBlank(cfg.Session_Token_Endpoint__c)
+            || String.isBlank(cfg.Session_Client_Id__c)
+            || String.isBlank(cfg.Session_Client_Secret__c)) {
+            return null;
+        }
+
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(cfg.Session_Token_Endpoint__c);
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+        req.setBody(
+            'grant_type=client_credentials'
+            + '&client_id=' + EncodingUtil.urlEncode(cfg.Session_Client_Id__c, 'UTF-8')
+            + '&client_secret=' + EncodingUtil.urlEncode(cfg.Session_Client_Secret__c, 'UTF-8')
+        );
+        req.setTimeout(60000);
+
+        HttpResponse res = new Http().send(req);
+        if (res.getStatusCode() != 200) {
+            return null;
+        }
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+        Object token = body.get('access_token');
+        return token == null ? null : String.valueOf(token);
+    }
+
+    private String buildPartnerServerUrl() {
+        return URL.getOrgDomainUrl().toExternalForm()
+            + '/services/Soap/u/59.0/' + UserInfo.getOrganizationId();
+    }
+
+    // ─── Failure path ────────────────────────────────────────────────────────
+
+    private void failWithLog(Compliance__c c, String reason, Exception ex) {
+        // Track D writing MSA_Status__c='Failed' re-fires the orchestration
+        // trigger; guard against logging the same failure twice on the rerun.
+        if (c.MSA_Status__c == STATUS_FAILED) {
+            Integer existing = [
+                SELECT COUNT()
+                FROM Execution_Log__c
+                WHERE Related_Record_Id__c = :String.valueOf(c.Id)
+                  AND Note__c = :TRACK_LABEL
+                  AND Type__c = 'Error'
+            ];
+            if (existing >= 1) {
+                return;
+            }
+        }
+
+        BoardingErrorLogService.log(
+            BoardingErrorLogService.Level.ERROR,
+            'TrackDMsaConga',
+            'tryAdvance',
+            c.Id,
+            c.Nuvei_Connect_Application_ID__c,
+            TRACK_LABEL,
+            'Track D: ' + reason,
+            ex,
+            null,
+            412
+        );
+
+        update new Compliance__c(
+            Id = c.Id,
+            MSA_Status__c = STATUS_FAILED,
+            MSA_Started_At__c = c.MSA_Started_At__c == null ? DateTime.now() : c.MSA_Started_At__c
+        );
+    }
+}

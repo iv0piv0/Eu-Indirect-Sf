@@ -1,4 +1,4 @@
-**
+/**
  * Wave 2 — P1 fixes regression tests for NuveiConnectWebhookHandler.
  * Covers gaps #6, #7, #8, #9, #10, #11, #16.
  *
@@ -121,9 +121,12 @@ private class WaveTwoWebhookFixesTest {
         List<Case> cases = [SELECT SB_Template__c, Contact_Information__c FROM Case
             WHERE Company_Profile__c = :c.Id LIMIT 1];
         System.assertEquals(1, cases.size(), 'Configuration Case should be created on APPROVED');
-        // gap #10
+                // gap #10
         System.assertEquals('Ecommerce', cases[0].SB_Template__c);
         // gap #11
         System.assertEquals('cpanel.admin@example.com', cases[0].Contact_Information__c);
+        // NEW — guard against re-adding the hardcoded Profile__c line
+        System.assertEquals(null, cases[0].Profile__c,
+            'Profile__c must NOT be hardcoded — it is now sourced from ExpressConfig.SB_Template__c via fallback');
     }
 }

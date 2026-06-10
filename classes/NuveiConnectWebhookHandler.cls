@@ -1047,7 +1047,6 @@ private static Boolean isApprovedStatus(String ncStatus) {
             c.Status             = 'In Progress';
             c.Reason             = 'New Merchant';
             c.Type               = 'Create new GW account with a new Multi';
-            c.Profile__c         = 'Merchant and merchantSite onboarding NCP acquiring CNP';
             c.Profile_Type__c    = 'None';
             if (!cPanelContacts.isEmpty()) {
                 c.ContactId              = cPanelContacts[0].Id;

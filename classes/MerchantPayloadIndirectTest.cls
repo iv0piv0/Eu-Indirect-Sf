@@ -23,8 +23,7 @@ private class MerchantPayloadIndirectTest {
         insert comp;
         Case cas = new Case(
             Company_Profile__c = comp.Id, ContactId = con.Id,
-            SB_PPP_Username__c = 'u@test.invalid', SB_Template__c = 'Ecommerce',
-            Profile__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+            SB_PPP_Username__c = 'u@test.invalid', SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
         insert cas;
         cas = MerchantOnboardingController.fetchCase(cas.Id);
@@ -61,8 +60,7 @@ private class MerchantPayloadIndirectTest {
         insert comp;
         Case cas = new Case(
             Company_Profile__c = comp.Id, ContactId = con.Id,
-            SB_PPP_Username__c = 'u@test.invalid', SB_Template__c = 'Ecommerce',
-            Profile__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+            SB_PPP_Username__c = 'u@test.invalid', SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
         insert cas;
         cas = MerchantOnboardingController.fetchCase(cas.Id);
@@ -101,8 +99,7 @@ private class MerchantPayloadIndirectTest {
         insert comp;
         Case cas = new Case(
             Company_Profile__c = comp.Id, ContactId = con.Id,
-            SB_PPP_Username__c = 'pf@test.invalid', SB_Template__c = 'Ecommerce',
-            Profile__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+            SB_PPP_Username__c = 'pf@test.invalid', SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
         insert cas;
         cas = MerchantOnboardingController.fetchCase(cas.Id);
@@ -132,8 +129,7 @@ private class MerchantPayloadIndirectTest {
         insert comp;
         Case cas = new Case(
             Company_Profile__c = comp.Id, ContactId = con.Id,
-            SB_PPP_Username__c = 'a@test.invalid', SB_Template__c = 'Ecommerce',
-            Profile__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+            SB_PPP_Username__c = 'a@test.invalid', SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
         insert cas;
         cas = MerchantOnboardingController.fetchCase(cas.Id);
@@ -183,8 +179,7 @@ private class MerchantPayloadIndirectTest {
             Case cas = new Case(
                 Company_Profile__c = comp.Id, ContactId = con.Id,
                 SB_PPP_Username__c = 'ef' + uniq + '@test.invalid',
-                SB_Template__c = 'Ecommerce',
-                Profile__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+                SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
             );
             insert cas;
             cas = MerchantOnboardingController.fetchCase(cas.Id);

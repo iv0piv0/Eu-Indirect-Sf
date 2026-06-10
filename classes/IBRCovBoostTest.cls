@@ -291,10 +291,9 @@ static void direct_tryTrackNcp_main_path_sets_in_progress() {
             Status = 'In Progress',
             Reason = 'New Merchant',
             Type = 'Create new GW account with a new Multi',
-            Profile__c = 'Merchant and merchantSite onboarding NCP acquiring CNP',
             Profile_Type__c = 'None',
             SB_PPP_Username__c = adm.Email,
-            SB_Template__c = 'Ecommerce'
+            SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
     }
 

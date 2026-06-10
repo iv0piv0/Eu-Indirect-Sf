@@ -109,7 +109,6 @@ private class TrackDMsaCongaTest {
             Status              = 'In Progress',
             Reason              = 'New Merchant',
             Type                = 'Create new GW account with a new Multi',
-            Profile__c          = 'Merchant and merchantSite onboarding NCP acquiring CNP',
             Profile_Type__c     = 'None',
             SB_PPP_Username__c  = 'cfg@test.invalid',
             SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'

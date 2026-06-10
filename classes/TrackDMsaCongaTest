@@ -104,7 +104,7 @@ private class TrackDMsaCongaTest {
             Profile__c          = 'Merchant and merchantSite onboarding NCP acquiring CNP',
             Profile_Type__c     = 'None',
             SB_PPP_Username__c  = 'cfg@test.invalid',
-            SB_Template__c      = 'Ecommerce'
+            SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
     }
 

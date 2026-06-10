@@ -118,7 +118,7 @@ private class WaveTwoWebhookFixesTest {
 
         Compliance__c c = [SELECT Id, Account__c FROM Compliance__c
             WHERE Nuvei_Connect_Application_ID__c = 'W2-APP-010' LIMIT 1];
-        List<Case> cases = [SELECT SB_Template__c, Contact_Information__c FROM Case
+        List<Case> cases = [SELECT SB_Template__c, Contact_Information__c, Profile__c FROM Case
             WHERE Company_Profile__c = :c.Id LIMIT 1];
         System.assertEquals(1, cases.size(), 'Configuration Case should be created on APPROVED');
                 // gap #10

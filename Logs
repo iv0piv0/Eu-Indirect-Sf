@@ -1,1217 +1,555 @@
-Apex Debug Log Detail
-User	Dimitar Panayotov	Date	05/06/2026, 10:41:34 EEST
-Status	Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)	Application	Unknown
-Request Type	Api	Operation	FutureHandler
-Duration (ms)	4,739	Log Size (bytes)	100,969
-Log	
-63.0 APEX_CODE,DEBUG;APEX_PROFILING,INFO;CALLOUT,INFO;DATA_ACCESS,INFO;DB,INFO;NBA,INFO;SYSTEM,DEBUG;VALIDATION,INFO;VISUALFORCE,INFO;WAVE,INFO;WORKFLOW,INFO
-10:41:30.0 (237144)|USER_INFO|[EXTERNAL]|0051O00000CupBm|dimitar.panayotov@nuvei.com|(GMT+03:00) Eastern European Summer Time (Europe/Sofia)|GMT+03:00
-10:41:30.0 (315927)|EXECUTION_STARTED
-10:41:30.0 (335114)|CODE_UNIT_STARTED|[EXTERNAL]|FutureHandler - state load
-10:41:30.0 (2679727)|CODE_UNIT_FINISHED|FutureHandler - state load
-10:41:30.0 (2698282)|EXECUTION_FINISHED
-10:41:30.32 (32334901)|USER_INFO|[EXTERNAL]|0051O00000CupBm|dimitar.panayotov@nuvei.com|(GMT+03:00) Eastern European Summer Time (Europe/Sofia)|GMT+03:00
-10:41:30.32 (32355491)|EXECUTION_STARTED
-10:41:30.32 (32374128)|CODE_UNIT_STARTED|[EXTERNAL]|01pPj00000KlNIb|MerchantOnboardingController.sendMerchantRequest(String, Boolean, Boolean)
-10:41:30.32 (34502513)|SYSTEM_MODE_ENTER|false
-10:41:30.32 (34842272)|SYSTEM_MODE_EXIT|false
-10:41:30.32 (34874608)|SYSTEM_MODE_ENTER|false
-10:41:30.32 (34978918)|USER_DEBUG|[104]|DEBUG|===> Inside sendMerchantRequest, caseId: 500Pj000016Of4U
-10:41:30.32 (35068024)|USER_DEBUG|[343]|DEBUG|===> Inside fetchCase, caseId: 500Pj000016Of4U
-10:41:30.32 (37976776)|SOQL_EXECUTE_BEGIN|[346]|Aggregations:0|SELECT Id, Company_Profile__c, Integration_Channel__c, ContactId, SB_PPP_Username__c, SB_PPP_Password__c, SB_Template__c, Profile__c, Location__c, Location__r.Name, Location__r.Email_Address__c, Location__r.Street__c, Location__r.City__c, Location__r.Country__c, Location__r.Postal_Code__c, Location__r.Phone_Number__c, Platform_Integration__c, Contact.FirstName, Contact.LastName, Contact.Email, Contact.Phone FROM Case WHERE Id = :tmpVar1 LIMIT 1
-10:41:30.32 (72562086)|SOQL_EXECUTE_END|[346]|Rows:1
-10:41:30.32 (72978257)|USER_DEBUG|[359]|DEBUG|===> Case fetched: Case:{Id=500Pj000016Of4UIAS, Company_Profile__c=a0m1O000008j6nNQAQ, Integration_Channel__c=Fasttrack, ContactId=0031O00003H2k1nQAB, SB_PPP_Username__c=dimitar.panayotov02570633, SB_Template__c=Merchant and merchantSite NCP acquiring CNP REST 2 fast track, Platform_Integration__c=- none -}
-10:41:30.32 (73450234)|SOQL_EXECUTE_BEGIN|[363]|Aggregations:0|SELECT Id, Name, FirstName, LastName, Email, MailingStreet, MailingCity, MailingCountry, MailingPostalCode, Phone FROM Contact WHERE Id = :tmpVar1
-10:41:30.32 (84826751)|SOQL_EXECUTE_END|[363]|Rows:1
-10:41:30.32 (85470650)|USER_DEBUG|[368]|DEBUG|===> Contact fetched: Contact:{Id=0031O00003H2k1nQAB, Name=David Hazan, FirstName=David, LastName=Hazan, Email=dimitarpanayotov@gmail.com, Phone=44876756457986}
-10:41:30.32 (88803728)|SOQL_EXECUTE_BEGIN|[373]|Aggregations:0|SELECT Id, Name, Registered_Country_Code2__c, Registered_Zip_Postal_Code__c, MCC_Code__c, VAT_Number__c, Registered_Street__c, Registered_City__c, Primary_Contact__r.Phone, Primary_Contact__r.Id, Primary_Contact__r.Email, Primary_Contact__r.FirstName, Primary_Contact__r.LastName, Primary_Contact__r.MailingStreet, Primary_Contact__r.MailingCity, Primary_Contact__r.MailingCountry, Primary_Contact__r.MailingPostalCode, MSA_Effective_Date__c, City_field__c, Merchant_Tier__c, State_USA__c, Registered_Country__c, Primary_Contact__c, Account__r.Id, Account__r.Name, Sales_Rep__c, Sales_Rep__r.FirstName, Sales_Rep__r.LastName, Sales_Rep__r.Email, Account_Manager__c, Account_Manager__r.FirstName, Account_Manager__r.LastName, Account_Manager__r.Email, Account_Operational_Manager_CP__c, Account_Operational_Manager_CP__r.FirstName, Account_Operational_Manager_CP__r.LastName, Account_Operational_Manager_CP__r.Email, From_Reseller__r.Id, From_Reseller__r.Name, From_Reseller__r.Nuvei_Partner_ID__c, From_Reseller__r.Credentials_URL__c, From_Reseller__r.Overwrite_Financial_Vertical__c, Overwrite_Financial_Vertical__c, Origin_Region__c, Visa_Payfac_ID__c, Mastercard_Payfac_ID__c, Nuvei_Connect_Application_ID__c, EU_Indirect_Orchestration__c FROM Compliance__c WHERE Id = :tmpVar1
-10:41:30.32 (174683978)|SOQL_EXECUTE_END|[373]|Rows:1
-10:41:30.32 (175245568)|USER_DEBUG|[392]|DEBUG|===> Compliance Profile fetched: Compliance__c:{Id=a0m1O000008j6nNQAQ, Name=REST 2.0 onboarding test LTD, Registered_Country_Code2__c=GBR, Registered_Zip_Postal_Code__c=7654654, MCC_Code__c=5817, VAT_Number__c=N/A, Registered_Street__c=baker street 22, Registered_City__c=London, Primary_Contact__c=0031O00003H2k1nQAB, City_field__c=davidh.com, Merchant_Tier__c=5, State_USA__c=England and Wales, Registered_Country__c=United Kingdom, Account__c=0011O000029FeRMQA0, EU_Indirect_Orchestration__c=false}
-10:41:30.32 (177314524)|SOQL_EXECUTE_BEGIN|[124]|Aggregations:0|SELECT MO_SB_endpoint__c, MO_prod_endpoint__c, MO_SB_token_endpoint__c, MO_prod_token_endpoint__c, Exception_email__c, MO_SB_secret__c, MO_prod_secret__c FROM ExpressConfig__c LIMIT 1
-10:41:30.32 (214845055)|SOQL_EXECUTE_END|[124]|Rows:1
-10:41:30.32 (215932918)|SOQL_EXECUTE_BEGIN|[132]|Aggregations:0|SELECT Name FROM Website__c WHERE Compliance__c = :tmpVar1 ORDER BY Primary_URL__c DESC NULLS FIRST, CreatedDate ASC NULLS FIRST LIMIT 1
-10:41:30.32 (233617564)|SOQL_EXECUTE_END|[132]|Rows:1
-10:41:30.32 (233906976)|USER_DEBUG|[144]|DEBUG|endpoint: https://sandbox.nuvei.com/selfconfiguration/api/merchants
-10:41:30.32 (233923138)|USER_DEBUG|[145]|DEBUG|tokenEndpoint: https://accounts.preproduction.nuvei.com/connect/token?client_credentials
-10:41:30.32 (233931012)|USER_DEBUG|[146]|DEBUG|clientSecret: rSO25LKrOysdKjwB1G5p4UKIvAK4FkNRyECPDlGqWGogx6qZqyzjbrbRx9mEZInU
-10:41:30.32 (237608954)|CALLOUT_REQUEST|[584]|System.HttpRequest[Endpoint=https://accounts.preproduction.nuvei.com/connect/token?client_credentials, Method=POST]
-10:41:30.32 (825512216)|CALLOUT_RESPONSE|[584]|System.HttpResponse[Status=OK, StatusCode=200]
-10:41:30.32 (826570802)|USER_DEBUG|[150]|DEBUG|accessToken: eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3ODVCQ0Q3RTYzQjc4MUE2QzRCQkY2NjlERkYzMTEzMTcxMDNGNDRSUzI1NiIsIng1dCI6Iko0VzgxLVk3ZUJwc1M3OW1uZjh4RXhjUVAwUSIsInR5cCI6ImF0K2p3dCJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLnByZXByb2R1Y3Rpb24ubnV2ZWkuY29tIiwibmJmIjoxNzgwNjQ1MjkwLCJpYXQiOjE3ODA2NDUyOTAsImV4cCI6MTc4MTAwNTI5MCwiYXVkIjpbImRpZ2l0YWwuZ2F0ZXdheS5ib2FyZGluZy5hcGkiLCJoYWwubmNwLm1pY3Jvc2VydmljZSIsInFhX25hX2JhY2tvZmZpY2UuYXBpIl0sInNjb3BlIjpbImRpZ2l0YWwuZ2F0ZXdheS5ib2FyZGluZy5hcGkuc2NvcGUiXSwiY2xpZW50X2lkIjoicHJvY2Vzc21hbmFnZXIiLCJpbmZvc2VjX2RlY3J5cHRfaWZfc291cmNlX2lzIjoiaGFsLmFwcGxpbmsuYXBpIiwianRpIjoiQjhDMDg4MTRENjhFRDdGQjlGODU2NzIzMDJFMDVFQkIifQ.LOWtu-RPOlozlVIhoplJ96MBgSQA4x-nzn9h5qVTtCqSUwj7AAnwmGpoRno9GRTvs769T2RA3hzC0BKrcbKPNUrDI1LkackI3tZByD5xxgcdABXGDqtQ6UNVuQM0ss_1PZ0m6KB1G29IbgEXeAf-fDpL0ZhjDkHwz0f_snS-yFIzYyJ9tRr-SMHCLczl7EDnzu7oRiyGRZHOCsLrYmgRNTn-4AytlTk-kPdgUaASSkrgkrm5QBNrcQumQygFu6l4lyIT4IXBtyfC1oFxLQlIgE439M4pVt32IxeceURdMJQ70sQ58qbYIgHIlJwjg2FaMA41C_5VzsE-WLj0S0C_QA
-10:41:30.32 (836823789)|SOQL_EXECUTE_BEGIN|[65]|Aggregations:0|SELECT Code__c FROM States__c WHERE Name = :tmpVar1 LIMIT 1
-10:41:30.32 (910392372)|SOQL_EXECUTE_END|[65]|Rows:1
-10:41:30.32 (913663334)|SOQL_EXECUTE_BEGIN|[91]|Aggregations:0|SELECT ISO_2__c FROM Countries__c WHERE Name = :tmpVar1 LIMIT 1
-10:41:30.32 (959579911)|SOQL_EXECUTE_END|[91]|Rows:1
-10:41:30.32 (960466553)|USER_DEBUG|[195]|DEBUG|cas.Contact: Contact:{Id=0031O00003H2k1nQAB, Name=David Hazan, FirstName=David, LastName=Hazan, Email=dimitarpanayotov@gmail.com, Phone=44876756457986}
-10:41:30.32 (962346250)|SOQL_EXECUTE_BEGIN|[428]|Aggregations:0|SELECT Name FROM Website__c WHERE Compliance__c = :tmpVar1 ORDER BY Primary_URL__c DESC NULLS FIRST, CreatedDate ASC NULLS FIRST LIMIT 1
-10:41:30.32 (975529105)|SOQL_EXECUTE_END|[428]|Rows:1
-10:41:30.32 (976321065)|SOQL_EXECUTE_BEGIN|[65]|Aggregations:0|SELECT Code__c FROM States__c WHERE Name = :tmpVar1 LIMIT 1
-10:41:30.32 (988022732)|SOQL_EXECUTE_END|[65]|Rows:1
-10:41:30.32 (988599389)|SOQL_EXECUTE_BEGIN|[91]|Aggregations:0|SELECT ISO_2__c FROM Countries__c WHERE Name = :tmpVar1 LIMIT 1
-10:41:30.32 (999332530)|SOQL_EXECUTE_END|[91]|Rows:1
-10:41:30.32 (1000470438)|SOQL_EXECUTE_BEGIN|[65]|Aggregations:0|SELECT Code__c FROM States__c WHERE Name = :tmpVar1 LIMIT 1
-10:41:30.32 (1008844293)|SOQL_EXECUTE_END|[65]|Rows:1
-10:41:30.32 (1016715955)|USER_DEBUG|[199]|DEBUG|payload: {
-  "address" : {
-    "city" : "London",
-    "country" : "gb",
-    "line1" : "baker street 22",
-    "postalCode" : "7654654",
-    "state" : "ENG"
-  },
-  "clientManagementDetails" : {
-    "account" : {
-      "id" : "0011O000029FeRMQA0",
-      "name" : "DavidH LTD"
-    },
-    "businessOriginRegion" : { },
-    "company" : {
-      "id" : "a0m1O000008j6nNQAQ",
-      "name" : "REST 2.0 onboarding test LTD"
-    },
-    "contact" : [ { } ],
-    "customerIntegrationChannel" : "Fasttrack",
-    "industryIndication" : { },
-    "integrationCaseId" : "500Pj000016Of4UIAS",
-    "introducer" : { },
-    "platform" : "- none -"
-  },
-  "email" : "dimitarpanayotov@gmail.com",
-  "externalId" : "a0m1O000008j6nNQAQ",
-  "isPayFac" : false,
-  "merchantCategoryCode" : "5817",
-  "name" : "REST 2.0 onboarding test LTD",
-  "paymentProcessing" : {
-    "address" : {
-      "city" : "London",
-      "country" : "gb",
-      "line1" : "baker street 22",
-      "postalCode" : "7654654",
-      "state" : "ENG"
-    },
-    "contacts" : [ {
-      "email" : "dimitarpanayotov@gmail.com",
-      "name" : {
-        "first" : "David",
-        "last" : "Hazan"
-      },
-      "roles" : [ "Contact" ]
-    } ],
-    "email" : "dimitarpanayotov@gmail.com",
-    "name" : "REST 2.0 onboarding test LTD",
-    "phoneNumber" : "davidh.com",
-    "website" : "www.davidh.com"
-  },
-  "phoneNumber" : "davidh.com",
-  "profile" : "Merchant and merchantSite NCP acquiring CNP REST 2 fast track",
-  "taxId" : "N/A",
-  "tier" : 5,
-  "users" : [ {
-    "email" : "dimitarpanayotov@gmail.com",
-    "name" : {
-      "first" : "David",
-      "last" : "Hazan"
-    },
-    "password" : "Sk8Fn6r3",
-    "roles" : [ "management" ],
-    "username" : "dimitar.panayotov02570633"
-  } ]
-}
-10:41:30.32 (1017411265)|CALLOUT_REQUEST|[211]|System.HttpRequest[Endpoint=https://sandbox.nuvei.com/selfconfiguration/api/merchants, Method=POST]
-10:41:33.554 (3554013368)|CALLOUT_RESPONSE|[211]|System.HttpResponse[Status=Internal Server Error, StatusCode=500]
-10:41:33.554 (3554150762)|USER_DEBUG|[213]|DEBUG|=== Request Sent ===
-10:41:33.554 (3554278840)|USER_DEBUG|[214]|DEBUG|Request URL: https://sandbox.nuvei.com/selfconfiguration/api/merchants
-10:41:33.554 (3554291331)|USER_DEBUG|[215]|DEBUG|Request Method: POST
-10:41:33.554 (3554342366)|USER_DEBUG|[216]|DEBUG|Request Headers: application/json
-10:41:33.554 (3554410255)|USER_DEBUG|[217]|DEBUG|Request Body: {"users":[{"username":"dimitar.panayotov02570633","roles":["management"],"password":"Sk8Fn6r3","name":{"last":"Hazan","first":"David"},"email":"dimitarpanayotov@gmail.com"}],"tier":5,"taxId":"N/A","profile":"Merchant and merchantSite NCP acquiring CNP REST 2 fast track","phoneNumber":"davidh.com","paymentProcessing":{"website":"www.davidh.com","phoneNumber":"davidh.com","name":"REST 2.0 onboarding test LTD","email":"dimitarpanayotov@gmail.com","contacts":[{"roles":["Contact"],"name":{"last":"Hazan","first":"David"},"email":"dimitarpanayotov@gmail.com"}],"address":{"state":"ENG","postalCode":"7654654","line1":"baker street 22","country":"gb","city":"London"}},"name":"REST 2.0 onboarding test LTD","merchantCategoryCode":"5817","isPayFac":false,"externalId":"a0m1O000008j6nNQAQ","email":"dimitarpanayotov@gmail.com","clientManagementDetails":{"platform":"- none -","introducer":{},"integrationCaseId":"500Pj000016Of4UIAS","industryIndication":{},"customerIntegrationChannel":"Fasttrack","contact":[{}],"company":{"name":"REST 2.0 onboarding test LTD","id":"a0m1O000008j6nNQAQ"},"businessOriginRegion":{},"account":{"name":"DavidH LTD","id":"0011O000029FeRMQA0"}},"address":{"state":"ENG","postalCode":"7654654","line1":"baker street 22","country":"gb","city":"London"}}
-10:41:33.554 (3554427627)|USER_DEBUG|[218]|DEBUG|===================
-10:41:33.554 (3554434184)|USER_DEBUG|[220]|DEBUG|=== Response Received ===
-10:41:33.554 (3554776094)|USER_DEBUG|[221]|DEBUG|Response Status Code: 500
-10:41:33.554 (3554824533)|USER_DEBUG|[222]|DEBUG|Response Body: {"status":500,"code":"SE.InternalErrors","title":"Expected internal server error","detail":"Undefined array key \"roles\"","type":"https:\/\/nuvei.atlassian.net\/wiki\/spaces\/SA\/pages\/5593629554\/Error+Management+Standard#SE.InternalErrors"}
-10:41:33.554 (3554854334)|USER_DEBUG|[238]|DEBUG|Response Status is not successful, saving response to Case...
-10:41:33.554 (3555361597)|SOQL_EXECUTE_BEGIN|[243]|Aggregations:0|SELECT Id, Configuration_Issue_Details__c FROM Compliance__c WHERE Id = :tmpVar1 LIMIT 1
-10:41:33.554 (3575903125)|SOQL_EXECUTE_END|[243]|Rows:1
-10:41:33.554 (3576263394)|DML_BEGIN|[250]|Op:Update|Type:Compliance__c|Rows:1
-10:41:33.554 (3607114129)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:01I300000027f4c
-10:41:33.554 (3608377096)|CODE_UNIT_FINISHED|Flow:01I300000027f4c
-10:41:33.554 (3619017381)|CODE_UNIT_STARTED|[EXTERNAL]|01q1O000000k9fA|ComplianceTrigger on Compliance trigger event BeforeUpdate|__sfdc_trigger/ComplianceTrigger
-10:41:33.554 (3623309370)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3623337293)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (3623410328)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3623450432)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (3623453968)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3623456369)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (3623505223)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3623636480)|SYSTEM_MODE_EXIT|false
-10:41:33.623 (3623652590)|CUMULATIVE_LIMIT_USAGE
-10:41:33.623 (3623652590)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 12 out of 200
-  Number of query rows: 12 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 150 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 0 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:33.623 (3623652590)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:33.554 (3623923100)|CODE_UNIT_FINISHED|ComplianceTrigger on Compliance trigger event BeforeUpdate|__sfdc_trigger/ComplianceTrigger
-10:41:33.554 (3777602740)|CODE_UNIT_STARTED|[EXTERNAL]|Validation:Compliance:a0m1O000008j6nN
-10:41:33.554 (3777633825)|VALIDATION_RULE|03dPj0000000wvF|AUD_available_for_Nuvei_Australia_Pty_Li
-10:41:33.554 (3777905481)|VALIDATION_FORMULA|TEXT(Managing_Company__c) <> "Nuvei Australia Pty Limited" &&   TEXT(Fees_Currency__c) = "AUD"|Managing_Company__c=null , Fees_Currency__c=EUR
-10:41:33.554 (3777912970)|VALIDATION_PASS
-10:41:33.554 (3777915208)|VALIDATION_RULE|03d1O0000009Nve|Buy_rates_for_percent_above_buy_blended
-10:41:33.554 (3778076387)|VALIDATION_FORMULA|AND(TEXT (Introducer_Commission_Model__c) = "% above buy rate (blended)", ISBLANK(Buy_Rate_actually_received_by_Safecharge__c))|Introducer_Commission_Model__c=null , Buy_Rate_actually_received_by_Safecharge__c=null
-10:41:33.554 (3778083944)|VALIDATION_PASS
-10:41:33.554 (3778085501)|VALIDATION_RULE|03d1O0000009Nvj|Buy_rates_for_percent_above_buy_IC
-10:41:33.554 (3778140585)|VALIDATION_FORMULA|AND(TEXT (Introducer_Commission_Model__c) = "% above buy rate (IC)", ISBLANK(Buy_Rate_actually_received_by_Safecharge__c) )|Introducer_Commission_Model__c=null , Buy_Rate_actually_received_by_Safecharge__c=null
-10:41:33.554 (3778143709)|VALIDATION_PASS
-10:41:33.554 (3778144759)|VALIDATION_RULE|03dPj000000jukP|CAD_available_for_Nuvei_Tech_Corp
-10:41:33.554 (3778242789)|VALIDATION_FORMULA|TEXT(Managing_Company__c) <> "Nuvei Technologies Corp" &&
-TEXT(Managing_Company__c) <> "Nuvei Corporation" &&   TEXT(Fees_Currency__c) = "CAD"|Managing_Company__c=null , Fees_Currency__c=EUR
-10:41:33.554 (3778246262)|VALIDATION_PASS
-10:41:33.554 (3778247407)|VALIDATION_RULE|03d5Y000001m4Ew|Cashier_Fee_cannot_be_empty
-10:41:33.554 (3778422496)|VALIDATION_FORMULA|ISBLANK(Cashier_fee__c) && CONTAINS(RecordType.Name, "Nuvei")  && DateValue(CreatedDate) > Date(2020,01,01)|CreatedDate=2019-01-15 15:17:27 , Cashier_fee__c=0.03 , RecordType.Name=Express
-10:41:33.554 (3778426165)|VALIDATION_PASS
-10:41:33.554 (3778427336)|VALIDATION_RULE|03d5Y000000Adke|Close_Date_Required
-10:41:33.554 (3778484525)|VALIDATION_FORMULA|AND(ISPICKVAL(Compliance_Status__c, "Closed"),
-   ISBLANK(Close_Date__c))|Compliance_Status__c=In Pre-Approval , Close_Date__c=null
-10:41:33.554 (3778487331)|VALIDATION_PASS
-10:41:33.554 (3778488257)|VALIDATION_RULE|03d1O000001DZae|Commission_cannot_be_0
-10:41:33.554 (3778525181)|VALIDATION_FORMULA|Reseller_Commission__c = 0|Reseller_Commission__c=null
-10:41:33.554 (3778527591)|VALIDATION_PASS
-10:41:33.554 (3778528636)|VALIDATION_RULE|03dPj0000001PM9|Company_name_to_be_changed_only_UW
-10:41:33.554 (3797568603)|VALIDATION_FORMULA|ISCHANGED(Name) && 
-CONTAINS( TEXT(Compliance_Status__c) , "Live") && 
-NOT(CONTAINS( Name , "demo")) && 
-$Profile.Id <> "00e30000001wPru" && 
-$Profile.Id <> "00e14000001x8p0" && 
-$Profile.Id <> "00e14000001dsrM" && 
-$Profile.Id <> "00e1O000001x9YU" && 
-$Profile.Id <> "00ea0000000jQe2"&& 
-$User.Username <> 'david.hazan@nuvei.com' && 
-$User.Username <> 'dimitar.delchev@nuvei.com' && 
-$User.Username <> 'ivaylo.nikolov@nuvei.com' &&
-NOT(ISPICKVAL(Managing_Company__c, "Nuvei Technologies Inc.")) &&
-NOT(ISPICKVAL(Managing_Company__c, "Nuvei Technologies Corp"))|Compliance_Status__c=In Pre-Approval , $Profile.Id=00ea0000000jQe2 , $User.Username=dimitar.panayotov@nuvei.com , Managing_Company__c=null , Name=REST 2.0 onboarding test LTD
-10:41:33.554 (3797592006)|VALIDATION_PASS
-10:41:33.554 (3797593968)|VALIDATION_RULE|03d1O000001Luzu|CP_Edit_Open_Date
-10:41:33.554 (3797947079)|VALIDATION_FORMULA|ISCHANGED( Open_Date__c) &&
-($User.ProfileId <> '00e30000001wPru' &&
-$User.ProfileId <> '00e30000001g4RQ'&&
-$User.ProfileId <> '00e14000000jVHa' &&
-$User.ProfileId <> '00e14000001x8p0' &&
-$User.ProfileId <> '00e1O000002GVB5' &&
-$User.ProfileId <> '00ea0000000jQ06' &&
-$User.ProfileId <> '00e30000001MQiE' &&
-$User.ProfileId <> '00ea0000000jQe2' &&
-$User.ProfileId <> '00e5Y000002Gz1w' &&
-$User.ProfileId <> '00e5Y000003bPY2')|Open_Date__c=null , $User.ProfileId=00ea0000000jQe2
-10:41:33.554 (3797955637)|VALIDATION_PASS
-10:41:33.554 (3797957139)|VALIDATION_RULE|03d1O000001LwOR|DCC_max_value
-10:41:33.554 (3798027404)|VALIDATION_FORMULA|DCC__c > 0.50|DCC__c=0
-10:41:33.554 (3798030892)|VALIDATION_PASS
-10:41:33.554 (3798032219)|VALIDATION_RULE|03d1O000001Q8So|Declined_Reason_mandatory
-10:41:33.554 (3798141326)|VALIDATION_FORMULA|AND ( 
-TEXT( Compliance_Status__c ) = 'Declined',
-ISBLANK(TEXT( Declined_Reason__c ))
-)|Compliance_Status__c=In Pre-Approval , Declined_Reason__c=null
-10:41:33.554 (3798144745)|VALIDATION_PASS
-10:41:33.554 (3798146063)|VALIDATION_RULE|03dPj000000cIgf|Dormant_Compliance_status_by_Risk
-10:41:33.554 (3798431022)|VALIDATION_FORMULA|OR(
-AND(
-ISCHANGED(Compliance_Status__c),
-ISPICKVAL(Compliance_Status__c, "Dormant") ,
-$Profile.Id <> "00e14000001ZgIZ",
-$Profile.Id <> "00e14000001dtZP",
-$Profile.Id <> "00e1O000001ZgvW",
-$Profile.Id <> "00e1O000002Kho7",
-$Profile.Id <> "00e30000001wPru",
-OR(
-ISPICKVAL(Managing_Company__c, "Safecharge HK Limited"),
-ISPICKVAL(Managing_Company__c, "Safecharge PTE Limited"),
-ISPICKVAL(Managing_Company__c, "Nuvei Australia Pty Limited"))),
-AND(
-ISCHANGED(Compliance_Status__c),
-ISPICKVAL(Compliance_Status__c, "Dormant") ,
-NOT(ISPICKVAL(Managing_Company__c, "Safecharge HK Limited")),
-NOT(ISPICKVAL(Managing_Company__c, "Safecharge PTE Limited")),
-NOT(ISPICKVAL(Managing_Company__c, "Nuvei Australia Pty Limited")),
-$Profile.Id <> "00e14000001ZgIZ",
-$Profile.Id <> "00e14000001dtZP",
-$Profile.Id <> "00e1O000001ZgvW",
-$Profile.Id <> "00e1O000002Kho7"))|Compliance_Status__c=In Pre-Approval , $Profile.Id=00ea0000000jQe2 , Managing_Company__c=null
-10:41:33.554 (3798440433)|VALIDATION_PASS
-10:41:33.554 (3798441890)|VALIDATION_RULE|03d5Y000001MOSz|GW_Processing_Fee_cannot_be_empty
-10:41:33.554 (3798543100)|VALIDATION_FORMULA|ISBLANK(GW_Processing_Fee__c ) && CONTAINS(RecordType.Name, "Nuvei")|RecordType.Name=Express , GW_Processing_Fee__c=0.15
-10:41:33.554 (3798548789)|VALIDATION_PASS
-10:41:33.554 (3798550839)|VALIDATION_RULE|03d14000000thRk|Holdback_for_APMs_edited_only_by_Risk
-10:41:33.554 (3798758940)|VALIDATION_FORMULA|ISCHANGED(Holdback_for_APMs__c) &&  
-($User.ProfileId <> '00e1O000001Zgwo' &&
-$User.ProfileId <> '00e1O000002KhoR' &&
-$User.ProfileId <> '00e30000001g4RQ' && 
-$User.Id <> '0055Y00000Gd389'
-&& $User.Id <> '0055Y00000HxVGa'
-&& $User.Id <> '0055Y00000I7146'
-&& $User.Id <> '005Pj00000Faent'
-)|Holdback_for_APMs__c=5.00 , $User.Id=0051O00000CupBm , $User.ProfileId=00ea0000000jQe2
-10:41:33.554 (3798764359)|VALIDATION_PASS
-10:41:33.554 (3798783184)|VALIDATION_RULE|03d14000000qLX3|Industry_Validation
-10:41:33.554 (3800485943)|VALIDATION_FORMULA|Bank_Count__c > 0 && $Profile.Id  != '00e30000001g4RQ' && $Profile.Id  != '00e30000001wPru' && (PRIORVALUE( Industry_For_Pricing__c )) <>"" && ISCHANGED(Industry_For_Pricing__c ) && NOT(ISCHANGED(  Integration_Status__c  ))|$Profile.Id=00ea0000000jQe2 , Integration_Status__c=New , Bank_Count__c=3 , Industry_For_Pricing__c=ECOMMERCE
-10:41:33.554 (3800499044)|VALIDATION_PASS
-10:41:33.554 (3800501191)|VALIDATION_RULE|03d14000000qJAC|Minimum_monthly_Limit_logic_2
-10:41:33.554 (3800618547)|VALIDATION_FORMULA|OR( NOT(ISBLANK(Minimum_monthly_fee_Limit_1__c)) && ISBLANK(Minimum_monthly_fee_Value_2__c), 
-		ISBLANK(Minimum_monthly_fee_Limit_1__c) && NOT(ISBLANK(Minimum_monthly_fee_Value_2__c)), 
-			Minimum_monthly_fee_Value_2__c <= Minimum_monthly_fee_Value_1__c 
-		)|Minimum_monthly_fee_Value_2__c=null , Minimum_monthly_fee_Value_1__c=120 , Minimum_monthly_fee_Limit_1__c=null
-10:41:33.554 (3800623845)|VALIDATION_PASS
-10:41:33.554 (3800625626)|VALIDATION_RULE|03d14000000qJAH|Minimum_monthly_Limit_logic_3
-10:41:33.554 (3800732230)|VALIDATION_FORMULA|OR( NOT(ISBLANK(Minimum_monthly_fee_Limit_2__c)) && ISBLANK(Minimum_monthly_fee_Value_3__c), 
-		ISBLANK(Minimum_monthly_fee_Limit_2__c) && NOT(ISBLANK(Minimum_monthly_fee_Value_3__c)), 
-			Minimum_monthly_fee_Value_3__c <= Minimum_monthly_fee_Value_2__c 
-		)|Minimum_monthly_fee_Value_2__c=null , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Limit_2__c=null
-10:41:33.554 (3800736650)|VALIDATION_PASS
-10:41:33.554 (3800738180)|VALIDATION_RULE|03d14000000qJAM|Minimum_monthly_Limit_logic_4
-10:41:33.554 (3800810218)|VALIDATION_FORMULA|OR( NOT(ISBLANK(Minimum_monthly_fee_Limit_3__c)) && ISBLANK(Minimum_monthly_fee_Value_4__c), 
-		ISBLANK(Minimum_monthly_fee_Limit_3__c) && NOT(ISBLANK(Minimum_monthly_fee_Value_4__c)), 
-			Minimum_monthly_fee_Value_4__c <= Minimum_monthly_fee_Value_3__c 
-		)|Minimum_monthly_fee_Value_4__c=null , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Limit_3__c=null
-10:41:33.554 (3800813877)|VALIDATION_PASS
-10:41:33.554 (3800815132)|VALIDATION_RULE|03d140000009L0v|NON_Minimum_and_term_HARD_limits
-10:41:33.554 (3801078517)|VALIDATION_FORMULA|AND( 
-	Non_standard_terms__c = true,
-        Remittance_Currency_old__c = "Euro",
-        TEXT(Remittance_Cycle__c) = "Weekly with 1 week delay",
-	NOT(OR( 
-		ISBLANK(Minimum_monthly_fee_Value_1__c), 
-		(Minimum_monthly_fee_Value_1__c == 0 && (Minimum_monthly_fee_Limit_1__c > 9 &#124;&#124; ISBLANK(Minimum_monthly_fee_Limit_1__c )) ), 
-		(Minimum_monthly_fee_Value_1__c < 2000 && ISBLANK(Minimum_monthly_fee_Limit_1__c ) ), 
-		(Minimum_monthly_fee_Value_1__c < 2000 && Minimum_monthly_fee_Limit_1__c > 9 ), 
-
-		(NOT(ISBLANK(Minimum_monthly_fee_Value_2__c)) && Minimum_monthly_fee_Value_2__c < 2000 && (Minimum_monthly_fee_Limit_1__c >= 9 &#124;&#124; ISBLANK(Minimum_monthly_fee_Value_3__c) ) ), 
-		(NOT(ISBLANK(Minimum_monthly_fee_Value_3__c)) && Minimum_monthly_fee_Value_3__c < 2000 && (Minimum_monthly_fee_Limit_2__c >= 9 &#124;&#124; ISBLANK(Minimum_monthly_fee_Value_4__c) ) ), 
-		(NOT(ISBLANK(Minimum_monthly_fee_Value_4__c)) && Minimum_monthly_fee_Value_4__c < 2000 && Minimum_monthly_fee_Limit_3__c >= 9 ), 
-		(NOT(ISBLANK(Minimum_monthly_fee_Value_4__c)) && Minimum_monthly_fee_Value_4__c < 2000 ), 
-
-		(ISNULL(Contract_Term__c) &#124;&#124; Contract_Term__c < 12) 
-	))
-)|Remittance_Currency_old__c=EUR, GBP, USD , Minimum_monthly_fee_Value_2__c=null , Contract_Term__c=36 , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Value_4__c=null , Minimum_monthly_fee_Limit_3__c=null , Non_standard_terms__c=1 , Minimum_monthly_fee_Value_1__c=120 , Remittance_Cycle__c=Weekly with 3 business days delay , Minimum_monthly_fee_Limit_1__c=null , Minimum_monthly_fee_Limit_2__c=null
-10:41:33.554 (3801091983)|VALIDATION_PASS
-10:41:33.554 (3801093576)|VALIDATION_RULE|03dPj0000004raP|No_deletion_of_Settlement_threshold
-10:41:33.554 (3801200746)|VALIDATION_FORMULA|ISCHANGED( Settlement_threshold__c)   &&   ISBLANK(TEXT(Settlement_threshold__c))|Settlement_threshold__c=null
-10:41:33.554 (3801205015)|VALIDATION_PASS
-10:41:33.554 (3801206387)|VALIDATION_RULE|03d14000000thPt|on_finance_admin_issue_set_the_details
-10:41:33.554 (3802560673)|VALIDATION_FORMULA|TEXT( Finance_admin_status__c )  = 'Issue' &&
-ISBLANK(    finance_Issue_details__c )|finance_Issue_details__c=Set it to no payout until further notice from UW for banking details. , Finance_admin_status__c=Installed
-10:41:33.554 (3802570694)|VALIDATION_PASS
-10:41:33.554 (3802572585)|VALIDATION_RULE|03d14000000thPo|on_RSI_issue_set_the_details
-10:41:33.554 (3802714905)|VALIDATION_FORMULA|TEXT(MRSI_status__c )  = 'Issue' &&
-ISBLANK(   MRSI_Issue_details__c )|MRSI_status__c=null , MRSI_Issue_details__c=null
-10:41:33.554 (3802718160)|VALIDATION_PASS
-10:41:33.554 (3802719369)|VALIDATION_RULE|03d14000001Hz7D|Rebilling_system_Setup_fee
-10:41:33.554 (3802757609)|VALIDATION_FORMULA|ISBLANK(Rebilling_system_Setup__c)|Rebilling_system_Setup__c=0
-10:41:33.554 (3802759993)|VALIDATION_PASS
-10:41:33.554 (3802761176)|VALIDATION_RULE|03d5Y000001MOP8|Remittance_cycle_required
-10:41:33.554 (3802968589)|VALIDATION_FORMULA|OR(RecordType.Name = "Nuvei APAC", 
-RecordType.Name = "Nuvei Global",
-RecordType.Name = "Nuvei LATAM",
-RecordType.Name = "Nuvei Mexico",
-RecordType.Name = "Nuvei UAE",
-RecordType.Name = "Nuvei UK") 
-
-&& ISBLANK(TEXT(MSA_Status__c))
-
-&& ISBLANK(TEXT(Remittance_Cycle__c))
-
-&& DATEVALUE(CreatedDate) > DATE(2022,01,01)
-
-&& NOT(ISBLANK(TEXT(Managing_Company__c)))|Remittance_Cycle__c=Weekly with 3 business days delay , MSA_Status__c=signed , CreatedDate=2019-01-15 15:17:27 , RecordType.Name=Express , Managing_Company__c=null
-10:41:33.554 (3802974037)|VALIDATION_PASS
-10:41:33.554 (3802975398)|VALIDATION_RULE|03d14000000qJCw|Risk_status_manual_set
-10:41:33.554 (3803250458)|VALIDATION_FORMULA|AND(    NOT(CONTAINS($Profile.Name, 'Administrator')),
-         ISCHANGED(Processing_History__c) ,
-        NOT(CONTAINS($Profile.Name, 'Risk')),
-        NOT(CONTAINS($Profile.Name, 'automation')),
-		OR(ISPICKVAL( Processing_History__c, 'Approved') , ISPICKVAL( Processing_History__c, 'Complete'))
- )|$Profile.Name=Integration Team , Processing_History__c=null
-10:41:33.554 (3803258505)|VALIDATION_PASS
-10:41:33.554 (3803260338)|VALIDATION_RULE|03d5Y000001MOIP|State_required_for_US_Canada
-10:41:33.554 (3803384818)|VALIDATION_FORMULA|TEXT(Jurisdiction__c) = "USA" &&  (TEXT(Registered_Country__c) = "Canada"  &#124;&#124;  TEXT(Registered_Country__c) = "United States") &&   TEXT ( State_USA__c ) = "" && TEXT(Industry__c) <> "Reseller" && TEXT(Industry__c) <> "ISO" && TEXT(Industry__c) <> "PayFac"|Industry__c=Digital Goods - Software Applications (Excluding Games) , Jurisdiction__c=null , Registered_Country__c=United Kingdom , State_USA__c=England and Wales
-10:41:33.554 (3803390191)|VALIDATION_PASS
-10:41:33.554 (3803391670)|VALIDATION_RULE|03d14000001Hz7w|Tokenization_Recurring_fee
-10:41:33.554 (3803427565)|VALIDATION_FORMULA|ISBLANK(Tokenization_recurring__c)|Tokenization_recurring__c=0
-10:41:33.554 (3803429931)|VALIDATION_PASS
-10:41:33.554 (3803431187)|VALIDATION_RULE|03d5Y000001QvWj|Gaming_not_allowed_for_Safecharge_PTE_Li
-10:41:33.554 (3803554230)|VALIDATION_FORMULA|OR(TEXT(Managing_Company__c) = "Safecharge PTE Limited", TEXT(Managing_Company__c) = "Nuvei Singapore Pte. Ltd")  &&  Industry_For_Pricing__c = "Gaming"|Industry_For_Pricing__c=ECOMMERCE , Managing_Company__c=null
-10:41:33.554 (3803558520)|VALIDATION_PASS
-10:41:33.554 (3803559779)|VALIDATION_RULE|03dPj000000bhu1|MSA_status_change_for_NA
-10:41:33.554 (3803784659)|VALIDATION_FORMULA|RecordType.Id = "012Pj000000JUOz" && 
-ISCHANGED(MSA_Status__c) && 
-$Profile.Id <> "00e30000001wPru" &&
-$Profile.Id <> "00e30000001g4RQ" &&
-$Profile.Id <> "00e5Y000003bPY2" &&
-$Profile.Id <> "00e1O000002GVB0" &&
-$User.Username <> 'siobhan.harlow@nuvei.com' && 
-$User.Username <> 'brandi.kidd@nuvei.com' && 
-$User.Username <> 'jared.murphy@nuvei.com' && 
-$User.Username <> 'patrick.wormus@nuvei.com' && 
-$User.Username <> 'natalie.hammar@nuvei.com' && 
-$User.Username <> 'anna.farrell@nuvei.com' && 
-$User.Username <> 'nikola.valchev@nuvei.com' &&
-$User.Username <> 'marta.lambova@nuvei.com' &&
-$User.Username <> 'svetoslava.mihova@nuvei.com' &&
-$User.Username <> 'naamad@safecharge.com' &&
-$User.Username <> 'keren.kruyswyk@nuvei.com' &&
-$User.Username <> 'nikola.valchev@nuvei.com' &&
-$User.Username <> 'silviya.valkova@nuvei.com'|$Profile.Id=00ea0000000jQe2 , MSA_Status__c=signed , $User.Username=dimitar.panayotov@nuvei.com , RecordType.Id=01214000000AWY7
-10:41:33.554 (3803793407)|VALIDATION_PASS
-10:41:33.554 (3803794702)|VALIDATION_RULE|03d1O000001LwOW|No_changes_in_AVS_after_approval
-10:41:33.554 (3804027083)|VALIDATION_FORMULA|( ISCHANGED(Mastercard_Automatic_Billing_Updater_ABU__c) &#124;&#124;
-ISCHANGED(DCC__c) &#124;&#124;
-ISCHANGED(Smart_3D_Secure_Fee__c) &#124;&#124;
-ISCHANGED(X3D_Transactions_Fee__c)  
-  )
-&&
-NOT(ISPICKVAL(MSA_Status__c,'Counter Signed'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Pending'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Send PQ for signing'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Started'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Approved'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Declined'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,''))
-&&  $User.Id  <> '00530000003nPYh'|X3D_Transactions_Fee__c=null , Price_Quote_Status__c=Settled , Mastercard_Automatic_Billing_Updater_ABU__c=null , Smart_3D_Secure_Fee__c=null , $User.Id=0051O00000CupBm , MSA_Status__c=signed , DCC__c=0
-10:41:33.554 (3804035616)|VALIDATION_PASS
-10:41:33.554 (3804036977)|VALIDATION_RULE|03d14000000mfKN|No_changes_in_PQ_after_approval
-10:41:33.554 (3804525382)|VALIDATION_FORMULA|( ISCHANGED(Minimum_monthly_fee_Value_1__c) &#124;&#124;
-ISCHANGED(Minimum_monthly_fee_Value_2__c) &#124;&#124;
-ISCHANGED(Minimum_monthly_fee_Value_3__c) &#124;&#124;
-ISCHANGED(Minimum_monthly_fee_Value_4__c) &#124;&#124;
-ISCHANGED(Minimum_monthly_fee_Limit_1__c) &#124;&#124;
-ISCHANGED(Minimum_monthly_fee_Limit_2__c) &#124;&#124;
-ISCHANGED(Minimum_monthly_fee_Limit_3__c) &#124;&#124;
-ISCHANGED(Service_Level_Standards__c) &#124;&#124;
-(ISCHANGED(GW_Processing_Fee__c) && NOT(ISNULL(PRIORVALUE(GW_Processing_Fee__c)))) &#124;&#124;
-ISCHANGED(Contract_Term__c) &#124;&#124;
-ISCHANGED(Remittance_Currency__c) &#124;&#124;
-ISCHANGED(X3D_Secure_setup__c) &#124;&#124;
-ISCHANGED(Rebilling_system_Setup__c) &#124;&#124;
-ISCHANGED(Rebilling_system_transaction__c) &#124;&#124;
-ISCHANGED(Remittance_Cycle__c) &#124;&#124;
-ISCHANGED(Wire_Fee__c) &#124;&#124;
-ISCHANGED(Settlement_threshold__c) &#124;&#124;
-ISCHANGED(Tokenization_recurring__c) 
-  )
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Pending'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Send PQ for signing'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Started'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,'Declined'))
-&&
-NOT(ISPICKVAL(Price_Quote_Status__c,''))
-&&  $User.Id  <> '00530000003nPYh'|Minimum_monthly_fee_Value_2__c=null , Contract_Term__c=36 , Minimum_monthly_fee_Value_3__c=null , Minimum_monthly_fee_Limit_3__c=null , Rebilling_system_Setup__c=0 , Minimum_monthly_fee_Value_1__c=120 , Rebilling_system_transaction__c=0.00 , Remittance_Cycle__c=Weekly with 3 business days delay , Remittance_Currency__c=0AAB0AAG0AAP , $User.Id=0051O00000CupBm , Minimum_monthly_fee_Limit_1__c=null , Tokenization_recurring__c=0 , Service_Level_Standards__c=0 , Minimum_monthly_fee_Value_4__c=null , X3D_Secure_setup__c=250 , Wire_Fee__c=null , Price_Quote_Status__c=Settled , Settlement_threshold__c=null , Minimum_monthly_fee_Limit_2__c=null , GW_Processing_Fee__c=0.15
-10:41:33.554 (3804591618)|VALIDATION_PASS
-10:41:33.554 (3804593426)|VALIDATION_RULE|03dPj000002Y1tN|No_change_after_Live_apart_from_UW_Risk
-10:41:33.554 (3805099135)|VALIDATION_FORMULA|( ISCHANGED( Name )  &#124;&#124; 
- ISCHANGED( Company_name__c )  &#124;&#124; 
- ISCHANGED( Incorporation_number__c  )  &#124;&#124; 
- ISCHANGED( ABN_Australia__c )  &#124;&#124; 
- ISCHANGED( Registered_City__c )  &#124;&#124; 
- ISCHANGED( Registered_Zip_Postal_Code__c )  &#124;&#124; 
- ISCHANGED( Registered_Address_New__c )  &#124;&#124; 
- ISCHANGED( Registered_Street__c )  &#124;&#124; 
- ISCHANGED( Registered_Country__c )  &#124;&#124; 
- ISCHANGED( Address_Operation_Location_2_New__c )  &#124;&#124; 
- ISCHANGED( Foundation_date__c )  &#124;&#124; 
- ISCHANGED( Industry__c )  &#124;&#124; 
- ISCHANGED( VAT_Number__c )  &#124;&#124; 
- ISCHANGED( Tax_ID_Type__c ))
-
- && RecordType.DeveloperName = "Nuvei_APAC"
- && TEXT(Compliance_Status__c) = "Live"
- 
-&& ( $Profile.Id  <>  "00e30000001wPru" &&
-$Profile.Id  <>  "00e14000001dtaI" &&
-$Profile.Id  <>  "00e1O000002GVo7" &&
-$Profile.Id  <>  "00e1O000002Khqc" &&
-$Profile.Id  <>  "00e14000001ZgIZ" &&
-$Profile.Id  <>  "00e1O000001ZgvW" &&
-$Profile.Id  <>  "00e1O000002Kho7" &&
-$Profile.Id  <>  "00e14000001dtYg" &&
-$Profile.Id  <>  "00e1O000001Zgwo" &&
-$Profile.Id  <>  "00e1O000002KhoR" &&
-
-$Profile.Id  <>  "00e30000001g4RQ" &&
-$Profile.Id  <>  "00e14000001dsrM" &&
-$Profile.Id  <>  "00e5Y000003bPY2")|Registered_Street__c=baker street 22 , Tax_ID_Type__c=null , Registered_Address_New__c=baker street 22, London, 7654654, United Kingdom , $Profile.Id=00ea0000000jQe2 , Foundation_date__c=2019-01-15 00:00:00 , Address_Operation_Location_2_New__c=, , , , VAT_Number__c=N/A , Company_name__c=null , Name=REST 2.0 onboarding test LTD , Registered_Zip_Postal_Code__c=7654654 , Incorporation_number__c=865874298 , Industry__c=Digital Goods - Software Applications (Excluding Games) , Compliance_Status__c=In Pre-Approval , RecordType.DeveloperName=OLD , ABN_Australia__c=null , Registered_Country__c=United Kingdom , Registered_City__c=London
-10:41:33.554 (3805114230)|VALIDATION_PASS
-10:41:33.554 (3805115790)|VALIDATION_RULE|03dPj0000014AOP|PQ_status_change_for_NA
-10:41:33.554 (3805302731)|VALIDATION_FORMULA|RecordType.Id = "012Pj000000JUOz" && 
-ISCHANGED (Price_Quote_Status__c) && 
-TEXT (Price_Quote_Status__c) <> "Pending" && 
-TEXT (Price_Quote_Status__c) <> "In Approval" && 
-TEXT (Price_Quote_Status__c) <> "Started" && 
-TEXT (Price_Quote_Status__c) <> "Declined" && 
-$Profile.Id <> "00e30000001wPru" &&
-$Profile.Id <> "00e30000001g4RQ" &&
-$Profile.Id <> "00e5Y000003bPY2" &&
-$Profile.Id <> "00e1O000002GVB0" &&
-$User.Username <> 'siobhan.harlow@nuvei.com' && 
-$User.Username <> 'brandi.kidd@nuvei.com' && 
-$User.Username <> 'jared.murphy@nuvei.com' && 
-$User.Username <> 'patrick.wormus@nuvei.com' && 
-$User.Username <> 'natalie.hammar@nuvei.com' && 
-$User.Username <> 'anna.farrell@nuvei.com' && 
-$User.Username <> 'nikola.valchev@nuvei.com' &&
-$User.Username <> 'marta.lambova@nuvei.com' &&
-$User.Username <> 'svetoslava.mihova@nuvei.com' &&
-$User.Username <> 'naamad@safecharge.com' &&
-$User.Username <> 'keren.kruyswyk@nuvei.com' &&
-$User.Username <> 'nikola.valchev@nuvei.com'|Price_Quote_Status__c=Settled , $Profile.Id=00ea0000000jQe2 , $User.Username=dimitar.panayotov@nuvei.com , RecordType.Id=01214000000AWY7
-10:41:33.554 (3805310791)|VALIDATION_PASS
-10:41:33.554 (3805312159)|VALIDATION_RULE|03d1O0000011gOV|Reserve_and_Fixed_edit_only_by_Risk
-10:41:33.554 (3805412190)|VALIDATION_FORMULA|(ISCHANGED(Reserve_Tier__c) &#124;&#124; ISCHANGED(Fixed_Reserve__c))
-&& 
-(CASESAFEID($User.Id) <> '0051400000BcSlUAAV' && 
-CASESAFEID($User.ProfileId) <> '00e30000001g4RQAAY' 
-)|Fixed_Reserve__c=null , $User.Id=0051O00000CupBm , Reserve_Tier__c=null , $User.ProfileId=00ea0000000jQe2
-10:41:33.554 (3805415985)|VALIDATION_PASS
-10:41:33.554 (3805417286)|VALIDATION_RULE|03d1O0000011gOQ|Reserve_tier_and_Fixed_reserve_set
-10:41:33.554 (3805510863)|VALIDATION_FORMULA|(ISBLANK( Reserve_Tier__c )&& NOT(ISBLANK( Fixed_Reserve__c )))
-&#124;&#124;
-(ISBLANK( Fixed_Reserve__c )&& NOT(ISBLANK( Reserve_Tier__c )))|Fixed_Reserve__c=null , Reserve_Tier__c=null
-10:41:33.554 (3805514597)|VALIDATION_PASS
-10:41:33.554 (3805515842)|VALIDATION_RULE|03d14000000qJ2I|risk_level_is_set_to_high_Low_risk_Forex
-10:41:33.554 (3805616128)|VALIDATION_FORMULA|AND((ISPICKVAL(PRIORVALUE(Risk_Level__c), "Low")&#124;&#124;(ISPICKVAL(PRIORVALUE(Risk_Level__c), "Medium"))), ISPICKVAL(Risk_Level__c, 'High') , ISPICKVAL(Processing_History__c  , 'Low Risk forex'))|Processing_History__c=null , Risk_Level__c=null
-10:41:33.554 (3805620044)|VALIDATION_PASS
-10:41:33.554 (3805621193)|VALIDATION_RULE|03d14000000qIre|Settled_PQ_Non_Standad
-10:41:33.554 (3805694554)|VALIDATION_FORMULA|ISPICKVAL( Price_Quote_Type__c , 'Non-Standard') &&
- ISPICKVAL( PRIORVALUE( Price_Quote_Status__c) , 'Declined')&& ISPICKVAL(  Price_Quote_Status__c , 'Settled')|Price_Quote_Status__c=Settled , Price_Quote_Type__c=Non-Standard
-10:41:33.554 (3805697738)|VALIDATION_PASS
-10:41:33.554 (3805705223)|CODE_UNIT_FINISHED|Validation:Compliance:a0m1O000008j6nN
-10:41:33.554 (3821795328)|CODE_UNIT_STARTED|[EXTERNAL]|01q1400000064lt|NotifyMerchantAndCompliance on Compliance trigger event AfterUpdate|__sfdc_trigger/NotifyMerchantAndCompliance
-10:41:33.822 (3822463385)|CUMULATIVE_LIMIT_USAGE
-10:41:33.822 (3822463385)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 12 out of 200
-  Number of query rows: 12 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 150 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 0 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:33.822 (3822463385)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:33.554 (3822753369)|CODE_UNIT_FINISHED|NotifyMerchantAndCompliance on Compliance trigger event AfterUpdate|__sfdc_trigger/NotifyMerchantAndCompliance
-10:41:33.554 (3826058838)|CODE_UNIT_STARTED|[EXTERNAL]|01q1O000000k9fA|ComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/ComplianceTrigger
-10:41:33.554 (3826226283)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3826264313)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (3826268409)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3826271124)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (3826287747)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (3828161637)|SOQL_EXECUTE_BEGIN|[8]|Aggregations:0|SELECT Id, Update_Date__c, Bank_Update_Status_Date_Live__c FROM Merchant_Bank__c WHERE Compliance__c = :tmpVar1
-10:41:33.554 (3833935422)|SOQL_EXECUTE_END|[8]|Rows:0
-10:41:33.554 (3834173248)|SYSTEM_MODE_EXIT|false
-10:41:33.834 (3834196472)|CUMULATIVE_LIMIT_USAGE
-10:41:33.834 (3834196472)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 13 out of 200
-  Number of query rows: 12 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 190 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 0 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:33.834 (3834196472)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:33.554 (3834362637)|CODE_UNIT_FINISHED|ComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/ComplianceTrigger
-10:41:33.554 (3839743123)|CODE_UNIT_STARTED|[EXTERNAL]|01qPj00000BLBzq|IndirectBoardingComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/IndirectBoardingComplianceTrigger
-10:41:33.842 (3842231701)|CUMULATIVE_LIMIT_USAGE
-10:41:33.842 (3842231701)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 13 out of 200
-  Number of query rows: 12 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 190 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 0 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:33.842 (3842231701)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:33.554 (3842384511)|CODE_UNIT_FINISHED|IndirectBoardingComplianceTrigger on Compliance trigger event AfterUpdate|__sfdc_trigger/IndirectBoardingComplianceTrigger
-10:41:33.554 (3845827349)|CODE_UNIT_STARTED|[EXTERNAL]|Workflow:01I300000027f4c
-10:41:33.554 (3857722030)|WF_RULE_EVAL_BEGIN|Workflow
-10:41:33.554 (3857821957)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk Assessment date|01Q5Y000000q5Y2|ON_ALL_CHANGES|0
-10:41:33.554 (3858198774)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N5Y00000OKGLn} )|Values:Risk_Assessment__c=null
-10:41:33.554 (3858206900)|WF_CRITERIA_END|false
-10:41:33.554 (3858258889)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Open Date for Live status|01Q1O000000u9KC|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3864433847)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live-SC Express, Live (No Payout)] 
-AND [Company Profile : Open Date equals ]
-10:41:33.554 (3864454933)|WF_RULE_EVAL_VALUE|4
-10:41:33.554 (3864457999)|WF_CRITERIA_END|false
-10:41:33.554 (3864469081)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Customer Due Diligence update on Risk Level Low|01Q1O000000E3Oy|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3864845414)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL({!ID:00Na0000002h9ce}, "Low")|Values:Risk_Level__c=null
-10:41:33.554 (3864851393)|WF_CRITERIA_END|false
-10:41:33.554 (3864859485)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|PQ Type is Set|01Q14000000HdWG|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3865001644)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3865008384)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|AMLCO_approval3011O000000kMD7|01Q5Y000000WZFK|ON_ALL_CHANGES|0
-10:41:33.554 (3865044555)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3865047621)|WF_CRITERIA_END|true
-10:41:33.554 (3866830625)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Funds Release in 14 Days|01Q1O000000SCG2|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3867233204)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]IF( TODAY() =  {!ID:00N1O00000BV8k8} - ( ( 365 / 365 ) * 14), true, false)|Values:Funds_Release_Date__c=null
-10:41:33.554 (3867240230)|WF_CRITERIA_END|false
-10:41:33.554 (3867249174)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|New UW manager|01Q1O000000hcSM|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3876132328)|WF_RULE_FILTER|[Company Profile : Underwriting Mgr Name does not contain Cyprus] 
-AND [Company Profile : Compliance Status not equal to ] 
-AND [Company Profile : Underwriting Mgr Name not equal to ] 
-AND [Company Profile : Managing Company equals Safecharge Limited, Safecharge International, Safecharge Financial Services, Nuvei Payments DMCC, Safecharge (USA) Inc.] 
-AND [Company Profile : Industry does not contain Internal]
-10:41:33.554 (3876211826)|WF_RULE_EVAL_VALUE|Stanimira Trencheva (UW)
-10:41:33.554 (3876223280)|WF_RULE_EVAL_VALUE|4
-10:41:33.554 (3876273442)|WF_RULE_EVAL_VALUE|Stanimira Trencheva (UW)
-10:41:33.554 (3876277304)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3876278594)|WF_CRITERIA_END|false
-10:41:33.554 (3876289627)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Notify AM on MSA signed by merchant|01Q14000000Ds3G|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3876370092)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3876375082)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|From_Approval_to_Live3011O00000093PI|01Q5Y000000q6Uk|ON_ALL_CHANGES|0
-10:41:33.554 (3876446230)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3876449642)|WF_CRITERIA_END|true
-10:41:33.554 (3876463388)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Merchant_Segregation_PB_Account_Manager301140000004Y2v|01QPj000004164H|ON_RECURSIVE_UPDATE|0
-10:41:33.554 (3876485528)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3876487670)|WF_CRITERIA_END|true
-10:41:33.554 (3876492998)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Merchant_Segregation_PB_Internal_Sales30114000000LFES|01Q5Y000000KGdw|ON_RECURSIVE_UPDATE|0
-10:41:33.554 (3876509368)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3876511419)|WF_CRITERIA_END|true
-10:41:33.554 (3876516571)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|VIP Merchant set to VIP (CP)|01Q14000000JeV6|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3876542983)|WF_RULE_FILTER|[Company Profile : VIP equals Yes]
-10:41:33.554 (3876545808)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3876546869)|WF_CRITERIA_END|false
-10:41:33.554 (3876550639)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC 3|01QPj00000061O1|ON_ALL_CHANGES|0
-10:41:33.554 (3877473028)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000008rJPO}) && ( 
-TEXT({!ID:00N30000008rJPO}) = "Automobile and Truck Dealers - Sales, Service, Repairs, Parts, and Leasing" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Pawn Shops" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Durable Goods (not elsewhere classified)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Nondurable Goods (not elsewhere classified)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Contractors, Special Trade (not elsewhere classified)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Dentists, Orthodontists" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Package Stores, Beer, Wine, and Liquor" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Construction Materials (not elsewhere classified)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Miscellaneous Publishing and Printing" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Clubs - Country Clubs, Membership (Athletic, Recreation, Sports), Private Golf Courses" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Automotive Body Repair Shops" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Attorneys, Legal Services" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Floor Covering Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Swimming Pools - Sales and Supplies" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "General Contractors, residential and commercial" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Commercial Equipment (not elsewhere classified)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Gateway Services" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Religious Goods Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Home Supply Warehouse Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Cleaning, Maintenance, and Janitorial Services" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Elementary and Secondary Schools" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Colleges, Universities, Professional Schools, and Junior Colleges" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Consulting, Management, and Public Relations Services" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Bands, Orchestras, and Miscellaneous Entertainers (not elsewhere classified)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Freezer, Locker Meat Provisioners" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Bridge and Road Fees, Tolls" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "POS PayFac" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Cruise Lines" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - Avianca" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Sweeps" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Video Amusement Game Supplies" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "On Ramp Provider" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Sweepstakes" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Travel Agencies and Tour Operators" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "MPG" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Proprietary Trading" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - Air France" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - Aeromexico" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - Royal Dutch Airlines (KLM)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - Emirates Airlines" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Local and Suburban Commuter Passenger Transportation, Including Ferries" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Motor Vehicle Supplies and New Parts" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Motorcycle Shops and Dealers" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Air Conditioning, Heating, and Plumbing Contractors")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
-10:41:33.554 (3877503755)|WF_CRITERIA_END|false
-10:41:33.554 (3877514643)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|New addition/ change of VAT Number|01Q5Y000001AqMV|ON_ALL_CHANGES|0
-10:41:33.554 (3877702200)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]AND(ISCHANGED( {!ID:00N3000000A5MyX} ), OR(TEXT( {!ID:00N1400000BBvX1} ) = "Live", TEXT( {!ID:00N1400000BBvX1} ) = "Live (No Payout)", TEXT( {!ID:00N1400000BBvX1} ) = "Live-SC Express"))|Values:Compliance_Status__c=In Pre-Approval, VAT_Number__c=N/A
-10:41:33.554 (3877706732)|WF_CRITERIA_END|false
-10:41:33.554 (3877712567)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Director_approval3011O000000kMDP|01Q5Y000001SK0V|ON_ALL_CHANGES|0
-10:41:33.554 (3877740915)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3877745229)|WF_CRITERIA_END|true
-10:41:33.554 (3877755864)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Holdback 0|01Q1O000000hczB|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3878152236)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL ({!ID:00N30000008rJPO}, "Barber and Beauty Shops")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Cigar stores and stands") &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Duty Free Stores")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Eating Places, Restaurants")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Fast Food Restaurants")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Pubs and Bars")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Restaurants") &#124;&#124;
-ISPICKVAL ({!ID:00N30000008rJPO}, "Taxicabs and Limousines")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
-10:41:33.554 (3878161341)|WF_CRITERIA_END|false
-10:41:33.554 (3878168370)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|FI Approval|01Q1O000000u87R|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3878216782)|WF_RULE_FILTER|[Company Profile : FI Approval equals true]
-10:41:33.554 (3878221880)|WF_RULE_EVAL_VALUE|false
-10:41:33.554 (3878223453)|WF_CRITERIA_END|false
-10:41:33.554 (3878227224)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Settle PQ for live merchant|01Q14000000DsBA|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3889573767)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]TEXT({!ID:00N30000007uAMQ.StageName}) = 'Live' &&  TEXT({!ID:00N1400000BBsNP}) = 'Approved'|Values:Opportunity__r.StageName=Live, Price_Quote_Status__c=Settled
-10:41:33.554 (3889586137)|WF_CRITERIA_END|false
-10:41:33.554 (3889610258)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|FATCA Check|01Q14000000Haxj|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3889696408)|WF_RULE_FILTER|[Company Profile : Does the company have a U.S. Address? equals Yes] OR
- [Company Profile : Does the account have a U.S. phone num? equals Yes] OR
- [Company Profile : Do any owners have a U.S. Passport? equals Yes] OR
- [Company Profile : It this a U.S. Reportable Account? equals Yes]
-10:41:33.554 (3889704425)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3889706014)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3889707304)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3889708578)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3889709661)|WF_CRITERIA_END|false
-10:41:33.554 (3889714306)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|VIP Merchant set to LIVE -VIP|01Q14000000JeVG|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3889739141)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live (VIP)]
-10:41:33.554 (3889757376)|WF_RULE_EVAL_VALUE|4
-10:41:33.554 (3889759094)|WF_CRITERIA_END|false
-10:41:33.554 (3889763754)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|FI Comment|01Q1O000000u87W|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3889779375)|WF_RULE_FILTER|[Company Profile : FI Notes not equal to ]
-10:41:33.554 (3889781669)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3889782526)|WF_CRITERIA_END|false
-10:41:33.554 (3889786169)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|above the monthly minimum HARD limit|01Q14000000DsxT|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3889824359)|WF_RULE_FILTER|[Company Profile : Non standard terms equals false]
-10:41:33.554 (3889828081)|WF_RULE_EVAL_VALUE|true
-10:41:33.554 (3889829583)|WF_CRITERIA_END|false
-10:41:33.554 (3889833197)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Registration Address Change for an existing client for Merchant Finance|01Q5Y000001AqMf|ON_ALL_CHANGES|0
-10:41:33.554 (3890259067)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]AND( OR(ISCHANGED(  {!ID:00N1O00000BV4mZ}   ), ISCHANGED(  {!ID:00N1O00000BV4mj}  ), ISCHANGED(  {!ID:00N1O00000BV4mo}  ), ISCHANGED(  {!ID:00N1O00000BV4me}  )), 
-OR(TEXT( {!ID:00N1400000BBvX1} ) = "Live", TEXT( {!ID:00N1400000BBvX1} ) = "Live (No Payout)", TEXT( {!ID:00N1400000BBvX1} ) = "Live-SC Express"))|Values:Registered_Street__c=baker street 22, Registered_Zip_Postal_Code__c=7654654, Compliance_Status__c=In Pre-Approval, Registered_Country__c=United Kingdom, Registered_City__c=London
-10:41:33.554 (3890267740)|WF_CRITERIA_END|false
-10:41:33.554 (3890274775)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Notify when Integration Status Done|01Q1O000000SDbG|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3891766977)|WF_RULE_FILTER|[Company Profile : Integration Status equals Done]
-10:41:33.554 (3891784002)|WF_RULE_EVAL_VALUE|1
-10:41:33.554 (3891786221)|WF_CRITERIA_END|false
-10:41:33.554 (3891793212)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Payout alert for AM|01Q1O000000u8Cg|ON_ALL_CHANGES|0
-10:41:33.554 (3892028861)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N1O00000Bduh1} )|Values:Payouts__c=null
-10:41:33.554 (3892033676)|WF_CRITERIA_END|false
-10:41:33.554 (3892039853)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk Assessment reminder|01Q5Y000000q5YC|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3892088750)|WF_RULE_FILTER|[Company Profile : Risk Assessment Date not equal to ] 
-AND [Company Profile : Compliance Status contains Live]
-10:41:33.554 (3892092746)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3892093777)|WF_CRITERIA_END|false
-10:41:33.554 (3892097817)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Checklist for Introducers|01Q1O000000uANM|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3892162668)|WF_RULE_FILTER|[Company Profile : Record Type equals Reseller]
-10:41:33.554 (3892169137)|WF_RULE_EVAL_VALUE|01214000000AWY7
-10:41:33.554 (3892173565)|WF_CRITERIA_END|false
-10:41:33.554 (3892178260)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Primary_contact_update3011O000000c8Ar|01Q1O000000hcuR|ON_RECURSIVE_UPDATE|0
-10:41:33.554 (3892245290)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3892248115)|WF_CRITERIA_END|true
-10:41:33.554 (3892262982)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Holdback 5|01Q1O000000hcz6|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3892753728)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL ({!ID:00N30000008rJPO}, "Antiques dealer")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Art") &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Art Dealers and Galleries")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Binary Options")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Caterers")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Consumer Credit Reporting Agencies")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Customer Financial Institution (Quasi Cash)") &#124;&#124;
-ISPICKVAL ({!ID:00N30000008rJPO}, "Gaming")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Insurance")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Organizations, Charitable and Social Service")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Regulated online casinos")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Security brokers") &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Tax Payments")  &#124;&#124; 
-ISPICKVAL ({!ID:00N30000008rJPO}, "Telecommunication Service")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
-10:41:33.554 (3892777705)|WF_CRITERIA_END|false
-10:41:33.554 (3892785469)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|SalesRep_Update301140000004Y3x|01Q1O000000yHl2|ON_CREATE_ONLY|0
-10:41:33.554 (3892799874)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3892803624)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Account Opening Risk & Finance Finished|01Q14000000lqSW|ON_ALL_CHANGES|0
-10:41:33.554 (3893584281)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]AND( 
-	ISCHANGED(  {!ID:00N1400000BRwpx} ) &#124;&#124; ISCHANGED(   {!ID:00N1400000BRwq2}) ,
-	TEXT({!ID:00N1400000BRwpx}) = 'Installed',
-	TEXT({!ID:00N1400000BRwq2}) = 'Installed'
- )|Values:MRSI_status__c=null, Finance_admin_status__c=Installed
-10:41:33.554 (3893594148)|WF_CRITERIA_END|false
-10:41:33.554 (3893603470)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Camden POS Device Sent|01Q1O000000yHkT|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3893635953)|WF_RULE_FILTER|[Company Profile : PoS Status equals Initiated]
-10:41:33.554 (3893639398)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3893640438)|WF_CRITERIA_END|false
-10:41:33.554 (3893661532)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC created 2|01Q5Y000001SJmT|ON_CREATE_ONLY|0
-10:41:33.554 (3893668826)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3893672117)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Segragation: Default Roles|01Q14000000Dsmk|ON_CREATE_ONLY|0
-10:41:33.554 (3893675963)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3893678931)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC created 3|01QPj00000061MP|ON_CREATE_ONLY|0
-10:41:33.554 (3893682471)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3893685491)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk Decline to update Compliance Status|01Q1O000000u8SP|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3893706145)|WF_RULE_FILTER|[Company Profile : Credit Risk Status equals Declined]
-10:41:33.554 (3893708571)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3893709515)|WF_CRITERIA_END|false
-10:41:33.554 (3893713121)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Closed_CP_Launch_Flow3011O000000kP03|01QPj000003oMzh|ON_ALL_CHANGES|0
-10:41:33.554 (3893779200)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3893782159)|WF_CRITERIA_END|true
-10:41:33.554 (3893793530)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Customer Due Diligence update on Risk Level Medium|01Q1O000000E3P3|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3893919010)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL({!ID:00Na0000002h9ce}, "Medium")|Values:Risk_Level__c=null
-10:41:33.554 (3893922868)|WF_CRITERIA_END|false
-10:41:33.554 (3893927985)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk_Handling30114000000TUoZ|01Q140000007DqP|ON_ALL_CHANGES|0
-10:41:33.554 (3893987045)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3893989709)|WF_CRITERIA_END|true
-10:41:33.554 (3893997538)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Below the monthly minimum HARD limit|01Q14000000Drpd|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3895749443)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3895771056)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Deal_PQ30114000000Cvth|01Q14000000JfkR|ON_ALL_CHANGES|0
-10:41:33.554 (3895878184)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3895882656)|WF_CRITERIA_END|true
-10:41:33.554 (3895910512)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|G2S Company Profile created|01Q14000000JdNV|ON_CREATE_ONLY|0
-10:41:33.554 (3895917064)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3895920493)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC 2|01Q5Y000001SJmO|ON_ALL_CHANGES|0
-10:41:33.554 (3898074181)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000008rJPO}) && ( 
-TEXT({!ID:00N30000008rJPO}) = "Associations - Civic, Social and Fraternal" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Schools and Educational Services - not elsewhere classified" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Non-financial Institutions – Stored Value Card Purchase/Load" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Accounting, Auditing, and Bookkeeping Services" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Variety Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (Travel-Related Arrangement Services)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - All Nippon Airways" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Online Retail"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Pet Shops - Pet Food and Supplies" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Cable, Satellite, and Other Pay Television and Radio Services" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Daily Fantasy Gaming" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Firearms/ammunition (no gun parts)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Warranties" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "CBD based products" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Antiques dealer" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Music" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Radio" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Card, Gift, Novelty, and Souvenir Shops" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Equipment, Furniture, and Home Furnishings Stores (except Appliances)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Automotive Parts, Accessories Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Health and Beauty Spas" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Game, Toy, and Hobby Shops" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Electrical Parts and Equipment" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Real Estate Agents and Managers - Rentals" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Nursing and Personal Care Facilities" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Womens Accessory and Specialty Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Collection Agencies" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Miscellaneous House Furnishing Specialty Shops" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Stamp and Coin Stores: Philatelic and Numismatic Supplies" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Grocery Stores, Supermarkets" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Electronic Stores/Electronic Sales" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Health Practitioners, Medical Services - not elsewhere classified" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Online marketplaces")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
-10:41:33.554 (3898168916)|WF_CRITERIA_END|false
-10:41:33.554 (3898227590)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Risk pre-approved Fraud Prevention Team Descriptor & City field|01Q1O000000JjKm|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3898310402)|WF_RULE_FILTER|[Company Profile : Credit Risk Status equals Pre-Approved]
-10:41:33.554 (3898315617)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3898317527)|WF_CRITERIA_END|false
-10:41:33.554 (3898322487)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Open_Finance_Admin_automation301Pj00000cELxy|01QPj000002DiJp|ON_ALL_CHANGES|0
-10:41:33.554 (3898392714)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3898396565)|WF_CRITERIA_END|true
-10:41:33.554 (3898407350)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Merchant_Segregation_PB_Sales_Rep30114000000LFEU|01Q5Y000000q6Z6|ON_RECURSIVE_UPDATE|0
-10:41:33.554 (3898432700)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3898435672)|WF_CRITERIA_END|true
-10:41:33.554 (3898449538)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Application_filling_Status_notification301Pj000006VuAZ|01QPj000000ATf3|ON_ALL_CHANGES|0
-10:41:33.554 (3898473499)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3898477611)|WF_CRITERIA_END|true
-10:41:33.554 (3898485833)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC created|01Q1O000000hctD|ON_CREATE_ONLY|0
-10:41:33.554 (3898495410)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3898500559)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|notify AM on MSA status|01Q14000000DsGt|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3898539605)|WF_RULE_NOT_EVALUATED
-10:41:33.554 (3898544356)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Account Opening Finance installed/issue|01Q14000000HiHa|ON_ALL_CHANGES|0
-10:41:33.554 (3898725380)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N1400000BRwpx}) &&   TEXT({!ID:00N1400000BRwpx}) = "Installed"|Values:Finance_admin_status__c=Installed
-10:41:33.554 (3898731803)|WF_CRITERIA_END|false
-10:41:33.554 (3898737949)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Account Opening Risk installed/issue|01Q1O000000yHzd|ON_ALL_CHANGES|0
-10:41:33.554 (3898834607)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N1400000BRwq2} )|Values:MRSI_status__c=null
-10:41:33.554 (3898840078)|WF_CRITERIA_END|false
-10:41:33.554 (3898848122)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Primary Contact email|01Q1O000000uB4a|ON_ALL_CHANGES|0
-10:41:33.554 (3898952419)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000007uAMf})|Values:Primary_Contact__c=0031O00003H2k1n
-10:41:33.554 (3898957725)|WF_CRITERIA_END|false
-10:41:33.554 (3898963581)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|M&A Expiration|01Q14000000Hame|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3899023431)|WF_RULE_FILTER|[Company Profile : M&A Expiration not equal to ] 
-AND [Company Profile : Notification Contact Email not equal to ] 
-AND [Company Profile : Notification Contact Name not equal to ]
-10:41:33.554 (3899030481)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3899032189)|WF_CRITERIA_END|false
-10:41:33.554 (3899036659)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|M&A Expiration 2|01Q14000000Hamf|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3899055444)|WF_RULE_FILTER|[Company Profile : M&A Expiration not equal to ] 
-AND [Company Profile : Notification Contact Email not equal to ] 
-AND [Company Profile : Notification Contact Name not equal to ]
-10:41:33.554 (3899058742)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3899060179)|WF_CRITERIA_END|false
-10:41:33.554 (3899064232)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|VIP Start 30 days countdown|01Q14000000JeVk|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3899092152)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live (VIP)]
-10:41:33.554 (3899099362)|WF_RULE_EVAL_VALUE|4
-10:41:33.554 (3899101587)|WF_CRITERIA_END|false
-10:41:33.554 (3899105682)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Customer Due Diligence update on Risk Level High|01Q1O000000E3P8|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3899229584)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISPICKVAL({!ID:00Na0000002h9ce}, "High")|Values:Risk_Level__c=null
-10:41:33.554 (3899234836)|WF_CRITERIA_END|false
-10:41:33.554 (3899240204)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Compliance status no payouts|01Q1O000000uAY0|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3899259987)|WF_RULE_FILTER|[Company Profile : Compliance Status equals Live (No Payout)]
-10:41:33.554 (3899266461)|WF_RULE_EVAL_VALUE|4
-10:41:33.554 (3899268501)|WF_CRITERIA_END|false
-10:41:33.554 (3899272528)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Additional MCC 1|01Q1O000000E3PS|ON_ALL_CHANGES|0
-10:41:33.554 (3901483557)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED({!ID:00N30000008rJPO}) && ( 
-TEXT({!ID:00N30000008rJPO}) = "Caterers"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Automobile Parking Lots and Garages"  &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Womens Ready to Wear Stores"  &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Mens and Boys Clothing and Accessories Stores" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Sports Apparel, Riding Apparel Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Shoe Stores" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Mens and Womens Clothing Stores" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Sporting Goods Stores" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "PayFac" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Airline - TAP Portugal" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Customer Financial Institution (Quasi Cash)"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Barber and Beauty Shops"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Industrial Supplies"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Airline - Turkish Airlines (THY)"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Digital Goods - Multi-Category"  &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Second hand Books"  &#124;&#124;  
-TEXT({!ID:00N30000008rJPO}) = "Carpool services"  &#124;&#124;  
-TEXT({!ID:00N30000008rJPO}) = "Second hand Clothes / Shoes / Accessories"  &#124;&#124;  
-TEXT({!ID:00N30000008rJPO}) = "Second hand Records" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Art Dealers and Galleries" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Cosmetic Stores" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Bus Lines" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (not elsewhere classified)" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Run online lotteries" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Regulated online casinos" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Consumer Credit Reporting Agencies" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Regulated events for online horse and dog racing" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (Combination Catalog and Retail Merchants)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Direct Marketing (Continuity/Subscription Merchants)" &#124;&#124;
-TEXT({!ID:00N30000008rJPO}) = "Clinics" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Buying/Shopping Club, Services" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Duty Free Stores" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Lodging - Hotels, Motels, Resorts, Central Reservation Service" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Dietary Supplements" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Courier Services - Air and Ground, Freight Forwarders" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Accessory and Apparel Stores - Miscellaneous" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Utilities - Electric, Gas, Heating Oil, Sanitary, Water" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Drugstores and Druggists" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "ISO" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Miscellaneous And Specialty Retail Stores" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Dental and Medical Laboratories" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Reseller" &#124;&#124; 
-TEXT({!ID:00N30000008rJPO}) = "Marketplace")|Values:Industry__c=Digital Goods - Software Applications (Excluding Games)
-10:41:33.554 (3901532497)|WF_CRITERIA_END|false
-10:41:33.554 (3901547500)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Camden Submit Application Form|01Q1O000000yHja|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3902123286)|WF_RULE_FILTER|[Company Profile : Application Status equals Completed] 
-AND [Company Profile : Partner equals Camden]
-10:41:33.554 (3902139854)|WF_RULE_EVAL_VALUE|9
-10:41:33.554 (3902143166)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3902149181)|WF_CRITERIA_END|false
-10:41:33.554 (3902157251)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Update_UW_manager_in_AI3011O0000004hjJ|01Q1O000000yGz8|ON_ALL_CHANGES|0
-10:41:33.554 (3902234967)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]true|Values:
-10:41:33.554 (3902238890)|WF_CRITERIA_END|true
-10:41:33.554 (3902248940)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Update Introducer Commission Approval Status to Needed|01Q1O000000SDJv|ON_ALL_CHANGES|0
-10:41:33.554 (3902579444)|WF_FORMULA|Formula:ENCODED:[treatNullAsNull]ISCHANGED( {!ID:00N1O00000BVFXc} ) &#124;&#124; ISCHANGED( {!ID:00N1O00000B9nt9} ) &#124;&#124; ISCHANGED(  {!ID:00N1O00000B9r8q} ) &#124;&#124; ISCHANGED(  {!ID:00N1O00000B9r8v} ) &#124;&#124; ISCHANGED ( {!ID:00N1O00000AuFwF} )|Values:Reseller_Commission__c=null, Revenue_Share_Term__c=null, Introducer_Commission_Model__c=null, Buy_Rate_received_by_Safecharge_other__c=null, Buy_Rate_actually_received_by_Safecharge__c=null
-10:41:33.554 (3902603988)|WF_CRITERIA_END|false
-10:41:33.554 (3902614077)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|ISO Checklist|01Q1O000000px2a|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3902916493)|WF_RULE_FILTER|[Company Profile : Industry equals ISO]
-10:41:33.554 (3902927227)|WF_RULE_EVAL_VALUE|74
-10:41:33.554 (3902930071)|WF_CRITERIA_END|false
-10:41:33.554 (3902940665)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Strategic High Profitability merchant|01Q1O000000pxKU|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3902975132)|WF_RULE_FILTER|[Company Profile : Strategic / High Profitability equals 1, 2] 
-AND [Company Profile : Company Name does not contain test]
-10:41:33.554 (3902978856)|WF_RULE_EVAL_VALUE|
-10:41:33.554 (3902980410)|WF_CRITERIA_END|false
-10:41:33.554 (3902984522)|WF_CRITERIA_BEGIN|[Company Profile: REST 2.0 onboarding test LTD a0m1O000008j6nN]|Express account configured for Merchant|01Q1O000000yIXV|ON_CREATE_OR_TRIGGERING_UPDATE|0
-10:41:33.554 (3903025805)|WF_RULE_FILTER|[Company Profile : Record Type equals SafeCharge Express] 
-AND [Company Profile : Configuration Status equals Done]
-10:41:33.554 (3903037560)|WF_RULE_EVAL_VALUE|01214000000AWY7
-10:41:33.554 (3903040643)|WF_CRITERIA_END|false
-10:41:33.554 (3903063590)|WF_SPOOL_ACTION_BEGIN|Workflow
-10:41:33.554 (3903123524)|WF_ACTION| Flow Trigger: 13;
-10:41:33.554 (3903140192)|WF_RULE_EVAL_END
-10:41:33.905 (3905281088)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CJrR|301Pj000006VuAZ
-10:41:33.905 (3906496630)|FLOW_CREATE_INTERVIEW_END|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
-10:41:33.554 (3906547565)|WF_FLOW_ACTION_BEGIN|09LPj0000000MgT
-10:41:33.908 (3908298945)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:33.908 (3908339787)|FLOW_START_INTERVIEW_BEGIN|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
-10:41:33.908 (3909199787)|FLOW_START_INTERVIEW_END|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
-10:41:33.908 (3909216632)|FLOW_START_INTERVIEWS_END|1
-10:41:33.908 (3909245908)|FLOW_INTERVIEW_FINISHED|5918e6b748c51632017e1685fb0919e96a751f0-5ee4|Deal: Application Form
-10:41:33.554 (3912964502)|WF_FLOW_ACTION_END|09LPj0000000MgT
-10:41:33.915 (3915120547)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000YRvu|3011O0000004hjJ
-10:41:33.915 (3917049535)|FLOW_CREATE_INTERVIEW_END|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
-10:41:33.554 (3917082862)|WF_FLOW_ACTION_BEGIN|09L1O000000L57s
-10:41:33.918 (3918772023)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:33.918 (3918821461)|FLOW_START_INTERVIEW_BEGIN|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
-10:41:33.918 (4050985217)|FLOW_START_INTERVIEW_END|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
-10:41:33.918 (4051010275)|FLOW_START_INTERVIEWS_END|1
-10:41:33.918 (4051036490)|FLOW_INTERVIEW_FINISHED|5919e6b748c51632017e1685fb0919e96a751f0-5ee5|Update UW manager in AI
-10:41:33.554 (4054392501)|WF_FLOW_ACTION_END|09L1O000000L57s
-10:41:34.55 (4055935258)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKdr|30114000000LFEU
-10:41:34.55 (4056919379)|FLOW_CREATE_INTERVIEW_END|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
-10:41:33.554 (4056951778)|WF_FLOW_ACTION_BEGIN|09L5Y000000ZPGW
-10:41:34.58 (4058680697)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.58 (4058713412)|FLOW_START_INTERVIEW_BEGIN|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
-10:41:34.58 (4073651193)|FLOW_START_INTERVIEW_END|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
-10:41:34.58 (4073674425)|FLOW_START_INTERVIEWS_END|1
-10:41:34.58 (4073699918)|FLOW_INTERVIEW_FINISHED|5920e6b748c51632017e1685fb0919e96a751f0-5ee6|Merchant Segregation PB - Sales Rep
-10:41:33.554 (4077152824)|WF_FLOW_ACTION_END|09L5Y000000ZPGW
-10:41:34.79 (4079412197)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000wo9p|3011O000000kP03
-10:41:34.79 (4080591298)|FLOW_CREATE_INTERVIEW_END|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
-10:41:33.554 (4080621769)|WF_FLOW_ACTION_BEGIN|09LPj0000002ELR
-10:41:34.82 (4082404604)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.82 (4082435174)|FLOW_START_INTERVIEW_BEGIN|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
-10:41:34.82 (4093373374)|FLOW_START_INTERVIEW_END|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
-10:41:34.82 (4093393750)|FLOW_START_INTERVIEWS_END|1
-10:41:34.82 (4093418131)|FLOW_INTERVIEW_FINISHED|5921e6b748c51632017e1685fb0919e96a751f0-5ee7|Closed CP Launch Flow
-10:41:33.554 (4096693122)|WF_FLOW_ACTION_END|09LPj0000002ELR
-10:41:34.98 (4098932216)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001400000086YG|30114000000TUoZ
-10:41:34.98 (4101023201)|FLOW_CREATE_INTERVIEW_END|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
-10:41:33.554 (4101058971)|WF_FLOW_ACTION_BEGIN|09L14000000PBuU
-10:41:34.102 (4102775571)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.102 (4102809206)|FLOW_START_INTERVIEW_BEGIN|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
-10:41:34.102 (4113618105)|FLOW_START_INTERVIEW_END|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
-10:41:34.102 (4113638947)|FLOW_START_INTERVIEWS_END|1
-10:41:34.102 (4113665684)|FLOW_INTERVIEW_FINISHED|5922e6b748c51632017e1685fb0919e96a751f0-5ee8|Risk Handlng
-10:41:33.554 (4116903306)|WF_FLOW_ACTION_END|09L14000000PBuU
-10:41:34.119 (4119319285)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKdp|301140000004Y2v
-10:41:34.119 (4121403223)|FLOW_CREATE_INTERVIEW_END|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
-10:41:33.554 (4121439791)|WF_FLOW_ACTION_BEGIN|09LPj0000002NJt
-10:41:34.123 (4123177346)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.123 (4123211857)|FLOW_START_INTERVIEW_BEGIN|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
-10:41:34.123 (4140080462)|FLOW_START_INTERVIEW_END|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
-10:41:34.123 (4140103578)|FLOW_START_INTERVIEWS_END|1
-10:41:34.123 (4140130369)|FLOW_INTERVIEW_FINISHED|5923e6b748c51632017e1685fb0919e96a751f0-5ee9|Merchant Segregation PB - Account Manager
-10:41:33.554 (4143357998)|WF_FLOW_ACTION_END|09LPj0000002NJt
-10:41:34.145 (4145562738)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000wnvs|3011O000000kMDP
-10:41:34.145 (4147466368)|FLOW_CREATE_INTERVIEW_END|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
-10:41:33.554 (4147501215)|WF_FLOW_ACTION_BEGIN|09L5Y0000002WEQ
-10:41:34.149 (4149082759)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.149 (4149115848)|FLOW_START_INTERVIEW_BEGIN|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
-10:41:34.149 (4159933891)|FLOW_START_INTERVIEW_END|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
-10:41:34.149 (4159954646)|FLOW_START_INTERVIEWS_END|1
-10:41:34.149 (4159981216)|FLOW_INTERVIEW_FINISHED|5924e6b748c51632017e1685fb0919e96a751f0-5eea|Director approval
-10:41:33.554 (4163223755)|WF_FLOW_ACTION_END|09L5Y0000002WEQ
-10:41:34.164 (4164464033)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000sdIN|301Pj00000cELxy
-10:41:34.164 (4165985863)|FLOW_CREATE_INTERVIEW_END|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
-10:41:33.554 (4166010872)|WF_FLOW_ACTION_BEGIN|09LPj0000001Ym1
-10:41:34.167 (4167546528)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.167 (4167575620)|FLOW_START_INTERVIEW_BEGIN|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
-10:41:34.167 (4168230393)|FLOW_START_INTERVIEW_END|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
-10:41:34.167 (4168248435)|FLOW_START_INTERVIEWS_END|1
-10:41:34.167 (4168271651)|FLOW_INTERVIEW_FINISHED|5925e6b748c51632017e1685fb0919e96a751f0-5eeb|Open Finance Admin automation
-10:41:33.554 (4171318079)|WF_FLOW_ACTION_END|09LPj0000001Ym1
-10:41:34.173 (4173070865)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKdq|30114000000LFES
-10:41:34.173 (4174347872)|FLOW_CREATE_INTERVIEW_END|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
-10:41:33.554 (4174370477)|WF_FLOW_ACTION_BEGIN|09L5Y000001IwjB
-10:41:34.175 (4175951487)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.175 (4175984287)|FLOW_START_INTERVIEW_BEGIN|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
-10:41:34.175 (4190090818)|FLOW_START_INTERVIEW_END|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
-10:41:34.175 (4190113971)|FLOW_START_INTERVIEWS_END|1
-10:41:34.175 (4190140189)|FLOW_INTERVIEW_FINISHED|5926e6b748c51632017e1685fb0919e96a751f0-5eec|Merchant Segregation PB - Internal Sales
-10:41:33.554 (4193389027)|WF_FLOW_ACTION_END|09L5Y000001IwjB
-10:41:34.195 (4195045517)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000wnvx|3011O000000kMD7
-10:41:34.195 (4196492006)|FLOW_CREATE_INTERVIEW_END|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
-10:41:33.554 (4196522594)|WF_FLOW_ACTION_BEGIN|09L5Y000001EkQQ
-10:41:34.198 (4198226479)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.198 (4198264545)|FLOW_START_INTERVIEW_BEGIN|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
-10:41:34.198 (4210489557)|FLOW_START_INTERVIEW_END|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
-10:41:34.198 (4210511437)|FLOW_START_INTERVIEWS_END|1
-10:41:34.198 (4210538491)|FLOW_INTERVIEW_FINISHED|5928e6b748c51632017e1685fb0919e96a751f0-5eee|AMLCO approval
-10:41:33.554 (4213955576)|WF_FLOW_ACTION_END|09L5Y000001EkQQ
-10:41:34.215 (4215381342)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001O000000sdH0|3011O000000c8Ar
-10:41:34.215 (4216219390)|FLOW_CREATE_INTERVIEW_END|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
-10:41:33.554 (4216254177)|WF_FLOW_ACTION_BEGIN|09L1O000000g3fr
-10:41:34.218 (4218259304)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.218 (4218329272)|FLOW_START_INTERVIEW_BEGIN|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
-10:41:34.218 (4234432434)|FLOW_START_INTERVIEW_END|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
-10:41:34.218 (4234456835)|FLOW_START_INTERVIEWS_END|1
-10:41:34.218 (4234488686)|FLOW_INTERVIEW_FINISHED|5929e6b748c51632017e1685fb0919e96a751f0-5eef|Primary contact update
-10:41:33.554 (4237958693)|WF_FLOW_ACTION_END|09L1O000000g3fr
-10:41:34.240 (4240611201)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|30014000000CKfH|3011O00000093PI
-10:41:34.240 (4242519108)|FLOW_CREATE_INTERVIEW_END|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
-10:41:33.554 (4242548224)|WF_FLOW_ACTION_BEGIN|09L5Y000000ZP9A
-10:41:34.244 (4244376696)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.244 (4244410005)|FLOW_START_INTERVIEW_BEGIN|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
-10:41:34.244 (4256890997)|FLOW_START_INTERVIEW_END|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
-10:41:34.244 (4256911512)|FLOW_START_INTERVIEWS_END|1
-10:41:34.244 (4256935664)|FLOW_INTERVIEW_FINISHED|5930e6b748c51632017e1685fb0919e96a751f0-5ef0|From Approval to Live
-10:41:33.554 (4260387058)|WF_FLOW_ACTION_END|09L5Y000000ZP9A
-10:41:34.262 (4262691792)|FLOW_CREATE_INTERVIEW_BEGIN|00D30000000pE7X|3001400000086Ui|30114000000Cvth
-10:41:34.262 (4264942992)|FLOW_CREATE_INTERVIEW_END|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
-10:41:33.554 (4264973070)|WF_FLOW_ACTION_BEGIN|09L14000000Cd7Z
-10:41:34.266 (4266785212)|FLOW_START_INTERVIEWS_BEGIN|1
-10:41:34.266 (4266817510)|FLOW_START_INTERVIEW_BEGIN|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
-10:41:34.266 (4278824122)|FLOW_START_INTERVIEW_END|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
-10:41:34.266 (4278845033)|FLOW_START_INTERVIEWS_END|1
-10:41:34.266 (4278869500)|FLOW_INTERVIEW_FINISHED|5931e6b748c51632017e1685fb0919e96a751f0-5ef1|Deal: PQ
-10:41:33.554 (4282315874)|WF_FLOW_ACTION_END|09L14000000Cd7Z
-10:41:33.554 (4282363355)|WF_TIME_TRIGGERS_BEGIN
-10:41:33.554 (4284823433)|WF_ACTIONS_END| Flow Trigger: 13;
-10:41:33.554 (4284839593)|CODE_UNIT_FINISHED|Workflow:01I300000027f4c
-10:41:33.554 (4286394536)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:01I300000027f4c
-10:41:33.554 (4293063230)|CODE_UNIT_FINISHED|Flow:01I300000027f4c
-10:41:33.554 (4296734681)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:01I300000027f4c
-10:41:33.554 (4301104387)|CODE_UNIT_FINISHED|Flow:01I300000027f4c
-10:41:33.554 (4306613927)|DML_END|[250]
-10:41:33.554 (4340681287)|CODE_UNIT_STARTED|[EXTERNAL]|Flow:EmailMessage
-10:41:33.554 (4340710466)|CODE_UNIT_FINISHED|Flow:EmailMessage
-10:41:33.554 (4347509793)|CODE_UNIT_STARTED|[EXTERNAL]|01qPj00000AKA2H|EmailMessageHandlerTrigger on EmailMessage trigger event BeforeInsert|__sfdc_trigger/EmailMessageHandlerTrigger
-10:41:33.554 (4348106308)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4348738484)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4388394128)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4389265754)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4394309024)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4394879947)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4399131477)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4399590556)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4403556018)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4403993817)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4407931813)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4408302171)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4412068189)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4412419416)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4416268302)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4416629280)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4420238578)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4420660293)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4424797798)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4425145422)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4429129552)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4429479290)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4433154331)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4433496690)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4437314032)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4437659040)|SOQL_EXECUTE_BEGIN|[13]|Aggregations:0|SELECT Id FROM RecordType WHERE SObjectType = :objectName AND DeveloperName = :recordTypeName LIMIT 1
-10:41:33.554 (4441362087)|SOQL_EXECUTE_END|[13]|Rows:1
-10:41:33.554 (4444596605)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (4444665877)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4444716632)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (4444720076)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4444722683)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (4444756110)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4444889708)|SYSTEM_MODE_EXIT|false
-10:41:34.444 (4444903201)|CUMULATIVE_LIMIT_USAGE
-10:41:34.444 (4444903201)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 26 out of 200
-  Number of query rows: 25 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 423 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 1 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:34.444 (4444903201)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:33.554 (4445074771)|CODE_UNIT_FINISHED|EmailMessageHandlerTrigger on EmailMessage trigger event BeforeInsert|__sfdc_trigger/EmailMessageHandlerTrigger
-10:41:33.554 (4490195207)|CODE_UNIT_STARTED|[EXTERNAL]|01qPj00000AKA2H|EmailMessageHandlerTrigger on EmailMessage trigger event AfterInsert|__sfdc_trigger/EmailMessageHandlerTrigger
-10:41:33.554 (4490521449)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4490563005)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (4490567474)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4490570153)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (4490589355)|SYSTEM_MODE_ENTER|false
-10:41:33.554 (4490780378)|USER_DEBUG|[37]|DEBUG|EmailMessageHandler-afterInsert before
-10:41:33.554 (4493691861)|EXCEPTION_THROWN|[54]|System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
-10:41:33.554 (4493798978)|SYSTEM_MODE_EXIT|false
-10:41:33.554 (4493869512)|FATAL_ERROR|System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
-
-Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
-Class.EmailMessageHandler.afterInsert: line 40, column 1
-Class.ITriggerHandlerImpl.execute: line 31, column 1
-Trigger.EmailMessageHandlerTrigger: line 11, column 1
-10:41:33.554 (4493879578)|FATAL_ERROR|System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
-
-Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
-Class.EmailMessageHandler.afterInsert: line 40, column 1
-Class.ITriggerHandlerImpl.execute: line 31, column 1
-Trigger.EmailMessageHandlerTrigger: line 11, column 1
-10:41:34.493 (4493903407)|CUMULATIVE_LIMIT_USAGE
-10:41:34.493 (4493903407)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 26 out of 200
-  Number of query rows: 25 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 423 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 1 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:34.493 (4493903407)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:33.554 (4494057216)|CODE_UNIT_FINISHED|EmailMessageHandlerTrigger on EmailMessage trigger event AfterInsert|__sfdc_trigger/EmailMessageHandlerTrigger
-10:41:33.554 (4532109724)|EXCEPTION_THROWN|[333]|System.EmailException: SendEmail failed. First exception on row 0; first error: UNKNOWN_EXCEPTION, EmailMessageHandlerTrigger: execution of AfterInsert
-
-caused by: System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
-
-Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
-Class.EmailMessageHandler.afterInsert: line 40, column 1
-Class.ITriggerHandlerImpl.execute: line 31, column 1
-Trigger.EmailMessageHandlerTrigger: line 11, column 1: []
-10:41:33.554 (4534577865)|USER_DEBUG|[288]|DEBUG|General Exception in sendMerchantRequest: SendEmail failed. First exception on row 0; first error: UNKNOWN_EXCEPTION, EmailMessageHandlerTrigger: execution of AfterInsert
-
-caused by: System.AsyncException: Future method cannot be called from a future or batch method: EmailMessageHandler.duplicateEmailToCaseFuture(Set<Id>)
-
-Class.EmailMessageHandler.duplicateEmailToCase: line 54, column 1
-Class.EmailMessageHandler.afterInsert: line 40, column 1
-Class.ITriggerHandlerImpl.execute: line 31, column 1
-Trigger.EmailMessageHandlerTrigger: line 11, column 1: []
-10:41:33.554 (4534623461)|USER_DEBUG|[343]|DEBUG|===> Inside fetchCase, caseId: 500Pj000016Of4U
-10:41:33.554 (4535268911)|SOQL_EXECUTE_BEGIN|[346]|Aggregations:0|SELECT Id, Company_Profile__c, Integration_Channel__c, ContactId, SB_PPP_Username__c, SB_PPP_Password__c, SB_Template__c, Profile__c, Location__c, Location__r.Name, Location__r.Email_Address__c, Location__r.Street__c, Location__r.City__c, Location__r.Country__c, Location__r.Postal_Code__c, Location__r.Phone_Number__c, Platform_Integration__c, Contact.FirstName, Contact.LastName, Contact.Email, Contact.Phone FROM Case WHERE Id = :tmpVar1 LIMIT 1
-10:41:34.554 (4554633784)|SOQL_EXECUTE_END|[346]|Rows:1
-10:41:34.554 (4554882363)|USER_DEBUG|[359]|DEBUG|===> Case fetched: Case:{Id=500Pj000016Of4UIAS, Company_Profile__c=a0m1O000008j6nNQAQ, Integration_Channel__c=Fasttrack, ContactId=0031O00003H2k1nQAB, SB_PPP_Username__c=dimitar.panayotov02570633, SB_Template__c=Merchant and merchantSite NCP acquiring CNP REST 2 fast track, Platform_Integration__c=- none -}
-10:41:34.554 (4555212143)|SOQL_EXECUTE_BEGIN|[363]|Aggregations:0|SELECT Id, Name, FirstName, LastName, Email, MailingStreet, MailingCity, MailingCountry, MailingPostalCode, Phone FROM Contact WHERE Id = :tmpVar1
-10:41:34.554 (4559466398)|SOQL_EXECUTE_END|[363]|Rows:1
-10:41:34.554 (4559691702)|USER_DEBUG|[368]|DEBUG|===> Contact fetched: Contact:{Id=0031O00003H2k1nQAB, Name=David Hazan, FirstName=David, LastName=Hazan, Email=dimitarpanayotov@gmail.com, Phone=44876756457986}
-10:41:34.554 (4560650309)|SOQL_EXECUTE_BEGIN|[373]|Aggregations:0|SELECT Id, Name, Registered_Country_Code2__c, Registered_Zip_Postal_Code__c, MCC_Code__c, VAT_Number__c, Registered_Street__c, Registered_City__c, Primary_Contact__r.Phone, Primary_Contact__r.Id, Primary_Contact__r.Email, Primary_Contact__r.FirstName, Primary_Contact__r.LastName, Primary_Contact__r.MailingStreet, Primary_Contact__r.MailingCity, Primary_Contact__r.MailingCountry, Primary_Contact__r.MailingPostalCode, MSA_Effective_Date__c, City_field__c, Merchant_Tier__c, State_USA__c, Registered_Country__c, Primary_Contact__c, Account__r.Id, Account__r.Name, Sales_Rep__c, Sales_Rep__r.FirstName, Sales_Rep__r.LastName, Sales_Rep__r.Email, Account_Manager__c, Account_Manager__r.FirstName, Account_Manager__r.LastName, Account_Manager__r.Email, Account_Operational_Manager_CP__c, Account_Operational_Manager_CP__r.FirstName, Account_Operational_Manager_CP__r.LastName, Account_Operational_Manager_CP__r.Email, From_Reseller__r.Id, From_Reseller__r.Name, From_Reseller__r.Nuvei_Partner_ID__c, From_Reseller__r.Credentials_URL__c, From_Reseller__r.Overwrite_Financial_Vertical__c, Overwrite_Financial_Vertical__c, Origin_Region__c, Visa_Payfac_ID__c, Mastercard_Payfac_ID__c, Nuvei_Connect_Application_ID__c, EU_Indirect_Orchestration__c FROM Compliance__c WHERE Id = :tmpVar1
-10:41:34.554 (4603983081)|SOQL_EXECUTE_END|[373]|Rows:1
-10:41:34.554 (4604334393)|USER_DEBUG|[392]|DEBUG|===> Compliance Profile fetched: Compliance__c:{Id=a0m1O000008j6nNQAQ, Name=REST 2.0 onboarding test LTD, Registered_Country_Code2__c=GBR, Registered_Zip_Postal_Code__c=7654654, MCC_Code__c=5817, VAT_Number__c=N/A, Registered_Street__c=baker street 22, Registered_City__c=London, Primary_Contact__c=0031O00003H2k1nQAB, City_field__c=davidh.com, Merchant_Tier__c=5, State_USA__c=England and Wales, Registered_Country__c=United Kingdom, Account__c=0011O000029FeRMQA0, EU_Indirect_Orchestration__c=false}
-10:41:34.554 (4604395798)|SYSTEM_MODE_EXIT|false
-10:41:34.604 (4604424282)|CUMULATIVE_LIMIT_USAGE
-10:41:34.604 (4604424282)|LIMIT_USAGE_FOR_NS|(default)|
-  Number of SOQL queries: 16 out of 200
-  Number of query rows: 15 out of 50000
-  Number of SOSL queries: 0 out of 20
-  Number of DML statements: 1 out of 150
-  Number of Publish Immediate DML: 0 out of 150
-  Number of DML rows: 1 out of 10000
-  Maximum CPU time: 559 out of 60000
-  Maximum heap size: 0 out of 12000000
-  Number of callouts: 2 out of 100
-  Number of Email Invocations: 0 out of 10
-  Number of future calls: 0 out of 50
-  Number of queueable jobs added to the queue: 0 out of 1
-  Number of Mobile Apex push calls: 0 out of 10
-
-10:41:34.604 (4604424282)|CUMULATIVE_LIMIT_USAGE_END
-
-10:41:34.554 (4604525977)|CODE_UNIT_FINISHED|MerchantOnboardingController.sendMerchantRequest(String, Boolean, Boolean)
-10:41:34.554 (4604561674)|EXECUTION_FINISHED
+Results
+66.0 APEX_CODE,DEBUG
+Execute Anonymous: // =====================================================================
+Execute Anonymous: // PROD - Discover field API names and child relationships needed for
+Execute Anonymous: // the Visualforce MSA template (Phase 1 + 2). Read-only describe calls.
+Execute Anonymous: // =====================================================================
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 1: Fields on Compliance__c that match template merges');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: List<String> complianceHints = new List<String>{
+Execute Anonymous:     'register',           // Registered country / address
+Execute Anonymous:     'incorpor',           // Incorporation number
+Execute Anonymous:     'address',
+Execute Anonymous:     'remit',              // Remittance cycle / currency
+Execute Anonymous:     'effective',          // MSA effective date
+Execute Anonymous:     'msa',
+Execute Anonymous:     'currency',           // Fees currency
+Execute Anonymous:     'fees',
+Execute Anonymous:     'contract_term',      // Minimum period
+Execute Anonymous:     'minimum',            // Minimum monthly fee / commitment
+Execute Anonymous:     'holdback',           // APM holdback rate
+Execute Anonymous:     'apm',                // APM chargeback fee
+Execute Anonymous:     'chargeback',
+Execute Anonymous:     'gw_processing',      // Gateway processing fee
+Execute Anonymous:     'wire',               // Wire fee
+Execute Anonymous:     'tokeniz',            // Tokenization
+Execute Anonymous:     'cashier',
+Execute Anonymous:     'smart_3d',           // Smart 3D Secure
+Execute Anonymous:     'x3d',                // 3D transactions fee
+Execute Anonymous:     'dcc',                // Dynamic currency conversion
+Execute Anonymous:     'mastercard',         // Mastercard ABU
+Execute Anonymous:     'visa',               // Visa ANI
+Execute Anonymous:     'reseller',           // From reseller name
+Execute Anonymous:     'partner',
+Execute Anonymous:     'managing_company',
+Execute Anonymous:     'go_live'
+Execute Anonymous: };
+Execute Anonymous: 
+Execute Anonymous: for (Schema.SObjectField f : Compliance__c.SObjectType.getDescribe().fields.getMap().values()) {
+Execute Anonymous:     Schema.DescribeFieldResult d = f.getDescribe();
+Execute Anonymous:     String apiName = d.getName().toLowerCase();
+Execute Anonymous:     String label = d.getLabel() == null ? '' : d.getLabel().toLowerCase();
+Execute Anonymous:     for (String h : complianceHints) {
+Execute Anonymous:         if (apiName.contains(h) || label.contains(h)) {
+Execute Anonymous:             System.debug('  ' + d.getName() + ' | "' + d.getLabel() + '" | ' + d.getType());
+Execute Anonymous:             break;
+Execute Anonymous:         }
+Execute Anonymous:     }
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 2: Child relationships on Compliance__c');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: for (Schema.ChildRelationship cr : Compliance__c.SObjectType.getDescribe().getChildRelationships()) {
+Execute Anonymous:     if (cr.getChildSObject() == null) continue;
+Execute Anonymous:     String objName = cr.getChildSObject().getDescribe().getName();
+Execute Anonymous:     String objLow = objName.toLowerCase();
+Execute Anonymous:     if (objLow.contains('web') || objLow.contains('url') || objLow.contains('site')
+Execute Anonymous:         || objLow.contains('bank') || objLow.contains('merchant') 
+Execute Anonymous:         || objLow.contains('application') || objLow.contains('chargeback')
+Execute Anonymous:         || objLow.contains('reseller') || objLow.contains('partner')) {
+Execute Anonymous:         System.debug('  CHILD: ' + objName
+Execute Anonymous:             + ' | via field=' + (cr.getField() == null ? 'null' : cr.getField().getDescribe().getName())
+Execute Anonymous:             + ' | relationshipName=' + cr.getRelationshipName());
+Execute Anonymous:     }
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 3: All child objects on Compliance__c (so we do not miss any)');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: for (Schema.ChildRelationship cr : Compliance__c.SObjectType.getDescribe().getChildRelationships()) {
+Execute Anonymous:     if (cr.getChildSObject() == null) continue;
+Execute Anonymous:     System.debug('  ' + cr.getChildSObject().getDescribe().getName()
+Execute Anonymous:         + ' | relationshipName=' + cr.getRelationshipName());
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 4: Fields on Merchant_Bank__c (Appendix A fee tables)');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: try {
+Execute Anonymous:     Map<String, Schema.SObjectField> mbFields = Schema.getGlobalDescribe().get('Merchant_Bank__c').getDescribe().fields.getMap();
+Execute Anonymous:     List<String> mbHints = new List<String>{
+Execute Anonymous:         'bank_name', 'msa_wording', 'setup_fee', 'annual', 'monthly', '3d_secure',
+Execute Anonymous:         'arbitration', 'remittance_fee', 'risk_fee', 'trx_fee', 'other_cards', 
+Execute Anonymous:         'credit_fee', 'mastercard_pt', 'visa_direct', 'visa_direct_row',
+Execute Anonymous:         'cmm_report', 'ecm_report', 'chb_handling', 'cb_chb', 'holdback_rate',
+Execute Anonymous:         'retrieval', 'statement_fee', 'partner_template'
+Execute Anonymous:     };
+Execute Anonymous:     for (Schema.SObjectField f : mbFields.values()) {
+Execute Anonymous:         Schema.DescribeFieldResult d = f.getDescribe();
+Execute Anonymous:         String apiName = d.getName().toLowerCase();
+Execute Anonymous:         String label = d.getLabel() == null ? '' : d.getLabel().toLowerCase();
+Execute Anonymous:         for (String h : mbHints) {
+Execute Anonymous:             if (apiName.contains(h) || label.contains(h)) {
+Execute Anonymous:                 System.debug('  ' + d.getName() + ' | "' + d.getLabel() + '" | ' + d.getType());
+Execute Anonymous:                 break;
+Execute Anonymous:             }
+Execute Anonymous:         }
+Execute Anonymous:     }
+Execute Anonymous: } catch (Exception e) {
+Execute Anonymous:     System.debug('  Merchant_Bank__c not found: ' + e.getMessage());
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 5: Fields on Application_Form__c (Appendix B C-Panel)');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: try {
+Execute Anonymous:     Map<String, Schema.SObjectField> afFields = Schema.getGlobalDescribe().get('Application_Form__c').getDescribe().fields.getMap();
+Execute Anonymous:     List<String> afHints = new List<String>{
+Execute Anonymous:         'primary_contact', 'administrator', 'apm_pricing', 'first_name',
+Execute Anonymous:         'last_name', 'title', 'email', 'phone', 'secret_word', 'tel'
+Execute Anonymous:     };
+Execute Anonymous:     for (Schema.SObjectField f : afFields.values()) {
+Execute Anonymous:         Schema.DescribeFieldResult d = f.getDescribe();
+Execute Anonymous:         String apiName = d.getName().toLowerCase();
+Execute Anonymous:         String label = d.getLabel() == null ? '' : d.getLabel().toLowerCase();
+Execute Anonymous:         for (String h : afHints) {
+Execute Anonymous:             if (apiName.contains(h) || label.contains(h)) {
+Execute Anonymous:                 System.debug('  ' + d.getName() + ' | "' + d.getLabel() + '" | ' + d.getType());
+Execute Anonymous:                 break;
+Execute Anonymous:             }
+Execute Anonymous:         }
+Execute Anonymous:     }
+Execute Anonymous: } catch (Exception e) {
+Execute Anonymous:     System.debug('  Application_Form__c not found: ' + e.getMessage());
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 6: Find object behind {{TableStart:WEBSITES}}');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: for (String objName : Schema.getGlobalDescribe().keySet()) {
+Execute Anonymous:     String lower = objName.toLowerCase();
+Execute Anonymous:     if ((lower.contains('website') || lower.contains('url') || lower.endsWith('_site__c'))
+Execute Anonymous:         && !lower.contains('translation') && !lower.contains('feed') && !lower.contains('history')
+Execute Anonymous:         && !lower.contains('share') && !lower.contains('change')) {
+Execute Anonymous:         System.debug('  CANDIDATE: ' + Schema.getGlobalDescribe().get(objName).getDescribe().getName()
+Execute Anonymous:             + ' | label=' + Schema.getGlobalDescribe().get(objName).getDescribe().getLabel());
+Execute Anonymous:     }
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('STEP 7: Find object behind {{TableStart:PreCB}} (Chargeback Protection)');
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: 
+Execute Anonymous: for (String objName : Schema.getGlobalDescribe().keySet()) {
+Execute Anonymous:     String lower = objName.toLowerCase();
+Execute Anonymous:     if ((lower.contains('chargeback') || lower.contains('protection') || lower.contains('precb'))
+Execute Anonymous:         && !lower.contains('translation') && !lower.contains('feed') && !lower.contains('history')
+Execute Anonymous:         && !lower.contains('share') && !lower.contains('change')) {
+Execute Anonymous:         System.debug('  CANDIDATE: ' + Schema.getGlobalDescribe().get(objName).getDescribe().getName()
+Execute Anonymous:             + ' | label=' + Schema.getGlobalDescribe().get(objName).getDescribe().getLabel());
+Execute Anonymous:     }
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========================================');
+Execute Anonymous: System.debug('Done. Look above for field API names and child object names.');
+Execute Anonymous: System.debug('========================================');
+18:51:02.41 (41522075)|USER_INFO|[EXTERNAL]|00530000006NODJ|ivaylo.nikolov@nuvei.com|(GMT+03:00) Eastern European Summer Time (Europe/Athens)|GMT+03:00
+18:51:02.41 (41580856)|EXECUTION_STARTED
+18:51:02.41 (41613853)|CODE_UNIT_STARTED|[EXTERNAL]|execute_anonymous_apex
+18:51:02.41 (42339505)|USER_DEBUG|[6]|DEBUG|========================================
+18:51:02.41 (42361238)|USER_DEBUG|[7]|DEBUG|STEP 1: Fields on Compliance__c that match template merges
+18:51:02.41 (42365290)|USER_DEBUG|[8]|DEBUG|========================================
+18:51:02.41 (50702634)|USER_DEBUG|[45]|DEBUG|  CurrencyIsoCode &#124; "Currency ISO Code" &#124; PICKLIST
+18:51:02.41 (54637908)|USER_DEBUG|[45]|DEBUG|  Is_Reseller__c &#124; "Is Introducer" &#124; BOOLEAN
+18:51:02.41 (55743629)|USER_DEBUG|[45]|DEBUG|  Holdback_for_APMs_Currency__c &#124; "Holdback for APMs Currency" &#124; PICKLIST
+18:51:02.41 (55845129)|USER_DEBUG|[45]|DEBUG|  Fix_Holdback_for_APMs__c &#124; "Fix Holdback for APMs" &#124; BOOLEAN
+18:51:02.41 (56036246)|USER_DEBUG|[45]|DEBUG|  Holdback_rate_for_APMs_edit_by_Risk__c &#124; "Fix Holdback rate for APMs" &#124; DOUBLE
+18:51:02.41 (62011587)|USER_DEBUG|[45]|DEBUG|  Holdback_rate_for_APMs_for_PQ_MSA__c &#124; "Holdback rate for APMs (for PQ/MSA)" &#124; STRING
+18:51:02.41 (72936752)|USER_DEBUG|[45]|DEBUG|  Expected_go_live_date__c &#124; "Expected go live date" &#124; DATE
+18:51:02.41 (78480344)|USER_DEBUG|[45]|DEBUG|  Managing_Company_Label__c &#124; "Managing Company Label" &#124; STRING
+18:51:02.41 (78690771)|USER_DEBUG|[45]|DEBUG|  Remittance_Cycle__c &#124; "Remittance Cycle" &#124; PICKLIST
+18:51:02.41 (78813824)|USER_DEBUG|[45]|DEBUG|  MSA_Termination_Date__c &#124; "MSA Termination Date" &#124; DATE
+18:51:02.41 (79040635)|USER_DEBUG|[45]|DEBUG|  MSA_Termination_Date_Formula__c &#124; "MSA Termination Date_Formula" &#124; DATE
+18:51:02.41 (91450471)|USER_DEBUG|[45]|DEBUG|  Pre_Chargeback_Status__c &#124; "Pre-Chargeback Status" &#124; PICKLIST
+18:51:02.41 (92664344)|USER_DEBUG|[45]|DEBUG|  NA_Partner__c &#124; "NA Partner" &#124; PICKLIST
+18:51:02.41 (92894858)|USER_DEBUG|[45]|DEBUG|  Partner__c &#124; "Partner" &#124; PICKLIST
+18:51:02.41 (93263032)|USER_DEBUG|[45]|DEBUG|  Registered_State__c &#124; "Registered State" &#124; STRING
+18:51:02.41 (93453513)|USER_DEBUG|[45]|DEBUG|  Cashier_fee__c &#124; "Cashier/Payment Page Fee" &#124; DOUBLE
+18:51:02.41 (97144727)|USER_DEBUG|[45]|DEBUG|  Managing_Company_Location__c &#124; "Managing Company Location" &#124; STRING
+18:51:02.41 (98488287)|USER_DEBUG|[45]|DEBUG|  Add_Cashier_fee__c &#124; "Add Cashier/Payment Page Fee" &#124; BOOLEAN
+18:51:02.41 (102244020)|USER_DEBUG|[45]|DEBUG|  Remittance_Cycle_MSA_wording__c &#124; "Remittance Cycle MSA wording" &#124; STRING
+18:51:02.41 (108724240)|USER_DEBUG|[45]|DEBUG|  Partner_Account__c &#124; "Partner Account" &#124; STRING
+18:51:02.41 (109164180)|USER_DEBUG|[45]|DEBUG|  Tri_party_MSA__c &#124; "Tri-party MSA" &#124; BOOLEAN
+18:51:02.41 (110797285)|USER_DEBUG|[45]|DEBUG|  Mastercard_Automatic_Billing_Updater_ABU__c &#124; "Mastercard ABU & Visa VAU" &#124; DOUBLE
+18:51:02.41 (115485144)|USER_DEBUG|[45]|DEBUG|  Wire_Fee__c &#124; "Wire Fee" &#124; DOUBLE
+18:51:02.41 (117016374)|USER_DEBUG|[45]|DEBUG|  Address_Verification__c &#124; "Address Verification" &#124; PICKLIST
+18:51:02.41 (117395542)|USER_DEBUG|[45]|DEBUG|  Address_Verification_Comments__c &#124; "Address Verification Comments" &#124; STRING
+18:51:02.41 (117760861)|USER_DEBUG|[45]|DEBUG|  Fees_Currency__c &#124; "Default Currency Fix Fees" &#124; PICKLIST
+18:51:02.41 (117842874)|USER_DEBUG|[45]|DEBUG|  Negative_Address_Verification_checks__c &#124; "Negative Address Verification checks" &#124; DOUBLE
+18:51:02.41 (118147270)|USER_DEBUG|[45]|DEBUG|  Smart_3D_Secure_Fee__c &#124; "Smart 3D Secure Fee" &#124; DOUBLE
+18:51:02.41 (118563548)|USER_DEBUG|[45]|DEBUG|  Connect_APMs__c &#124; "Connect APMs" &#124; DOUBLE
+18:51:02.41 (118734692)|USER_DEBUG|[45]|DEBUG|  GW_Processing_Fee__c &#124; "GW Processing Fee" &#124; DOUBLE
+18:51:02.41 (120792555)|USER_DEBUG|[45]|DEBUG|  X3D_Secure_activation__c &#124; "3D Secure (activation)" &#124; PICKLIST
+18:51:02.41 (120922714)|USER_DEBUG|[45]|DEBUG|  Tokenization_activation__c &#124; "Tokenization (activation)" &#124; PICKLIST
+18:51:02.41 (121002644)|USER_DEBUG|[45]|DEBUG|  Address_Verification_activation__c &#124; "Address Verification (activation)" &#124; PICKLIST
+18:51:02.41 (121352686)|USER_DEBUG|[45]|DEBUG|  Incorporation_number__c &#124; "Incorporation number" &#124; STRING
+18:51:02.41 (123562893)|USER_DEBUG|[45]|DEBUG|  DCC__c &#124; "Dynamic Currency Conversion (DCC)" &#124; PERCENT
+18:51:02.41 (123784871)|USER_DEBUG|[45]|DEBUG|  Remittance_Currency__c &#124; "Remittance Currency" &#124; MULTIPICKLIST
+18:51:02.41 (123998982)|USER_DEBUG|[45]|DEBUG|  Remittance_Currency_Text__c &#124; "Remittance Currency Text" &#124; STRING
+18:51:02.41 (124099877)|USER_DEBUG|[45]|DEBUG|  Minimum_Processing_Volume__c &#124; "Minimum Processing Volume" &#124; DOUBLE
+18:51:02.41 (125776139)|USER_DEBUG|[45]|DEBUG|  Incorporation_date__c &#124; "Incorporation date" &#124; DATE
+18:51:02.41 (127163383)|USER_DEBUG|[45]|DEBUG|  X3D_Transactions_Fee__c &#124; "3D Transactions Fee" &#124; DOUBLE
+18:51:02.41 (127947466)|USER_DEBUG|[45]|DEBUG|  Amendment_Mastercard_ABU__c &#124; "Amendment Mastercard ABU" &#124; BOOLEAN
+18:51:02.41 (128040084)|USER_DEBUG|[45]|DEBUG|  Amendment_Smart_3D__c &#124; "Amendment Smart 3D" &#124; BOOLEAN
+18:51:02.41 (128222423)|USER_DEBUG|[45]|DEBUG|  Amendment_DCC__c &#124; "Amendment DCC" &#124; BOOLEAN
+18:51:02.41 (146024718)|USER_DEBUG|[45]|DEBUG|  Incorporation_documents_or_Sole_trade__c &#124; "Incorporation documents or Sole trade" &#124; PICKLIST
+18:51:02.41 (148787170)|USER_DEBUG|[45]|DEBUG|  Trip_Address__c &#124; "Additional Company Address" &#124; STRING
+18:51:02.41 (149583925)|USER_DEBUG|[45]|DEBUG|  Trip_Number__c &#124; "Additional Company Incorporation Number" &#124; STRING
+18:51:02.41 (151195655)|USER_DEBUG|[45]|DEBUG|  Minimum_Fee_ES__c &#124; "Minimum Fee ES Section" &#124; STRING
+18:51:02.41 (152342928)|USER_DEBUG|[45]|DEBUG|  Industry_for_APMs__c &#124; "Industry for APMs" &#124; STRING
+18:51:02.41 (167930762)|USER_DEBUG|[45]|DEBUG|  Managing_Company_Grouping__c &#124; "Managing Company Grouping" &#124; STRING
+18:51:02.41 (168219279)|USER_DEBUG|[45]|DEBUG|  Holdback_for_APMs__c &#124; "Holdback for APMs (%)" &#124; PERCENT
+18:51:02.41 (168924416)|USER_DEBUG|[45]|DEBUG|  Non_STD_services_fees__c &#124; "Non STD services fees" &#124; STRING
+18:51:02.41 (169996483)|USER_DEBUG|[45]|DEBUG|  Visa_Direct_Mastercard_Send__c &#124; "Visa Direct / Mastercard Send" &#124; PERCENT
+18:51:02.41 (170376196)|USER_DEBUG|[45]|DEBUG|  Managing_Company__c &#124; "Managing Company" &#124; PICKLIST
+18:51:02.41 (171060048)|USER_DEBUG|[45]|DEBUG|  Country_Of_Incorporation_New__c &#124; "Country Of Incorporation - old" &#124; PICKLIST
+18:51:02.41 (171704030)|USER_DEBUG|[45]|DEBUG|  Minimum_commitment_calculation__c &#124; "Minimum commitment calculation" &#124; STRING
+18:51:02.41 (172258689)|USER_DEBUG|[45]|DEBUG|  Monthly_Expected_Chargeback_Ratio__c &#124; "Monthly Expected Chargeback Ratio" &#124; DOUBLE
+18:51:02.41 (174572167)|USER_DEBUG|[45]|DEBUG|  Does_the_company_have_a_U_S_Address__c &#124; "Does the company have a U.S. Address?" &#124; PICKLIST
+18:51:02.41 (174907144)|USER_DEBUG|[45]|DEBUG|  Incorporation_Documents_non_eu__c &#124; "Incorporation Documents" &#124; BOOLEAN
+18:51:02.41 (175651217)|USER_DEBUG|[45]|DEBUG|  Actual_Go_live_date__c &#124; "Actual Go live date" &#124; DATE
+18:51:02.41 (175834764)|USER_DEBUG|[45]|DEBUG|  MSA_Terminated__c &#124; "MSA Terminated" &#124; BOOLEAN
+18:51:02.41 (175910715)|USER_DEBUG|[45]|DEBUG|  SC_Acquirer_MSA__c &#124; "SC Acquirer MSA" &#124; DOUBLE
+18:51:02.41 (175988404)|USER_DEBUG|[45]|DEBUG|  APM_modified_via_Cpanel__c &#124; "APM modified via Cpanel" &#124; BOOLEAN
+18:51:02.41 (177007744)|USER_DEBUG|[45]|DEBUG|  Registered_Street__c &#124; "Registered Street" &#124; STRING
+18:51:02.41 (177261875)|USER_DEBUG|[45]|DEBUG|  Registered_City__c &#124; "Registered City" &#124; STRING
+18:51:02.41 (177422883)|USER_DEBUG|[45]|DEBUG|  Visa_Account_Name_Inquiry_ANI__c &#124; "Visa Account Name Inquiry (ANI)" &#124; DOUBLE
+18:51:02.41 (178018332)|USER_DEBUG|[45]|DEBUG|  Mastercard_Payfac_ID__c &#124; "Mastercard Payfac ID" &#124; STRING
+18:51:02.41 (178123388)|USER_DEBUG|[45]|DEBUG|  Visa_Payfac_ID__c &#124; "Visa Payfac ID" &#124; STRING
+18:51:02.41 (190178216)|USER_DEBUG|[45]|DEBUG|  Nuvei_Partner_ID__c &#124; "Nuvei Partner ID" &#124; STRING
+18:51:02.41 (190410283)|USER_DEBUG|[45]|DEBUG|  Count_of_SC_MSA_LTD_banks__c &#124; "Count of SC MSA LTD banks" &#124; DOUBLE
+18:51:02.41 (191655340)|USER_DEBUG|[45]|DEBUG|  Can_Send_Short_MSA__c &#124; "Can Send Short MSA" &#124; STRING
+18:51:02.41 (192648211)|USER_DEBUG|[45]|DEBUG|  MSA_Conga_URL__c &#124; "MSA Conga URL" &#124; TEXTAREA
+18:51:02.41 (192906481)|USER_DEBUG|[45]|DEBUG|  MSA_Started_At__c &#124; "MSA Started At" &#124; DATETIME
+18:51:02.41 (194215168)|USER_DEBUG|[45]|DEBUG|  Is_managing_company_Latam__c &#124; "Is managing company Latam?" &#124; BOOLEAN
+18:51:02.41 (194872380)|USER_DEBUG|[45]|DEBUG|  Registered_Zip_Postal_Code__c &#124; "Registered Zip/Postal Code" &#124; STRING
+18:51:02.41 (197378328)|USER_DEBUG|[45]|DEBUG|  Registered_Country__c &#124; "Country Of Incorporation" &#124; PICKLIST
+18:51:02.41 (203679752)|USER_DEBUG|[45]|DEBUG|  Registered_Country_Code2__c &#124; "Registered Country Code" &#124; STRING
+18:51:02.41 (205379544)|USER_DEBUG|[45]|DEBUG|  Registered_Country_Id2__c &#124; "Registered Country Id" &#124; STRING
+18:51:02.41 (206310504)|USER_DEBUG|[45]|DEBUG|  APM_Chargeback_Fee__c &#124; "APM Chargeback Fee" &#124; DOUBLE
+18:51:02.41 (207898085)|USER_DEBUG|[45]|DEBUG|  MSA_Recipient__c &#124; "MSA Recipient" &#124; REFERENCE
+18:51:02.41 (208012266)|USER_DEBUG|[45]|DEBUG|  MSA_Status__c &#124; "MSA Status" &#124; PICKLIST
+18:51:02.41 (208328719)|USER_DEBUG|[45]|DEBUG|  MSA_Template__c &#124; "MSA Template" &#124; STRING
+18:51:02.41 (208833323)|USER_DEBUG|[45]|DEBUG|  Minimum_Scales__c &#124; "Minimum Scales" &#124; DOUBLE
+18:51:02.41 (208939997)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Limit_1__c &#124; "1.   First months until end of month #" &#124; DOUBLE
+18:51:02.41 (209053659)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Limit_2__c &#124; "2. Then until end of month #" &#124; DOUBLE
+18:51:02.41 (209143434)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Limit_3__c &#124; "3. Then until end of month #" &#124; DOUBLE
+18:51:02.41 (209269383)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Value_1__c &#124; "Minimum monthly fee Value 1" &#124; DOUBLE
+18:51:02.41 (209350614)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Value_2__c &#124; "Minimum monthly fee Value 2" &#124; DOUBLE
+18:51:02.41 (209427958)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Value_3__c &#124; "Minimum monthly fee Value 3" &#124; DOUBLE
+18:51:02.41 (209525363)|USER_DEBUG|[45]|DEBUG|  Contract_Term__c &#124; "Contract Term" &#124; DOUBLE
+18:51:02.41 (214259290)|USER_DEBUG|[45]|DEBUG|  MSA_Effective_Date__c &#124; "MSA Effective Date" &#124; DATE
+18:51:02.41 (215282081)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_with_Waived__c &#124; "Minimum monthly fee with Waived" &#124; STRING
+18:51:02.41 (215427393)|USER_DEBUG|[45]|DEBUG|  Minimum_monthly_fee_Value_4__c &#124; "Minimum monthly fee Value 4" &#124; DOUBLE
+18:51:02.41 (217240440)|USER_DEBUG|[45]|DEBUG|  Minimum__c &#124; "Minimum Fee MSA section" &#124; STRING
+18:51:02.41 (217446627)|USER_DEBUG|[45]|DEBUG|  Minimum_Ticket_Value_1__c &#124; "Minimum Ticket Value" &#124; DOUBLE
+18:51:02.41 (219128077)|USER_DEBUG|[45]|DEBUG|  Expected_Monthly_Volume_Visa_1__c &#124; "Expected Monthly Volume-Visa" &#124; DOUBLE
+18:51:02.41 (219231315)|USER_DEBUG|[45]|DEBUG|  Address_Operation_Location_2_New__c &#124; "Operational Address" &#124; STRING
+18:51:02.41 (219498960)|USER_DEBUG|[45]|DEBUG|  Registered_Address_New__c &#124; "Registered Address" &#124; TEXTAREA
+18:51:02.41 (220954615)|USER_DEBUG|[45]|DEBUG|  Minimum_Fee_SC_ACQIURER_MSA_section__c &#124; "Minimum Fee SC ACQIURER MSA section" &#124; STRING
+18:51:02.41 (221196873)|USER_DEBUG|[45]|DEBUG|  X3D_Secure_setup__c &#124; "3D Secure (setup fee)" &#124; DOUBLE
+18:51:02.41 (221373388)|USER_DEBUG|[45]|DEBUG|  Tokenization_recurring__c &#124; "Tokenization (recurring fee)" &#124; DOUBLE
+18:51:02.41 (221970785)|USER_DEBUG|[45]|DEBUG|  No_APMs__c &#124; "No APMs" &#124; BOOLEAN
+18:51:02.41 (222464946)|USER_DEBUG|[45]|DEBUG|  From_Reseller__c &#124; "From Partner" &#124; REFERENCE
+18:51:02.41 (223141176)|USER_DEBUG|[45]|DEBUG|  Reseller_Commission__c &#124; "Introducer Commission" &#124; DOUBLE
+18:51:02.41 (223634181)|USER_DEBUG|[45]|DEBUG|  APM_Pricing_Tier__c &#124; "APM Pricing Tier" &#124; PICKLIST
+18:51:02.41 (225279470)|USER_DEBUG|[45]|DEBUG|  MSA_changes__c &#124; "MSA changes" &#124; TEXTAREA
+18:51:02.41 (227186292)|USER_DEBUG|[45]|DEBUG|  minimum_fee_text__c &#124; "minimum fee text" &#124; STRING
+18:51:02.41 (229255396)|USER_DEBUG|[45]|DEBUG|  Remittance_Currency_old__c &#124; "Remittance Currency*" &#124; STRING
+18:51:02.41 (234918147)|USER_DEBUG|[51]|DEBUG|========================================
+18:51:02.41 (234934447)|USER_DEBUG|[52]|DEBUG|STEP 2: Child relationships on Compliance__c
+18:51:02.41 (234937654)|USER_DEBUG|[53]|DEBUG|========================================
+18:51:02.41 (382473351)|USER_DEBUG|[63]|DEBUG|  CHILD: Application_Form__c &#124; via field=Company_Profile__c &#124; relationshipName=Application_Form__r
+18:51:02.41 (387536504)|USER_DEBUG|[63]|DEBUG|  CHILD: Banking_Details__c &#124; via field=Compliance__c &#124; relationshipName=Banking_Details__r
+18:51:02.41 (389843507)|USER_DEBUG|[63]|DEBUG|  CHILD: Banking_Products_UAB_Nuvei__c &#124; via field=Company_Profile__c &#124; relationshipName=Banking_Products_UAB_Nuvei__r
+18:51:02.41 (391839822)|USER_DEBUG|[63]|DEBUG|  CHILD: Chargeback_Protection__c &#124; via field=Company_Profile__c &#124; relationshipName=Chargeback_Protections__r
+18:51:02.41 (401906040)|USER_DEBUG|[63]|DEBUG|  CHILD: Merchant_Bank__c &#124; via field=Compliance__c &#124; relationshipName=Banks__r
+18:51:02.41 (404464576)|USER_DEBUG|[63]|DEBUG|  CHILD: North_America_Bank_Pricing__c &#124; via field=Company_Profile__c &#124; relationshipName=North_America_Bank_Pricing__r
+18:51:02.41 (406168912)|USER_DEBUG|[63]|DEBUG|  CHILD: Nuvei_UAB_Banking__c &#124; via field=Company_Profile__c &#124; relationshipName=Nuvei_UAB_Banking__r
+18:51:02.41 (412146891)|USER_DEBUG|[63]|DEBUG|  CHILD: ObjectRelatedUrl &#124; via field=ParentId &#124; relationshipName=null
+18:51:02.41 (466787484)|USER_DEBUG|[63]|DEBUG|  CHILD: ObjectRelatedUrlChangeEvent &#124; via field=ParentId &#124; relationshipName=null
+18:51:02.41 (470120551)|USER_DEBUG|[63]|DEBUG|  CHILD: Partner__c &#124; via field=Company_Profile__c &#124; relationshipName=Partners__r
+18:51:02.41 (473611715)|USER_DEBUG|[63]|DEBUG|  CHILD: Related_Merchant__c &#124; via field=Company_Profile__c &#124; relationshipName=Related_Merchants__r
+18:51:02.41 (479441854)|USER_DEBUG|[63]|DEBUG|  CHILD: Website__c &#124; via field=Compliance__c &#124; relationshipName=Websites__r
+18:51:02.41 (479986149)|USER_DEBUG|[69]|DEBUG|========================================
+18:51:02.41 (479995516)|USER_DEBUG|[70]|DEBUG|STEP 3: All child objects on Compliance__c (so we do not miss any)
+18:51:02.41 (479998760)|USER_DEBUG|[71]|DEBUG|========================================
+18:51:02.41 (480137058)|USER_DEBUG|[75]|DEBUG|  AIInsightValue &#124; relationshipName=null
+18:51:02.41 (480154437)|USER_DEBUG|[75]|DEBUG|  AIRecordInsight &#124; relationshipName=null
+18:51:02.41 (480168398)|USER_DEBUG|[75]|DEBUG|  APM_Provider__c &#124; relationshipName=APM_Providers__r
+18:51:02.41 (480181072)|USER_DEBUG|[75]|DEBUG|  APM__c &#124; relationshipName=APMs__r
+18:51:02.41 (480193584)|USER_DEBUG|[75]|DEBUG|  Action_Item_Comment__c &#124; relationshipName=Action_Item_Comments__r
+18:51:02.41 (480204967)|USER_DEBUG|[75]|DEBUG|  Action_Item__c &#124; relationshipName=Action_Items__r
+18:51:02.41 (480217894)|USER_DEBUG|[75]|DEBUG|  ActivityHistory &#124; relationshipName=ActivityHistories
+18:51:02.41 (480229376)|USER_DEBUG|[75]|DEBUG|  ActivityRecurrence2 &#124; relationshipName=null
+18:51:02.41 (480241394)|USER_DEBUG|[75]|DEBUG|  ActivityRecurrence2Exception &#124; relationshipName=null
+18:51:02.41 (480252794)|USER_DEBUG|[75]|DEBUG|  Additional_Address__c &#124; relationshipName=Additional_Addresses__r
+18:51:02.41 (480263971)|USER_DEBUG|[75]|DEBUG|  AgentWork &#124; relationshipName=null
+18:51:02.41 (480275894)|USER_DEBUG|[75]|DEBUG|  AgentWorkChangeEvent &#124; relationshipName=null
+18:51:02.41 (480287296)|USER_DEBUG|[75]|DEBUG|  Agreement__c &#124; relationshipName=Agreements__r
+18:51:02.41 (480299312)|USER_DEBUG|[75]|DEBUG|  Application_Form__c &#124; relationshipName=Application_Form__r
+18:51:02.41 (480310819)|USER_DEBUG|[75]|DEBUG|  ApprovalSubmission &#124; relationshipName=ApprovalSubmissions
+18:51:02.41 (480321907)|USER_DEBUG|[75]|DEBUG|  ApprovalWorkItem &#124; relationshipName=ApprovalWorkItems
+18:51:02.41 (480333755)|USER_DEBUG|[75]|DEBUG|  AttachedContentDocument &#124; relationshipName=AttachedContentDocuments
+18:51:02.41 (480345265)|USER_DEBUG|[75]|DEBUG|  AttachedContentNote &#124; relationshipName=AttachedContentNotes
+18:51:02.41 (480357279)|USER_DEBUG|[75]|DEBUG|  Attachment &#124; relationshipName=Attachments
+18:51:02.41 (480368978)|USER_DEBUG|[75]|DEBUG|  Banking_Details__c &#124; relationshipName=Banking_Details__r
+18:51:02.41 (480380552)|USER_DEBUG|[75]|DEBUG|  Banking_Products_UAB_Nuvei__c &#124; relationshipName=Banking_Products_UAB_Nuvei__r
+18:51:02.41 (480392202)|USER_DEBUG|[75]|DEBUG|  Card_Schemes__c &#124; relationshipName=Card_Schemes__r
+18:51:02.41 (480404178)|USER_DEBUG|[75]|DEBUG|  Case &#124; relationshipName=Cases__r
+18:51:02.41 (480415703)|USER_DEBUG|[75]|DEBUG|  Chargeback_Protection__c &#124; relationshipName=Chargeback_Protections__r
+18:51:02.41 (480427025)|USER_DEBUG|[75]|DEBUG|  CollaborationGroupRecord &#124; relationshipName=RecordAssociatedGroups
+18:51:02.41 (480438149)|USER_DEBUG|[75]|DEBUG|  CollaborationGroupRecordChangeEvent &#124; relationshipName=null
+18:51:02.41 (480449857)|USER_DEBUG|[75]|DEBUG|  CombinedAttachment &#124; relationshipName=CombinedAttachments
+18:51:02.41 (480460978)|USER_DEBUG|[75]|DEBUG|  Company_Legacy__c &#124; relationshipName=Company_Legacy__r
+18:51:02.41 (480472068)|USER_DEBUG|[75]|DEBUG|  Compliance_Contact__c &#124; relationshipName=Compliance_Contacts__r
+18:51:02.41 (480484541)|USER_DEBUG|[75]|DEBUG|  Compliance__Feed &#124; relationshipName=Feeds
+18:51:02.41 (480496024)|USER_DEBUG|[75]|DEBUG|  Compliance__History &#124; relationshipName=Histories
+18:51:02.41 (480507054)|USER_DEBUG|[75]|DEBUG|  Compliance__Share &#124; relationshipName=Shares
+18:51:02.41 (480518430)|USER_DEBUG|[75]|DEBUG|  Compliance__Tag &#124; relationshipName=Tags
+18:51:02.41 (480528661)|USER_DEBUG|[75]|DEBUG|  Compliance__c &#124; relationshipName=Reseller__r
+18:51:02.41 (480539834)|USER_DEBUG|[75]|DEBUG|  Contact &#124; relationshipName=Contacts1__r
+18:51:02.41 (480550237)|USER_DEBUG|[75]|DEBUG|  Contact &#124; relationshipName=Contacts__r
+18:51:02.41 (480561635)|USER_DEBUG|[75]|DEBUG|  ContactRequest &#124; relationshipName=ContactRequests
+18:51:02.41 (480572796)|USER_DEBUG|[75]|DEBUG|  ContentDistribution &#124; relationshipName=null
+18:51:02.41 (480584095)|USER_DEBUG|[75]|DEBUG|  ContentDocumentLink &#124; relationshipName=ContentDocumentLinks
+18:51:02.41 (480595348)|USER_DEBUG|[75]|DEBUG|  ContentDocumentLinkChangeEvent &#124; relationshipName=null
+18:51:02.41 (480606723)|USER_DEBUG|[75]|DEBUG|  ContentVersion &#124; relationshipName=null
+18:51:02.41 (480617675)|USER_DEBUG|[75]|DEBUG|  ContentVersionChangeEvent &#124; relationshipName=null
+18:51:02.41 (480628968)|USER_DEBUG|[75]|DEBUG|  Credit_Risk_Exposure__c &#124; relationshipName=Credit_Risk_Exposures__r
+18:51:02.41 (480640137)|USER_DEBUG|[75]|DEBUG|  Credit_Risk_Scoring__c &#124; relationshipName=Credit_Risk_Scoring__r
+18:51:02.41 (480650941)|USER_DEBUG|[75]|DEBUG|  Credit_Risk__c &#124; relationshipName=Credit_Risks__r
+18:51:02.41 (480662728)|USER_DEBUG|[75]|DEBUG|  Delivery_Manager_Request__c &#124; relationshipName=Delivery_Manager_Requests__r
+18:51:02.41 (480674113)|USER_DEBUG|[75]|DEBUG|  Directors_or_Ultimate_Beneficial_Owner__c &#124; relationshipName=Directors_or_Ultimate_Beneficial_Owner__r
+18:51:02.41 (480686318)|USER_DEBUG|[75]|DEBUG|  DuplicateRecordItem &#124; relationshipName=DuplicateRecordItems
+18:51:02.41 (480697443)|USER_DEBUG|[75]|DEBUG|  EmailMessage &#124; relationshipName=Email_Messages__r
+18:51:02.41 (480707611)|USER_DEBUG|[75]|DEBUG|  EmailMessage &#124; relationshipName=Emails
+18:51:02.41 (480718459)|USER_DEBUG|[75]|DEBUG|  EmailMessageChangeEvent &#124; relationshipName=null
+18:51:02.41 (480730157)|USER_DEBUG|[75]|DEBUG|  EngagementTopic &#124; relationshipName=EngagementInitiatedTopic
+18:51:02.41 (480741440)|USER_DEBUG|[75]|DEBUG|  EngagementTopicChangeEvent &#124; relationshipName=null
+18:51:02.41 (480752715)|USER_DEBUG|[75]|DEBUG|  EntitySubscription &#124; relationshipName=FeedSubscriptionsForEntity
+18:51:02.41 (480763836)|USER_DEBUG|[75]|DEBUG|  Event &#124; relationshipName=Events
+18:51:02.41 (480774739)|USER_DEBUG|[75]|DEBUG|  EventChangeEvent &#124; relationshipName=null
+18:51:02.41 (480785974)|USER_DEBUG|[75]|DEBUG|  EventRelation &#124; relationshipName=EventRelations
+18:51:02.41 (480797181)|USER_DEBUG|[75]|DEBUG|  EventRelationChangeEvent &#124; relationshipName=null
+18:51:02.41 (480807969)|USER_DEBUG|[75]|DEBUG|  Event_Management__c &#124; relationshipName=Events_Management__r
+18:51:02.41 (480819221)|USER_DEBUG|[75]|DEBUG|  FeedComment &#124; relationshipName=null
+18:51:02.41 (480829763)|USER_DEBUG|[75]|DEBUG|  FeedItem &#124; relationshipName=null
+18:51:02.41 (480841656)|USER_DEBUG|[75]|DEBUG|  FlowExecutionErrorEvent &#124; relationshipName=null
+18:51:02.41 (480852946)|USER_DEBUG|[75]|DEBUG|  FlowOrchestrationWorkItem &#124; relationshipName=FlowOrchestrationWorkItems
+18:51:02.41 (480864788)|USER_DEBUG|[75]|DEBUG|  FlowRecordRelation &#124; relationshipName=null
+18:51:02.41 (480876412)|USER_DEBUG|[75]|DEBUG|  GW_Name__c &#124; relationshipName=GW_Names__r
+18:51:02.41 (480887610)|USER_DEBUG|[75]|DEBUG|  Initiative__c &#124; relationshipName=Initiatives__r
+18:51:02.41 (480898555)|USER_DEBUG|[75]|DEBUG|  Lead &#124; relationshipName=Leads__r
+18:51:02.41 (480909539)|USER_DEBUG|[75]|DEBUG|  Location__c &#124; relationshipName=Locations__r
+18:51:02.41 (480920589)|USER_DEBUG|[75]|DEBUG|  Merchant_Bank__c &#124; relationshipName=Banks__r
+18:51:02.41 (480986607)|USER_DEBUG|[75]|DEBUG|  MessagingEndUser &#124; relationshipName=Messaging_Users__r
+18:51:02.41 (481001264)|USER_DEBUG|[75]|DEBUG|  NPS__c &#124; relationshipName=NPS_6__r
+18:51:02.41 (481013602)|USER_DEBUG|[75]|DEBUG|  NetworkActivityAudit &#124; relationshipName=ParentEntities
+18:51:02.41 (481025370)|USER_DEBUG|[75]|DEBUG|  NetworkFeedResponseMetric &#124; relationshipName=null
+18:51:02.41 (481050230)|USER_DEBUG|[75]|DEBUG|  NetworkUserHistoryRecent &#124; relationshipName=NetworkUserHistoryRecentToRecord
+18:51:02.41 (481066674)|USER_DEBUG|[75]|DEBUG|  North_America_Bank_Pricing__c &#124; relationshipName=North_America_Bank_Pricing__r
+18:51:02.41 (481079371)|USER_DEBUG|[75]|DEBUG|  Note &#124; relationshipName=Notes
+18:51:02.41 (481091359)|USER_DEBUG|[75]|DEBUG|  NoteAndAttachment &#124; relationshipName=NotesAndAttachments
+18:51:02.41 (481103321)|USER_DEBUG|[75]|DEBUG|  Nuvei_Survey__c &#124; relationshipName=Nuvei_Surveys__r
+18:51:02.41 (481115102)|USER_DEBUG|[75]|DEBUG|  Nuvei_UAB_Banking__c &#124; relationshipName=Nuvei_UAB_Banking__r
+18:51:02.41 (481126680)|USER_DEBUG|[75]|DEBUG|  OLAP__c &#124; relationshipName=OLAP__r
+18:51:02.41 (481137729)|USER_DEBUG|[75]|DEBUG|  ObjectRelatedUrl &#124; relationshipName=null
+18:51:02.41 (481149322)|USER_DEBUG|[75]|DEBUG|  ObjectRelatedUrlChangeEvent &#124; relationshipName=null
+18:51:02.41 (481160947)|USER_DEBUG|[75]|DEBUG|  OpenActivity &#124; relationshipName=OpenActivities
+18:51:02.41 (481171928)|USER_DEBUG|[75]|DEBUG|  Opportunity &#124; relationshipName=Opportunities__r
+18:51:02.41 (481182866)|USER_DEBUG|[75]|DEBUG|  OutgoingEmail &#124; relationshipName=null
+18:51:02.41 (481194698)|USER_DEBUG|[75]|DEBUG|  PCI__c &#124; relationshipName=PCI__r
+18:51:02.41 (481205853)|USER_DEBUG|[75]|DEBUG|  Partner__c &#124; relationshipName=Partners__r
+18:51:02.41 (481217604)|USER_DEBUG|[75]|DEBUG|  Payouts__c &#124; relationshipName=Payouts__r
+18:51:02.41 (481235533)|USER_DEBUG|[75]|DEBUG|  PendingServiceRouting &#124; relationshipName=null
+18:51:02.41 (481251541)|USER_DEBUG|[75]|DEBUG|  PendingServiceRoutingChangeEvent &#124; relationshipName=null
+18:51:02.41 (481266731)|USER_DEBUG|[75]|DEBUG|  PendingServiceRoutingInteractionInfo &#124; relationshipName=null
+18:51:02.41 (481276735)|USER_DEBUG|[75]|DEBUG|  PendingServiceRoutingInteractionInfo &#124; relationshipName=null
+18:51:02.41 (481288733)|USER_DEBUG|[75]|DEBUG|  ProcessException &#124; relationshipName=ProcessExceptions
+18:51:02.41 (481299849)|USER_DEBUG|[75]|DEBUG|  ProcessExceptionChangeEvent &#124; relationshipName=null
+18:51:02.41 (481311859)|USER_DEBUG|[75]|DEBUG|  ProcessExceptionEvent &#124; relationshipName=null
+18:51:02.41 (481323866)|USER_DEBUG|[75]|DEBUG|  ProcessInstance &#124; relationshipName=ProcessInstances
+18:51:02.41 (481335401)|USER_DEBUG|[75]|DEBUG|  ProcessInstanceChangeEvent &#124; relationshipName=null
+18:51:02.41 (481347059)|USER_DEBUG|[75]|DEBUG|  ProcessInstanceHistory &#124; relationshipName=ProcessSteps
+18:51:02.41 (481358708)|USER_DEBUG|[75]|DEBUG|  Proof_of_ID_Directors_Owners__c &#124; relationshipName=Directors_Shareholders__r
+18:51:02.41 (481369731)|USER_DEBUG|[75]|DEBUG|  Provisioning_Request__c &#124; relationshipName=Provisioning_Requests__r
+18:51:02.41 (481381165)|USER_DEBUG|[75]|DEBUG|  RecordAction &#124; relationshipName=RecordActions
+18:51:02.41 (481393456)|USER_DEBUG|[75]|DEBUG|  RecordActionHistory &#124; relationshipName=RecordActionHistories
+18:51:02.41 (481405283)|USER_DEBUG|[75]|DEBUG|  RecordAlert &#124; relationshipName=RecordAlertParent
+18:51:02.41 (481415478)|USER_DEBUG|[75]|DEBUG|  RecordAlert &#124; relationshipName=RecordAlertWhat
+18:51:02.41 (481427276)|USER_DEBUG|[75]|DEBUG|  RecordAlertChangeEvent &#124; relationshipName=null
+18:51:02.41 (481437063)|USER_DEBUG|[75]|DEBUG|  RecordAlertChangeEvent &#124; relationshipName=null
+18:51:02.41 (481448069)|USER_DEBUG|[75]|DEBUG|  Red_Flags__c &#124; relationshipName=Red_Flags__r
+18:51:02.41 (481458943)|USER_DEBUG|[75]|DEBUG|  Related_Merchant__c &#124; relationshipName=Related_Merchants__r
+18:51:02.41 (481470499)|USER_DEBUG|[75]|DEBUG|  Risk_KPI__c &#124; relationshipName=Risk_KPIs__r
+18:51:02.41 (481481541)|USER_DEBUG|[75]|DEBUG|  Risk__c &#124; relationshipName=Risks__r
+18:51:02.41 (481492531)|USER_DEBUG|[75]|DEBUG|  Shareholder__c &#124; relationshipName=Shareholder_In__r
+18:51:02.41 (481502614)|USER_DEBUG|[75]|DEBUG|  Shareholder__c &#124; relationshipName=Shareholders__r
+18:51:02.41 (481514394)|USER_DEBUG|[75]|DEBUG|  SurveySubject &#124; relationshipName=SurveySubjectEntities
+18:51:02.41 (481525094)|USER_DEBUG|[75]|DEBUG|  SurveySubjectChangeEvent &#124; relationshipName=null
+18:51:02.41 (481536696)|USER_DEBUG|[75]|DEBUG|  SvcCatalogReqExtdAttrVal &#124; relationshipName=null
+18:51:02.41 (481548196)|USER_DEBUG|[75]|DEBUG|  SvcCatalogReqRelatedItem &#124; relationshipName=null
+18:51:02.41 (481559065)|USER_DEBUG|[75]|DEBUG|  Task &#124; relationshipName=Tasks
+18:51:02.41 (481571123)|USER_DEBUG|[75]|DEBUG|  TaskChangeEvent &#124; relationshipName=null
+18:51:02.41 (481582756)|USER_DEBUG|[75]|DEBUG|  TaskRelation &#124; relationshipName=TaskRelations
+18:51:02.41 (481593786)|USER_DEBUG|[75]|DEBUG|  TaskRelationChangeEvent &#124; relationshipName=null
+18:51:02.41 (481605054)|USER_DEBUG|[75]|DEBUG|  Terminal_Pricing__c &#124; relationshipName=Terminal_Pricing__r
+18:51:02.41 (481615976)|USER_DEBUG|[75]|DEBUG|  Terminal__c &#124; relationshipName=Terminals__r
+18:51:02.41 (481627623)|USER_DEBUG|[75]|DEBUG|  TopicAssignment &#124; relationshipName=TopicAssignments
+18:51:02.41 (481638977)|USER_DEBUG|[75]|DEBUG|  Transaction_Monitoring__c &#124; relationshipName=Transaction_Monitoring__r
+18:51:02.41 (481650207)|USER_DEBUG|[75]|DEBUG|  UserDefinedLabelAssignment &#124; relationshipName=UserDefinedLabelAssignments
+18:51:02.41 (481660939)|USER_DEBUG|[75]|DEBUG|  Velocity_Limit__c &#124; relationshipName=Velocity_Limits__r
+18:51:02.41 (481671721)|USER_DEBUG|[75]|DEBUG|  Website__c &#124; relationshipName=Websites__r
+18:51:02.41 (481683301)|USER_DEBUG|[75]|DEBUG|  dsfs__DocuSign_Status__c &#124; relationshipName=DocuSign_Status__r
+18:51:02.41 (481694238)|USER_DEBUG|[75]|DEBUG|  eKYB_Check__c &#124; relationshipName=KYC_Checks__r
+18:51:02.41 (481700878)|USER_DEBUG|[79]|DEBUG|========================================
+18:51:02.41 (481704977)|USER_DEBUG|[80]|DEBUG|STEP 4: Fields on Merchant_Bank__c (Appendix A fee tables)
+18:51:02.41 (481707617)|USER_DEBUG|[81]|DEBUG|========================================
+18:51:02.41 (615666589)|USER_DEBUG|[98]|DEBUG|  Annual_Report_Balance_Sheet__c &#124; "Annual Report/Balance Sheet" &#124; BOOLEAN
+18:51:02.41 (616148751)|USER_DEBUG|[98]|DEBUG|  Bank_Name__c &#124; "Bank Name" &#124; STRING
+18:51:02.41 (633981539)|USER_DEBUG|[98]|DEBUG|  contract_terms_and_minimum_fee_for_VP_sa__c &#124; "Minimum Monthly Fee" &#124; STRING
+18:51:02.41 (639059668)|USER_DEBUG|[98]|DEBUG|  Annual_Fee__c &#124; "Annual fee" &#124; DOUBLE
+18:51:02.41 (639161643)|USER_DEBUG|[98]|DEBUG|  Arbitration_fee__c &#124; "Arbitration fee" &#124; DOUBLE
+18:51:02.41 (639256460)|USER_DEBUG|[98]|DEBUG|  CHB_Handling__c &#124; "CHB Handling" &#124; DOUBLE
+18:51:02.41 (639343719)|USER_DEBUG|[98]|DEBUG|  CMM_Report_Fee__c &#124; "CMM Report Fee" &#124; DOUBLE
+18:51:02.41 (639989004)|USER_DEBUG|[98]|DEBUG|  Credit_Fee_Per_Credit__c &#124; "Refund Fee" &#124; DOUBLE
+18:51:02.41 (641906217)|USER_DEBUG|[98]|DEBUG|  ECM_Report_Fee__c &#124; "ECM Report Fee" &#124; DOUBLE
+18:51:02.41 (642124202)|USER_DEBUG|[98]|DEBUG|  Holdback_rate__c &#124; "Holdback rate (edit by Risk)" &#124; DOUBLE
+18:51:02.41 (642199237)|USER_DEBUG|[98]|DEBUG|  MC_Fee__c &#124; "Annual MC Fee" &#124; DOUBLE
+18:51:02.41 (650232423)|USER_DEBUG|[98]|DEBUG|  Holdback_rate_For_PQ__c &#124; "Holdback rate" &#124; STRING
+18:51:02.41 (650926926)|USER_DEBUG|[98]|DEBUG|  bank_Monthly_Fee__c &#124; "Bank specific - Monthly Fee" &#124; DOUBLE
+18:51:02.41 (663781796)|USER_DEBUG|[98]|DEBUG|  Remittance_Fee__c &#124; "Remittance Fee" &#124; DOUBLE
+18:51:02.41 (663914002)|USER_DEBUG|[98]|DEBUG|  Retrieval_Fee__c &#124; "Retrieval Fee" &#124; DOUBLE
+18:51:02.41 (664034921)|USER_DEBUG|[98]|DEBUG|  Risk_fee__c &#124; "Risk fee" &#124; DOUBLE
+18:51:02.41 (664431968)|USER_DEBUG|[98]|DEBUG|  Setup_fee_per_bank_Merchant_ID_MID__c &#124; "Setup fee" &#124; DOUBLE
+18:51:02.41 (664601260)|USER_DEBUG|[98]|DEBUG|  Statement_Fee_per_MID__c &#124; "Statement Fee (per MID)" &#124; DOUBLE
+18:51:02.41 (664812070)|USER_DEBUG|[98]|DEBUG|  Trx_Fee__c &#124; "Processing fee" &#124; DOUBLE
+18:51:02.41 (664895715)|USER_DEBUG|[98]|DEBUG|  X3D_secure_registration_fee__c &#124; "3D secure registration fee" &#124; DOUBLE
+18:51:02.41 (669919263)|USER_DEBUG|[98]|DEBUG|  setup_fee_specific__c &#124; "setup fee specific" &#124; STRING
+18:51:02.41 (671622396)|USER_DEBUG|[98]|DEBUG|  Holdback_Rate_Note__c &#124; "Holdback Rate Note" &#124; TEXTAREA
+18:51:02.41 (679428379)|USER_DEBUG|[98]|DEBUG|  GW_only_TRX_fee__c &#124; "GW only TRX fee" &#124; DOUBLE
+18:51:02.41 (680284173)|USER_DEBUG|[98]|DEBUG|  Other_Cards__c &#124; "Other Cards" &#124; DOUBLE
+18:51:02.41 (682677022)|USER_DEBUG|[98]|DEBUG|  Other_Cards_Display__c &#124; "Other Cards Display" &#124; STRING
+18:51:02.41 (683269112)|USER_DEBUG|[98]|DEBUG|  Other_Cards_Trx_Fee__c &#124; "Other Cards Trx Fee" &#124; DOUBLE
+18:51:02.41 (697174754)|USER_DEBUG|[98]|DEBUG|  Bank_Name_for_Conga__c &#124; "Bank Name for Conga" &#124; STRING
+18:51:02.41 (697471103)|USER_DEBUG|[98]|DEBUG|  Prior_Holdback_Rate__c &#124; "Prior Holdback Rate (OLD VALUE)" &#124; STRING
+18:51:02.41 (697636730)|USER_DEBUG|[98]|DEBUG|  Date_of_Holdback_Rate_change__c &#124; "Date of Holdback Rate change" &#124; DATE
+18:51:02.41 (700154496)|USER_DEBUG|[98]|DEBUG|  Visa_Direct_fee__c &#124; "Visa Direct (Domestic)" &#124; DOUBLE
+18:51:02.41 (701586434)|USER_DEBUG|[98]|DEBUG|  Visa_Direct_RoW__c &#124; "Visa Direct (RoW)" &#124; DOUBLE
+18:51:02.41 (701791134)|USER_DEBUG|[98]|DEBUG|  Mastercard_PT__c &#124; "Mastercard Send/PT" &#124; DOUBLE
+18:51:02.41 (705322381)|USER_DEBUG|[98]|DEBUG|  CB_Chb_Representment__c &#124; "Chargeback Representment Fee" &#124; DOUBLE
+18:51:02.41 (712362322)|USER_DEBUG|[98]|DEBUG|  New_MSA_wording__c &#124; "New MSA wording" &#124; STRING
+18:51:02.41 (713318606)|USER_DEBUG|[98]|DEBUG|  Annual_Visa_Fee__c &#124; "Annual Visa Fee" &#124; DOUBLE
+18:51:02.41 (719570317)|USER_DEBUG|[98]|DEBUG|  Pre_arbitration_fee__c &#124; "Pre-arbitration Fee" &#124; DOUBLE
+18:51:02.41 (720528864)|USER_DEBUG|[98]|DEBUG|  New_MSA_wording_ES__c &#124; "New MSA wording ES" &#124; STRING
+18:51:02.41 (722410562)|USER_DEBUG|[98]|DEBUG|  PCI_Compliance_Monthly__c &#124; "PCI Compliance Monthly" &#124; DOUBLE
+18:51:02.41 (723280153)|USER_DEBUG|[98]|DEBUG|  Expected_annual_volume__c &#124; "Expected annual volume" &#124; DOUBLE
+18:51:02.41 (723394373)|USER_DEBUG|[98]|DEBUG|  Security_Compliance_Fee_Annual__c &#124; "Security/Compliance Fee (Annual)" &#124; DOUBLE
+18:51:02.41 (723476248)|USER_DEBUG|[98]|DEBUG|  PCI_Non_Compliance_Monthly__c &#124; "PCI Non-Compliance Monthly" &#124; DOUBLE
+18:51:02.41 (723737358)|USER_DEBUG|[98]|DEBUG|  Risk_Fee_High_Risk_Merch__c &#124; "Risk Fee (High-Risk Merch)" &#124; DOUBLE
+18:51:02.41 (724114757)|USER_DEBUG|[98]|DEBUG|  Expected_annual_net_revenue__c &#124; "Expected annual net revenue" &#124; DOUBLE
+18:51:02.41 (724374076)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_1__c &#124; "Expected monthly volume Month 1" &#124; DOUBLE
+18:51:02.41 (724623259)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_2__c &#124; "Expected monthly volume Month 2" &#124; DOUBLE
+18:51:02.41 (724862610)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_3__c &#124; "Expected monthly volume Month 3" &#124; DOUBLE
+18:51:02.41 (725123701)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_4__c &#124; "Expected monthly volume Month 4" &#124; DOUBLE
+18:51:02.41 (725376149)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_5__c &#124; "Expected monthly volume Month 5" &#124; DOUBLE
+18:51:02.41 (725608826)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_6__c &#124; "Expected monthly volume Month 6" &#124; DOUBLE
+18:51:02.41 (725836636)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_7__c &#124; "Expected monthly volume Month 7" &#124; DOUBLE
+18:51:02.41 (726062331)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_8__c &#124; "Expected monthly volume Month 8" &#124; DOUBLE
+18:51:02.41 (726287644)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_9__c &#124; "Expected monthly volume Month 9" &#124; DOUBLE
+18:51:02.41 (726621895)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_10__c &#124; "Expected monthly volume Month 10" &#124; DOUBLE
+18:51:02.41 (726931935)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_11__c &#124; "Expected monthly volume Month 11" &#124; DOUBLE
+18:51:02.41 (727264980)|USER_DEBUG|[98]|DEBUG|  Expected_monthly_volume_Month_12__c &#124; "Expected monthly volume Month 12" &#124; DOUBLE
+18:51:02.41 (728901009)|USER_DEBUG|[98]|DEBUG|  Monthly_Estimated_Net_Rev_Not_weighed__c &#124; "Monthly Estimated Net Rev (Not weighed)" &#124; DOUBLE
+18:51:02.41 (731450226)|USER_DEBUG|[98]|DEBUG|  Monthly_Average_Gross_Rev_Not_weighed__c &#124; "Monthly Average Gross Rev (Not weighed)" &#124; DOUBLE
+18:51:02.41 (732544387)|USER_DEBUG|[98]|DEBUG|  Annual_Estimated_Net_Rev_Weighed__c &#124; "Annual Estimated Net Rev (Weighed)" &#124; DOUBLE
+18:51:02.41 (734454434)|USER_DEBUG|[98]|DEBUG|  Annual_Estimated_Gross_Rev_Weighed__c &#124; "Annual Estimated Gross Rev (Weighed)" &#124; DOUBLE
+18:51:02.41 (735518594)|USER_DEBUG|[98]|DEBUG|  Partner_Template_Pricing__c &#124; "Partner Template Pricing" &#124; BOOLEAN
+18:51:02.41 (735546961)|USER_DEBUG|[107]|DEBUG|========================================
+18:51:02.41 (735555517)|USER_DEBUG|[108]|DEBUG|STEP 5: Fields on Application_Form__c (Appendix B C-Panel)
+18:51:02.41 (735560379)|USER_DEBUG|[109]|DEBUG|========================================
+18:51:02.41 (771245946)|USER_DEBUG|[123]|DEBUG|  Customer_Support_Contact_Email__c &#124; "Customer Support Contact Email:" &#124; EMAIL
+18:51:02.41 (771362343)|USER_DEBUG|[123]|DEBUG|  Customer_Support_Contact_Telephone__c &#124; "Customer Support Phone" &#124; PHONE
+18:51:02.41 (774400132)|USER_DEBUG|[123]|DEBUG|  Primary_Contact_Email_New__c &#124; "Primary Contact Email" &#124; EMAIL
+18:51:02.41 (774495006)|USER_DEBUG|[123]|DEBUG|  Primary_Contact_First_Name_New__c &#124; "Primary Contact First Name" &#124; STRING
+18:51:02.41 (774569139)|USER_DEBUG|[123]|DEBUG|  Primary_Contact_Last_Name_New__c &#124; "Primary Contact Last Name" &#124; STRING
+18:51:02.41 (774641563)|USER_DEBUG|[123]|DEBUG|  Primary_Contact_Tel_New__c &#124; "Primary Contact Tel" &#124; PHONE
+18:51:02.41 (774713117)|USER_DEBUG|[123]|DEBUG|  Primary_Contact_Title_New__c &#124; "Primary Contact Title" &#124; STRING
+18:51:02.41 (775601445)|USER_DEBUG|[123]|DEBUG|  Secondary_Contact_Last_Name_New__c &#124; "Secondary Contact Last Name" &#124; STRING
+18:51:02.41 (775702429)|USER_DEBUG|[123]|DEBUG|  Secondary_Contact_Tel_New__c &#124; "Secondary Contact Tel" &#124; PHONE
+18:51:02.41 (775784248)|USER_DEBUG|[123]|DEBUG|  Secondary_Contact_Title_New__c &#124; "Secondary Contact Title" &#124; STRING
+18:51:02.41 (775867237)|USER_DEBUG|[123]|DEBUG|  Secondary_Contact_email_New__c &#124; "Secondary Contact email" &#124; EMAIL
+18:51:02.41 (775942390)|USER_DEBUG|[123]|DEBUG|  Secondary_Contact_first_Name_New__c &#124; "Secondary Contact First Name" &#124; STRING
+18:51:02.41 (777714861)|USER_DEBUG|[123]|DEBUG|  email_receipts_when_an_order_is_place__c &#124; "Email order confirmation receipt sent?" &#124; PICKLIST
+18:51:02.41 (778813149)|USER_DEBUG|[123]|DEBUG|  offer_telephone_orders__c &#124; "offer telephone orders" &#124; PICKLIST
+18:51:02.41 (778960695)|USER_DEBUG|[123]|DEBUG|  percentage_of_telephone_versus_online__c &#124; "If Yes, what is the % of phone orders" &#124; PERCENT
+18:51:02.41 (801862748)|USER_DEBUG|[123]|DEBUG|  Telephone__c &#124; "Telephone" &#124; PHONE
+18:51:02.41 (802585380)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_Email__c &#124; "APM Pricing Manager Email Address" &#124; EMAIL
+18:51:02.41 (802678708)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_First_Name__c &#124; "APM Pricing Manager First Name" &#124; STRING
+18:51:02.41 (803112668)|USER_DEBUG|[123]|DEBUG|  DBA_Telephone__c &#124; "DBA Telephone" &#124; PHONE
+18:51:02.41 (804013418)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_Last_Name__c &#124; "APM Pricing Manager Last Name" &#124; STRING
+18:51:02.41 (804107469)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_Title_Position__c &#124; "APM Pricing Manager Title/Position" &#124; STRING
+18:51:02.41 (804196318)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_Secret_Word__c &#124; "APM Pricing Manager Secret Word" &#124; STRING
+18:51:02.41 (804306931)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_Phone__c &#124; "APM Pricing Manager Phone" &#124; PHONE
+18:51:02.41 (804407477)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_Email_Address__c &#124; "C-Panel Administrator Email Address" &#124; EMAIL
+18:51:02.41 (804489635)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_First_Name__c &#124; "C-Panel Administrator First Name" &#124; STRING
+18:51:02.41 (804575166)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_Last_Name__c &#124; "C-Panel Administrator Last Name" &#124; STRING
+18:51:02.41 (804649864)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_Phone__c &#124; "C-Panel Administrator Phone" &#124; PHONE
+18:51:02.41 (804723732)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_Secret_Word__c &#124; "C-Panel Administrator Secret Word" &#124; STRING
+18:51:02.41 (804794455)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_Title_Position__c &#124; "C-Panel Administrator Title/Position" &#124; STRING
+18:51:02.41 (807691455)|USER_DEBUG|[123]|DEBUG|  Email_Address__c &#124; "Email Address" &#124; EMAIL
+18:51:02.41 (807831989)|USER_DEBUG|[123]|DEBUG|  Registered_Address_Phone__c &#124; "Registered Address Phone" &#124; PHONE
+18:51:02.41 (807948244)|USER_DEBUG|[123]|DEBUG|  Operational_Address_Phone__c &#124; "Operational Address Phone" &#124; PHONE
+18:51:02.41 (808416160)|USER_DEBUG|[123]|DEBUG|  Phone_number_bank__c &#124; "Phone number" &#124; PHONE
+18:51:02.41 (811501164)|USER_DEBUG|[123]|DEBUG|  Primary_Contact_Tel_Code__c &#124; "Primary Contact Tel Code" &#124; PICKLIST
+18:51:02.41 (811675900)|USER_DEBUG|[123]|DEBUG|  Customer_Support_Phone_Code__c &#124; "Customer Support Phone Code" &#124; PICKLIST
+18:51:02.41 (811814298)|USER_DEBUG|[123]|DEBUG|  APM_Pricing_Manager_Phone_Code__c &#124; "APM Pricing Manager Phone code" &#124; PICKLIST
+18:51:02.41 (811900742)|USER_DEBUG|[123]|DEBUG|  C_Panel_Administrator_Phone_Code__c &#124; "C-Panel Administrator Phone Code" &#124; PICKLIST
+18:51:02.41 (813715068)|USER_DEBUG|[123]|DEBUG|  Do_you_want_to_use_APM_Pricing_Manager__c &#124; "Do you want to use APM Pricing Manager" &#124; PICKLIST
+18:51:02.41 (813817977)|USER_DEBUG|[132]|DEBUG|========================================
+18:51:02.41 (813823722)|USER_DEBUG|[133]|DEBUG|STEP 6: Find object behind {{TableStart:WEBSITES}}
+18:51:02.41 (813826699)|USER_DEBUG|[134]|DEBUG|========================================
+18:51:02.41 (896471956)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: SiteIframeWhiteListUrl &#124; label=Trusted Domains for Inline Frames
+18:51:02.41 (949245952)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: IframeWhiteListUrl &#124; label=Trusted Domain for Inline Frames
+18:51:02.41 (1001741971)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: RedirectWhitelistUrl &#124; label=Allow URL for Redirects
+18:51:03.54 (1054417798)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: ConcurLongRunApexErrEvent &#124; label=Concurrent Long Running Apex Error Event
+18:51:03.54 (1108763558)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: ConvDefDialogHourlyMetric &#124; label=Conversation Definition Dialog Hourly Metric
+18:51:03.54 (1173441351)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: ObjectRelatedUrl &#124; label=Object Related URL
+18:51:03.54 (1240180423)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: Website__c &#124; label=Website
+18:51:03.54 (1303484102)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: Website__Tag &#124; label=Tag: Website
+18:51:03.54 (1359240629)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: MC4SF__MC_Campaign_Hourly_Stats__c &#124; label=MC Campaign Hourly Stats
+18:51:03.54 (1415645427)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: MC4SF__MC_Campaign_Hourly_Stats__Tag &#124; label=Tag: MC Campaign Hourly Stats
+18:51:03.54 (1469783565)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: sw_connector__SimilarWeb_Website_Data__c &#124; label=Similarweb Website Data
+18:51:03.54 (1525702939)|USER_DEBUG|[141]|DEBUG|  CANDIDATE: sw_connector__SimilarWeb_Website_Data__Tag &#124; label=Tag: Similarweb Website Data
+18:51:03.54 (1526568587)|USER_DEBUG|[146]|DEBUG|========================================
+18:51:03.54 (1526584879)|USER_DEBUG|[147]|DEBUG|STEP 7: Find object behind {{TableStart:PreCB}} (Chargeback Protection)
+18:51:03.54 (1526590939)|USER_DEBUG|[148]|DEBUG|========================================
+18:51:03.54 (1619483045)|USER_DEBUG|[155]|DEBUG|  CANDIDATE: Chargeback_Protection_Setting__c &#124; label=Pre-Chargeback Services Setting
+18:51:03.54 (1676367212)|USER_DEBUG|[155]|DEBUG|  CANDIDATE: Chargeback_Protection_Setting__Tag &#124; label=Tag: Pre-Chargeback Services Setting
+18:51:03.54 (1734059174)|USER_DEBUG|[155]|DEBUG|  CANDIDATE: Chargeback_Protection__c &#124; label=Pre-Chargeback Service
+18:51:03.54 (1787868544)|USER_DEBUG|[155]|DEBUG|  CANDIDATE: Chargeback_Protection__Tag &#124; label=Tag: Pre-Chargeback Service
+18:51:03.54 (1789063262)|USER_DEBUG|[160]|DEBUG|========================================
+18:51:03.54 (1789084252)|USER_DEBUG|[161]|DEBUG|Done. Look above for field API names and child object names.
+18:51:03.54 (1789089553)|USER_DEBUG|[162]|DEBUG|========================================
+18:51:03.54 (1789281593)|CODE_UNIT_FINISHED|execute_anonymous_apex
+18:51:03.54 (1789301832)|EXECUTION_FINISHED

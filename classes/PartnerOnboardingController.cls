@@ -361,6 +361,7 @@ public with sharing class PartnerOnboardingController {
         public String         profile;
         public String         name;
         public AddressBlock   address;
+        public IdentifiersBlock identifiers;
         public List<UserBlock> users;
         public List<FeaturesBlock> features;
         public List<ContactBlock> contacts;
@@ -377,6 +378,10 @@ public with sharing class PartnerOnboardingController {
             this.address.country    = cas.Company_Profile__r.Registered_Country_Code2__c;
             this.address.postalCode = cas.Company_Profile__r.Registered_Zip_Postal_Code__c;
             this.address.state      = cas.Company_Profile__r.Registered_Country_Code2__c; // fallback
+
+            // ── Identifiers — EU Indirect Salesforce ID (Company Profile SFID) ─
+            this.identifiers = new IdentifiersBlock();
+            this.identifiers.euIndirectSalesforceId = cas.Company_Profile__c;
 
             // ── cPanel admin user from Case Contact ───────────────────────────
             UserBlock adminUser   = new UserBlock();
@@ -426,6 +431,10 @@ public with sharing class PartnerOnboardingController {
         public String state;
         public String country;
         public String postalCode;
+    }
+
+    public class IdentifiersBlock {
+        public String euIndirectSalesforceId;
     }
 
     public class UserBlock {

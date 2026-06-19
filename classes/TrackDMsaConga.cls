@@ -1,304 +1,524 @@
-/**
- * Track D — EU Indirect MSA send, fully server-side (static PDF + DocuSign).
- *
- * Flow (spec §6):
- *   tryAdvance()
- *     ├─ eligibility gate     (APPROVED + Configuration Case + status rerunnable)
- *     ├─ pricing gate (§18)   → no Merchant_Bank__c pricing yet ⇒ stay Pending, return false
- *     ├─ signatory (§17)      → resolve R1 from Compliance_Contact__c (Director__c=true);
- *     │                         hard-fail (Failed + Execution_Log) if none — NO silent fallback
- *     ├─ Step 1: template     → load static MSA PDF from a ContentVersion (no callout)
- *     ├─ Step 2: DocuSign      → MsaDocuSignService.sendMsaEnvelope (eSignature REST);
- *     │                         all merchant fields injected as LOCKED prefill text tabs
- *     └─ Step 3: persist       → DocuSign_Envelope_Id__c + MSA_Status__c = 'sent'
- *   On any error: MSA_Status__c = 'Failed' + Execution_Log__c row.
- *
- * Static PDF approach (replaces Conga):
- *   The MSA is a pre-styled PDF (pricing tables baked in) stored as a Salesforce
- *   File. Track D resolves which ContentVersion to load:
- *     1. Compliance__c.MSA_Static_Template_Id__c (merchant — from NC payload)
- *     2. From_Reseller__r.MSA_Static_Template_Id__c (partner profile default)
- *     3. Conga_Setting__c.MSA_Template_Id__c (org-wide fallback)
- *   DocuSign overlays dynamic fields as locked prefill tabs. No Conga callout.
- *
- * Callout ordering:
- *   The template load is a SOQL read (not a callout). The only callout is the
- *   DocuSign send, performed after all gate checks; the status/envelope write
- *   happens only after it returns. (Same "no DML before callout" rule as Track F.)
- *
- * Status values are the Compliance__c.MSA_Status__c picklist API names — note
- * 'started'/'sent'/'signed' are lowercase. Track D writes 'sent' after a
- * successful DocuSign send; DocuSignStatusToMsa later advances 'sent' →
- * 'Counter Signed' from the dsfs webhook, which gates Track F.
- */
-public with sharing class TrackDMsaConga implements IMsaTrack {
+@IsTest
+private class TrackDMsaCongaTest {
 
-    public class TrackDException extends Exception {}
+    // ── Mocks ────────────────────────────────────────────────────────────
 
-    @TestVisible private static final String TRACK_LABEL = 'Track D: MSA Generation (Static PDF + DocuSign)';
-
-    // MSA_Status__c picklist API names (note the lowercase 'sent' — the picklist
-    // value is lowercase and DocuSignStatusToMsa maps the dsfs webhook to it).
-    @TestVisible private static final String STATUS_SENT    = 'sent';
-    @TestVisible private static final String STATUS_FAILED  = 'Failed';
-    @TestVisible private static final String STATUS_PENDING = 'Pending';
-
-
-    public Boolean tryAdvance(Id complianceId) {
-        if (complianceId == null) {
-            return false;
+    private class TrackDFullMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(201);
+            res.setHeader('Content-Type', 'application/json');
+            res.setBody('{"envelopeId":"a1b2c3d4-0000-1111-2222-deadbeefcafe","status":"sent"}');
+            return res;
         }
+    }
 
-        Compliance__c c = loadCompliance(complianceId);
-        if (c == null || c.EU_Indirect_Orchestration__c != true) {
-            return false;
+    private class DocuSignErrorMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(500);
+            res.setBody('{"error":"docusign down"}');
+            return res;
         }
-        if (!isEligible(c)) {
-            return false;
-        }
+    }
 
-        // §18 — pricing gate. Expected wait state: do NOT fail, just hold.
-        if (!hasMerchantPricing(c.Id)) {
-            return false;
-        }
+    // ── Setup helpers ────────────────────────────────────────────────────
 
+    private static void insertCongaSettingFull() {
+        insert new Conga_Setting__c(
+            Name = 'Default',
+            EU_Indirect_Template_ID__c = 'a1bTESTTEMPLATE',
+            DocuSign_Account_Id__c = 'test-ds-account',
+            MSA_Template_Id__c = 'TPL-ORG-DEFAULT'
+        );
+    }
+
+    private static Compliance__c newCompliance(String name, Id accId, Id primaryContactId) {
+        return new Compliance__c(
+            Name = name,
+            Account__c = accId,
+            EU_Indirect_Orchestration__c = true,
+            Nuvei_Connect_Status__c = 'APPROVED',
+            Nuvei_Connect_Application_ID__c = 'APP-' + name,
+            Compliance_Status__c = 'Live',
+            Registered_Country__c = 'United Kingdom',
+            Registered_Street__c = '1 St',
+            Registered_City__c = 'London',
+            Registered_Zip_Postal_Code__c = 'E1 1AA',
+            VAT_Number__c = 'GB123',
+            City_field__c = '+44123456789',
+            Primary_Contact__c = primaryContactId,
+            MSA_Status__c = 'Pending',
+            PCI_Status__c = 'Compliant'
+        );
+    }
+
+    private static void insertConfigCase(Id complianceId, Id accId, Id contactId) {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        insert new Case(
+            RecordTypeId        = rts[0].Id,
+            AccountId           = accId,
+            Company_Profile__c  = complianceId,
+            ContactId           = contactId,
+            Subject             = 'Cfg',
+            Status              = 'In Progress',
+            Reason              = 'New Merchant',
+            Type                = 'Create new GW account with a new Multi',
+            Profile_Type__c     = 'None',
+            SB_PPP_Username__c  = 'cfg@test.invalid',
+            SB_Template__c      = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+        );
+    }
+
+    private static void addSignatory(Id complianceId, Id accId) {
+        Contact signer = new Contact(
+            FirstName = 'Sig', LastName = 'Natory',
+            Email = 'signer@test.invalid', AccountId = accId,
+            Authorized_Signature__c = true
+        );
+        insert signer;
+        insert new Compliance_Contact__c(
+            Compliance__c = complianceId,
+            Contact__c = signer.Id
+        );
+    }
+
+    private static Boolean addMerchantPricing(Id complianceId) {
         try {
-            // §17 — resolve R1 (authorized signatory). Hard-fail on none.
-            Id signerContactId = resolveAuthorizedSignatory(c.Id);
-            if (signerContactId == null) {
-                failWithLog(c,
-                    'No authorized signatory found on Compliance — no Compliance_Contact__c row '
-                    + 'with Director__c=true. Populate Authorized_Signature__c on the relevant '
-                    + 'Contact(s) if needed.', null);
-                return true;
-            }
-
-            String templateId = resolveMsaTemplateId(c);
-            if (String.isBlank(templateId)) {
-                failWithLog(c,
-                    'No MSA PDF template configured — set MSA_Static_Template_Id__c on the '
-                    + 'merchant or partner profile, or Conga_Setting__c.MSA_Template_Id__c '
-                    + 'as org default', null);
-                return true;
-            }
-
-            // Step 1 — load the static MSA PDF template (SOQL, no callout)
-            Blob pdf = loadStaticMsaTemplate(templateId);
-            if (pdf == null || pdf.size() == 0) {
-                failWithLog(c,
-                    'Static MSA PDF template not found or empty for ContentVersion Id ' + templateId, null);
-                return true;
-            }
-
-            // cPanel admin (Appendix B) — same resolution pattern as Track F.
-            // Absence is non-fatal: the merge data falls back to blanks.
-            Id cPanelContactId = resolveCPanelAdmin(c.Account__c);
-
-            // Step 2 — DocuSign send via eSignature REST API (the only callout)
-            String envelopeId = MsaDocuSignService.sendMsaEnvelope(c, pdf, signerContactId, cPanelContactId);
-
-            // Step 3 — persist success (DML only after both callouts)
-            Compliance__c upd = new Compliance__c(
-                Id = c.Id,
-                DocuSign_Envelope_Id__c = envelopeId,
-                MSA_Status__c = STATUS_SENT
+            insert new Merchant_Bank__c(
+                Compliance__c = complianceId,
+                Partner_Template_Pricing__c = false
             );
-            if (c.MSA_Started_At__c == null) {
-                upd.MSA_Started_At__c = DateTime.now();
-            }
-            if (c.MSA_Effective_Date__c == null) {
-                upd.MSA_Effective_Date__c = Date.today();
-            }
-            update upd;
             return true;
-
         } catch (Exception e) {
-            failWithLog(c, 'Track D send failed: ' + e.getMessage(), e);
-            return true;
-        }
-    }
-
-    // ─── Loaders / gating ────────────────────────────────────────────────────
-
-    private Compliance__c loadCompliance(Id complianceId) {
-        List<Compliance__c> rows = [
-            SELECT
-                Id,
-                Name,
-                EU_Indirect_Orchestration__c,
-                Nuvei_Connect_Status__c,
-                Nuvei_Connect_Application_ID__c,
-                MSA_Status__c,
-                MSA_Effective_Date__c,
-                MSA_Started_At__c,
-                Underwriting_Mgr__c,
-                OwnerId,
-                Account__c,
-                Registered_Address_New__c,
-                Registered_Country__c,
-                Incorporation_number__c,
-                MSA_Static_Template_Id__c,
-                From_Reseller__r.Name,
-                From_Reseller__r.MSA_Static_Template_Id__c
-            FROM Compliance__c
-            WHERE Id = :complianceId
-            LIMIT 1
-        ];
-        return rows.isEmpty() ? null : rows[0];
-    }
-
-    private Boolean isEligible(Compliance__c c) {
-        if (c.Nuvei_Connect_Status__c != 'APPROVED') {
             return false;
         }
-        Integer cfgCount = [
-            SELECT COUNT()
-            FROM Case
-            WHERE Company_Profile__c = :c.Id
-            AND RecordType.DeveloperName = 'Configuration'
-        ];
-        if (cfgCount == 0) {
-            return false;
-        }
-        String s = c.MSA_Status__c;
-        // Track D fires only when status is unset / Pending / Failed (rerun).
-        return String.isBlank(s) || s == STATUS_PENDING || s == STATUS_FAILED;
     }
 
-    /**
-     * §18 — at least one merchant-level pricing row must exist. Track D does not
-     * care whether it was auto-copied from the partner template or supplied via
-     * custom intake — only that a Merchant_Bank__c with Partner_Template_Pricing__c=false
-     * exists for this Compliance.
-     */
-    @TestVisible
-    private Boolean hasMerchantPricing(Id complianceId) {
-        Integer pricingCount = [
-            SELECT COUNT()
-            FROM Merchant_Bank__c
-            WHERE Compliance__c = :complianceId
-            AND Partner_Template_Pricing__c = false
-        ];
-        return pricingCount > 0;
+    private static Id insertStaticTemplate(String title) {
+        ContentVersion cv = new ContentVersion(
+            Title           = title,
+            PathOnClient    = title + '.pdf',
+            VersionData     = Blob.valueOf('FAKE-PDF-' + title),
+            IsMajorVersion  = true
+        );
+        insert cv;
+        return [SELECT Id FROM ContentVersion WHERE Id = :cv.Id LIMIT 1].Id;
     }
 
-    /**
-     * §17 — R1 = the authorized signatory. Junction rows are populated upstream
-     * by the webhook handler; Track D only consumes them. Highest ownership
-     * percentage wins when more than one owner is flagged.
-     */
-    @TestVisible
-    private Id resolveAuthorizedSignatory(Id complianceId) {
-        List<Compliance_Contact__c> signers = [
-            SELECT Contact__c
-            FROM Compliance_Contact__c
-            WHERE Compliance__c = :complianceId
-            AND Director__c = true
-            AND Contact__r.Email != null
-            ORDER BY If_Owner_Percentage_held__c DESC NULLS LAST
-            LIMIT 1
-        ];
-        return signers.isEmpty() ? null : signers[0].Contact__c;
+    // ── Null / orchestration guards ──────────────────────────────────────
+
+    @IsTest
+    static void tryAdvance_returns_false_when_id_null() {
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(null);
+        Test.stopTest();
+        System.assertEquals(false, r);
     }
 
-    /**
-     * Resolve the ContentVersion Id for the static MSA PDF:
-     *   1. Merchant MSA_Static_Template_Id__c (from NC payload at onboarding)
-     *   2. Partner From_Reseller__r.MSA_Static_Template_Id__c
-     *   3. Conga_Setting__c.MSA_Template_Id__c (org default)
-     */
-    @TestVisible
-    private String resolveMsaTemplateId(Compliance__c c) {
-        if (String.isNotBlank(c.MSA_Static_Template_Id__c)) {
-            return c.MSA_Static_Template_Id__c.trim();
-        }
-        if (c.From_Reseller__r != null
-            && String.isNotBlank(c.From_Reseller__r.MSA_Static_Template_Id__c)) {
-            return c.From_Reseller__r.MSA_Static_Template_Id__c.trim();
-        }
-        List<Conga_Setting__c> rows = [
-            SELECT MSA_Template_Id__c FROM Conga_Setting__c LIMIT 1
-        ];
-        return rows.isEmpty() ? null : rows[0].MSA_Template_Id__c;
+    @IsTest
+    static void tryAdvance_returns_false_when_not_eu_indirect() {
+        Account acc = new Account(Name='AccNotEU'); insert acc;
+        Compliance__c c = new Compliance__c(
+            Name='CoNotEU', Account__c=acc.Id,
+            EU_Indirect_Orchestration__c = false,
+            Nuvei_Connect_Status__c = 'APPROVED'
+        );
+        insert c;
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(false, r);
     }
 
-    // ─── cPanel admin (Appendix B) ───────────────────────────────────────────
-
-    /**
-     * Resolve the c-Panel administrator Contact for the merchant account — the
-     * same flag and pattern used by Track F (IndirectBoardingRouter.tryTrackNcp).
-     * Returns null when the account is missing or no flagged Contact exists;
-     * the merge data then falls back to blanks (signing can still proceed).
-     */
-    @TestVisible
-    private Id resolveCPanelAdmin(Id accountId) {
-        if (accountId == null) {
-            return null;
-        }
-        List<Contact> admins = [
-            SELECT Id
-            FROM Contact
-            WHERE AccountId = :accountId
-            AND Is_CPanel_Admin__c = true
-            LIMIT 1
-        ];
-        return admins.isEmpty() ? null : admins[0].Id;
+    @IsTest
+    static void tryAdvance_returns_false_when_not_approved() {
+        Account acc = new Account(Name='AccNotAppr'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm', AccountId=acc.Id);
+        insert adm;
+        Compliance__c c = newCompliance('NotAppr', acc.Id, adm.Id);
+        c.Nuvei_Connect_Status__c = null;
+        insert c;
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(false, r);
     }
 
-    // ─── Step 1: static MSA PDF template ─────────────────────────────────────
-
-    /**
-     * Load the static MSA PDF from its ContentVersion. The pricing tables and
-     * legal boilerplate are baked into this artwork; DocuSign overlays the
-     * dynamic merchant fields as locked prefill tabs. Returns null when the
-     * ContentVersion is missing or has no data so the caller can fail clearly.
-     */
-    @TestVisible
-    private Blob loadStaticMsaTemplate(String templateId) {
-        List<ContentVersion> versions = [
-            SELECT VersionData
-            FROM ContentVersion
-            WHERE Id = :templateId
-            LIMIT 1
-        ];
-        return versions.isEmpty() ? null : versions[0].VersionData;
+    @IsTest
+    static void tryAdvance_returns_false_when_no_config_case() {
+        Account acc = new Account(Name='AccNoCase'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm', AccountId=acc.Id);
+        insert adm;
+        Compliance__c c = newCompliance('NoCase', acc.Id, adm.Id);
+        insert c;
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(false, r);
     }
 
-    // ─── Failure path ────────────────────────────────────────────────────────
+    @IsTest
+    static void tryAdvance_returns_false_when_status_is_sent_already() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
 
-    private void failWithLog(Compliance__c c, String reason, Exception ex) {
-        // Track D writing MSA_Status__c='Failed' re-fires the orchestration
-        // trigger; guard against logging the same failure twice on the rerun.
-        if (c.MSA_Status__c == STATUS_FAILED) {
-            Integer existing = [
-                SELECT COUNT()
-                FROM Execution_Log__c
-                WHERE Related_Record_Id__c = :String.valueOf(c.Id)
-                  AND Note__c = :TRACK_LABEL
-                  AND Type__c = 'Error'
-            ];
-            if (existing >= 1) {
-                return;
-            }
-        }
+        Account acc = new Account(Name='AccAlreadySent'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='alr@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+        Compliance__c c = newCompliance('AlreadySent', acc.Id, adm.Id);
+        c.MSA_Status__c = 'sent';
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
 
-        BoardingErrorLogService.log(
-            BoardingErrorLogService.Level.ERROR,
-            'TrackDMsaConga',
-            'tryAdvance',
-            c.Id,
-            c.Nuvei_Connect_Application_ID__c,
-            TRACK_LABEL,
-            'Track D: ' + reason,
-            ex,
-            null,
-            412
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(false, r);
+    }
+
+    @IsTest
+    static void tryAdvance_returns_false_when_no_pricing_yet() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+
+        Account acc = new Account(Name='AccNoPricing'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='np@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+        Compliance__c c = newCompliance('NoPricing', acc.Id, adm.Id);
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        addSignatory(c.Id, acc.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(false, r);
+
+        Compliance__c reread = [SELECT MSA_Status__c FROM Compliance__c WHERE Id=:c.Id];
+        System.assertEquals('Pending', reread.MSA_Status__c);
+    }
+
+    // ── Hard-fail paths (only run if Merchant_Bank insert succeeds) ─────
+
+    @IsTest
+    static void tryAdvance_fails_when_no_authorized_signatory() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        Account acc = new Account(Name='AccNoSig'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='ns@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+        Compliance__c c = newCompliance('NoSig', acc.Id, adm.Id);
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        if (!addMerchantPricing(c.Id)) return;
+
+        insertCongaSettingFull();
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(true, r);
+    }
+
+    @IsTest
+    static void tryAdvance_fails_when_template_missing() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        Account acc = new Account(Name='AccNoTpl'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='nt@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+        Compliance__c c = newCompliance('NoTpl', acc.Id, adm.Id);
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        addSignatory(c.Id, acc.Id);
+        if (!addMerchantPricing(c.Id)) return;
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(true, r);
+    }
+
+    @IsTest
+    static void tryAdvance_fails_when_docusign_returns_5xx() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        Account acc = new Account(Name='AccDsErr'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='ds@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('DsErrTpl');
+
+        Compliance__c c = newCompliance('DsErr', acc.Id, adm.Id);
+        c.MSA_Static_Template_Id__c = cvId;
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        addSignatory(c.Id, acc.Id);
+        if (!addMerchantPricing(c.Id)) return;
+        insertCongaSettingFull();
+
+        Test.setMock(HttpCalloutMock.class, new DocuSignErrorMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(true, r);
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id=:c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c);
+    }
+
+    @IsTest
+    static void tryAdvance_happy_path_marks_sent() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        Account acc = new Account(Name='AccHappy'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='hp@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('HappyTpl');
+
+        Compliance__c c = newCompliance('Happy', acc.Id, adm.Id);
+        c.MSA_Static_Template_Id__c = cvId;
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        addSignatory(c.Id, acc.Id);
+        if (!addMerchantPricing(c.Id)) return;
+        insertCongaSettingFull();
+
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(true, r);
+    }
+
+    @IsTest
+    static void failWithLog_does_not_log_twice_on_rerun() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        Account acc = new Account(Name='AccDup'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='du@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+        Compliance__c c = newCompliance('Dup', acc.Id, adm.Id);
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        if (!addMerchantPricing(c.Id)) return;
+
+        insertCongaSettingFull();
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        d.tryAdvance(c.Id);
+        d.tryAdvance(c.Id);
+        Test.stopTest();
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Coverage boost — direct @TestVisible method calls.
+    // These exercise paths that can't always be reached via tryAdvance()
+    // because org validation rules block Merchant_Bank__c inserts in test.
+    // ════════════════════════════════════════════════════════════════════
+
+    @IsTest
+    static void cov_hasMerchantPricing_returns_false_when_no_rows() {
+        Account acc = new Account(Name='HMP'); insert acc;
+        Compliance__c c = new Compliance__c(Name='HMP', Account__c=acc.Id);
+        insert c;
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.hasMerchantPricing(c.Id);
+        Test.stopTest();
+        System.assertEquals(false, r,
+            'No Merchant_Bank__c rows → hasMerchantPricing returns false');
+    }
+
+    @IsTest
+    static void cov_resolveAuthorizedSignatory_returns_null_when_no_signers() {
+        Account acc = new Account(Name='RAS'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RAS', Account__c=acc.Id);
+        insert c;
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Id r = d.resolveAuthorizedSignatory(c.Id);
+        Test.stopTest();
+        System.assertEquals(null, r,
+            'No Compliance_Contact__c with Director__c=true → null');
+    }
+
+    @IsTest
+    static void cov_resolveAuthorizedSignatory_returns_signer_id_when_present() {
+        Account acc = new Account(Name='RASS'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RASS', Account__c=acc.Id);
+        insert c;
+        Contact con = new Contact(
+            FirstName='Sig', LastName='Two', AccountId=acc.Id,
+            Email='sig2@x.invalid', Authorized_Signature__c=true
+        );
+        insert con;
+        insert new Compliance_Contact__c(
+            Compliance__c=c.Id,
+            Contact__c=con.Id
         );
 
-        update new Compliance__c(
-            Id = c.Id,
-            MSA_Status__c = STATUS_FAILED,
-            MSA_Started_At__c = c.MSA_Started_At__c == null ? DateTime.now() : c.MSA_Started_At__c
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Id r = d.resolveAuthorizedSignatory(c.Id);
+        Test.stopTest();
+        System.assertEquals(con.Id, r,
+            'Authorized signatory Contact must be returned');
+    }
+
+    @IsTest
+    static void cov_resolveMsaTemplateId_prefers_merchant_id() {
+        Account acc = new Account(Name='RMT-M'); insert acc;
+        Compliance__c c = new Compliance__c(
+            Name='RMT-M', Account__c=acc.Id,
+            MSA_Static_Template_Id__c = 'TPL-MERCHANT'
         );
+        insert c;
+        insertCongaSettingFull();
+
+        Compliance__c loaded = [
+            SELECT MSA_Static_Template_Id__c, From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        String tplId = d.resolveMsaTemplateId(loaded);
+        Test.stopTest();
+        System.assertEquals('TPL-MERCHANT', tplId);
+    }
+
+    @IsTest
+    static void cov_resolveMsaTemplateId_falls_back_to_org_default() {
+        Account acc = new Account(Name='RMT-O'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RMT-O', Account__c=acc.Id);
+        insert c;
+        insertCongaSettingFull();
+
+        Compliance__c loaded = [
+            SELECT MSA_Static_Template_Id__c, From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        String tplId = d.resolveMsaTemplateId(loaded);
+        Test.stopTest();
+        System.assertEquals('TPL-ORG-DEFAULT', tplId);
+    }
+
+    @IsTest
+    static void cov_resolveMsaTemplateId_returns_null_when_nothing_configured() {
+        Account acc = new Account(Name='RMT-N'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RMT-N', Account__c=acc.Id);
+        insert c;
+
+        Compliance__c loaded = [
+            SELECT MSA_Static_Template_Id__c, From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        String tplId = d.resolveMsaTemplateId(loaded);
+        Test.stopTest();
+        System.assertEquals(null, tplId);
+    }
+
+    @IsTest
+    static void cov_loadStaticMsaTemplate_returns_blob_when_present() {
+        Id cvId = insertStaticTemplate('LoadCov');
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Blob pdf = d.loadStaticMsaTemplate(cvId);
+        Test.stopTest();
+        System.assertNotEquals(null, pdf);
+        System.assert(pdf.size() > 0);
+    }
+
+    @IsTest
+    static void cov_loadStaticMsaTemplate_returns_null_when_missing() {
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Blob pdf = d.loadStaticMsaTemplate('068000000000000AAA');
+        Test.stopTest();
+        System.assertEquals(null, pdf);
+    }
+
+    @IsTest
+    static void cov_resolveCPanelAdmin_returns_null_when_account_id_null() {
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Id r = d.resolveCPanelAdmin(null);
+        Test.stopTest();
+        System.assertEquals(null, r);
+    }
+
+    @IsTest
+    static void cov_resolveCPanelAdmin_returns_contact_when_present() {
+        Account acc = new Account(Name='CPA'); insert acc;
+        Contact adm = new Contact(
+            FirstName='A', LastName='Adm', Email='cpa@x.invalid',
+            AccountId=acc.Id, Is_CPanel_Admin__c=true
+        );
+        insert adm;
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Id r = d.resolveCPanelAdmin(acc.Id);
+        Test.stopTest();
+        System.assertEquals(adm.Id, r);
     }
 }

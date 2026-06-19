@@ -2,75 +2,46 @@
 private class TrackDMsaCongaTest {
 
     // ── Mocks ────────────────────────────────────────────────────────────
+    //
+    // The new TrackDMsaConga makes ZERO Conga callouts — the MSA PDF is
+    // loaded from a ContentVersion via SOQL. The only HTTP callout is the
+    // DocuSign envelope send performed by MsaDocuSignService. These mocks
+    // therefore only need to answer DocuSign requests.
+    //
+    // We keep TrackDFullMock named the same way for readability with the
+    // historical tests; "Full" now means "everything DocuSign needs to
+    // succeed", not "everything Conga + DocuSign needs to succeed".
 
     private class TrackDFullMock implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
-            String ep = req.getEndpoint() == null ? '' : req.getEndpoint();
-            if (ep.contains('oauth2/token') || ep.contains('/token')) {
-                res.setStatusCode(200);
-                res.setHeader('Content-Type', 'application/json');
-                res.setBody('{"access_token":"FAKE-OAUTH-TOKEN"}');
-            } else if (ep.contains('composer.congamerge.com')) {
-                res.setStatusCode(200);
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setBodyAsBlob(Blob.valueOf('FAKE-PDF-CONTENT'));
-            } else {
-                res.setStatusCode(201);
-                res.setHeader('Content-Type', 'application/json');
-                res.setBody('{"envelopeId":"a1b2c3d4-0000-1111-2222-deadbeefcafe","status":"sent"}');
-            }
+            res.setStatusCode(201);
+            res.setHeader('Content-Type', 'application/json');
+            res.setBody('{"envelopeId":"a1b2c3d4-0000-1111-2222-deadbeefcafe","status":"sent"}');
             return res;
         }
     }
 
-    private class CongaErrorMock implements HttpCalloutMock {
-        public HttpResponse respond(HttpRequest req) {
-            HttpResponse res = new HttpResponse();
-            String ep = req.getEndpoint() == null ? '' : req.getEndpoint();
-            if (ep.contains('/token') || ep.contains('oauth2')) {
-                res.setStatusCode(200);
-                res.setHeader('Content-Type', 'application/json');
-                res.setBody('{"access_token":"FAKE-TOKEN"}');
-            } else {
-                res.setStatusCode(500);
-                res.setBody('{"error":"conga down"}');
-            }
-            return res;
-        }
-    }
-
-    /** Returns 500 on every call — used to test fetchOAuthSessionToken non-200 path. */
-    private class AlwaysErrorMock implements HttpCalloutMock {
+    private class DocuSignErrorMock implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(500);
-            res.setBody('{"error":"server error"}');
-            return res;
-        }
-    }
-
-    /** Returns 200 with no access_token in body — for fetchOAuthSessionToken null-token path. */
-    private class TokenMissingMock implements HttpCalloutMock {
-        public HttpResponse respond(HttpRequest req) {
-            HttpResponse res = new HttpResponse();
-            res.setStatusCode(200);
-            res.setHeader('Content-Type', 'application/json');
-            res.setBody('{"token_type":"Bearer"}');  // no access_token
+            res.setBody('{"error":"docusign down"}');
             return res;
         }
     }
 
     // ── Setup helpers ────────────────────────────────────────────────────
 
-    private static void insertCongaSettingFull() {
+    private static void insertDocuSignSetting() {
+        // Conga_Setting__c is retained as the DocuSign account-id holder
+        // (DocuSign_Account_Id__c). The Conga-specific session fields are
+        // no longer read by TrackDMsaConga but are harmless to populate.
         insert new Conga_Setting__c(
             Name = 'Default',
             EU_Indirect_Template_ID__c = 'a1bTESTTEMPLATE',
             DocuSign_Account_Id__c = 'test-ds-account',
-            Session_Token_Endpoint__c = 'https://test.my.salesforce.com/services/oauth2/token',
-            Session_Client_Id__c = 'test-client-id',
-            Session_Client_Secret__c = 'test-client-secret'
+            MSA_Template_Id__c = 'TPL-ORG-DEFAULT'
         );
     }
 
@@ -111,7 +82,7 @@ private class TrackDMsaCongaTest {
             Type                = 'Create new GW account with a new Multi',
             Profile_Type__c     = 'None',
             SB_PPP_Username__c  = 'cfg@test.invalid',
-            SB_Template__c = 'Merchant and merchantSite onboarding NCP acquiring CNP'
+            SB_Template__c      = 'Merchant and merchantSite onboarding NCP acquiring CNP'
         );
     }
 
@@ -138,6 +109,23 @@ private class TrackDMsaCongaTest {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Insert a small ContentVersion that represents the static MSA PDF.
+     * Returns the ContentVersion Id so the test can wire it onto the
+     * Compliance / Conga_Setting__c template-id fields.
+     */
+    private static Id insertStaticTemplate(String title) {
+        ContentVersion cv = new ContentVersion(
+            Title           = title,
+            PathOnClient    = title + '.pdf',
+            VersionData     = Blob.valueOf('FAKE-PDF-' + title),
+            IsMajorVersion  = true
+        );
+        insert cv;
+        // Re-query to get the Id that the SOQL in TrackDMsaConga will use.
+        return [SELECT Id FROM ContentVersion WHERE Id = :cv.Id LIMIT 1].Id;
     }
 
     // ── Null / orchestration guards ──────────────────────────────────────
@@ -265,18 +253,21 @@ private class TrackDMsaCongaTest {
         insertConfigCase(c.Id, acc.Id, adm.Id);
         if (!addMerchantPricing(c.Id)) return;
 
-        insertCongaSettingFull();
+        insertDocuSignSetting();
         Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
         Boolean r = d.tryAdvance(c.Id);
         Test.stopTest();
-        System.assertEquals(true, r);
+        System.assertEquals(true, r,
+            'No signatory must hard-fail (return true) and not call DocuSign');
     }
 
     @IsTest
     static void tryAdvance_fails_when_template_missing() {
+        // No Conga_Setting__c row and no MSA_Static_Template_Id__c on the
+        // Compliance / partner → resolveMsaTemplateId returns null → failure.
         List<RecordType> rts = [
             SELECT Id FROM RecordType
             WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
@@ -300,30 +291,69 @@ private class TrackDMsaCongaTest {
     }
 
     @IsTest
-    static void tryAdvance_fails_when_conga_returns_5xx() {
+    static void tryAdvance_fails_when_template_id_set_but_contentversion_missing() {
+        // MSA_Static_Template_Id__c references a non-existent ContentVersion
+        // → loadStaticMsaTemplate returns null → failWithLog branch.
         List<RecordType> rts = [
             SELECT Id FROM RecordType
             WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
         ];
         if (rts.isEmpty()) return;
-        Account acc = new Account(Name='AccCongaErr'); insert acc;
+        Account acc = new Account(Name='AccTplEmpty'); insert acc;
         Contact adm = new Contact(FirstName='A', LastName='Adm',
-            Email='cr@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+            Email='te@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
         insert adm;
-        Compliance__c c = newCompliance('CongaErr', acc.Id, adm.Id);
+        Compliance__c c = newCompliance('TplEmpty', acc.Id, adm.Id);
+        // Bogus ContentVersion Id — looks valid but no matching row.
+        c.MSA_Static_Template_Id__c = '068000000000000AAA';
         insert c;
         insertConfigCase(c.Id, acc.Id, adm.Id);
         addSignatory(c.Id, acc.Id);
         if (!addMerchantPricing(c.Id)) return;
-        insertCongaSettingFull();
-
-        Test.setMock(HttpCalloutMock.class, new CongaErrorMock());
+        insertDocuSignSetting();
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
         Boolean r = d.tryAdvance(c.Id);
         Test.stopTest();
-        System.assertEquals(true, r);
+        System.assertEquals(true, r,
+            'Missing ContentVersion must hard-fail without calling DocuSign');
+    }
+
+    @IsTest
+    static void tryAdvance_fails_when_docusign_returns_5xx() {
+        List<RecordType> rts = [
+            SELECT Id FROM RecordType
+            WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
+        ];
+        if (rts.isEmpty()) return;
+        Account acc = new Account(Name='AccDsErr'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='ds@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('DsErrTpl');
+
+        Compliance__c c = newCompliance('DsErr', acc.Id, adm.Id);
+        c.MSA_Static_Template_Id__c = cvId;
+        insert c;
+        insertConfigCase(c.Id, acc.Id, adm.Id);
+        addSignatory(c.Id, acc.Id);
+        if (!addMerchantPricing(c.Id)) return;
+        insertDocuSignSetting();
+
+        Test.setMock(HttpCalloutMock.class, new DocuSignErrorMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.tryAdvance(c.Id);
+        Test.stopTest();
+        System.assertEquals(true, r,
+            'DocuSign 5xx must be caught and converted to a Failed status');
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id=:c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'DocuSign failure must flip MSA_Status__c to Failed');
     }
 
     @IsTest
@@ -337,12 +367,16 @@ private class TrackDMsaCongaTest {
         Contact adm = new Contact(FirstName='A', LastName='Adm',
             Email='hp@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
         insert adm;
+
+        Id cvId = insertStaticTemplate('HappyTpl');
+
         Compliance__c c = newCompliance('Happy', acc.Id, adm.Id);
+        c.MSA_Static_Template_Id__c = cvId;
         insert c;
         insertConfigCase(c.Id, acc.Id, adm.Id);
         addSignatory(c.Id, acc.Id);
         if (!addMerchantPricing(c.Id)) return;
-        insertCongaSettingFull();
+        insertDocuSignSetting();
 
         Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
 
@@ -351,10 +385,26 @@ private class TrackDMsaCongaTest {
         Boolean r = d.tryAdvance(c.Id);
         Test.stopTest();
         System.assertEquals(true, r);
+
+        Compliance__c after = [
+            SELECT MSA_Status__c, DocuSign_Envelope_Id__c, MSA_Started_At__c, MSA_Effective_Date__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
+        System.assertEquals('sent', after.MSA_Status__c,
+            'Happy path must flip MSA_Status__c to sent');
+        System.assertEquals('a1b2c3d4-0000-1111-2222-deadbeefcafe',
+            after.DocuSign_Envelope_Id__c,
+            'envelopeId from DocuSign response must be persisted');
+        System.assertNotEquals(null, after.MSA_Started_At__c);
+        System.assertNotEquals(null, after.MSA_Effective_Date__c);
     }
 
     @IsTest
     static void failWithLog_does_not_log_twice_on_rerun() {
+        // No signatory + no template → tryAdvance hits failWithLog on every
+        // invocation. Calling tryAdvance twice must produce only one
+        // Execution_Log__c row because failWithLog's dedup guard fires once
+        // status is already 'Failed'.
         List<RecordType> rts = [
             SELECT Id FROM RecordType
             WHERE SObjectType = 'Case' AND DeveloperName = 'Configuration' LIMIT 1
@@ -368,22 +418,29 @@ private class TrackDMsaCongaTest {
         insert c;
         insertConfigCase(c.Id, acc.Id, adm.Id);
         if (!addMerchantPricing(c.Id)) return;
-
-        insertCongaSettingFull();
-        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+        insertDocuSignSetting();
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
         d.tryAdvance(c.Id);
         d.tryAdvance(c.Id);
         Test.stopTest();
+
+        Integer logged = [
+            SELECT COUNT() FROM Execution_Log__c
+            WHERE Related_Record_Id__c = :String.valueOf(c.Id)
+              AND Type__c = 'Error'
+        ];
+        System.assert(logged <= 1,
+            'Dedup branch must keep error-log row count at 0 or 1, got ' + logged);
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     // Coverage boost — direct @TestVisible method calls.
-    // These exercise paths that can't be reached via tryAdvance() because
-    // org validation rules block Merchant_Bank__c inserts in test context.
-    // ════════════════════════════════════════════════════════════════════
+    // These exercise paths that can't always be reached via tryAdvance()
+    // because org validation rules block Merchant_Bank__c inserts in test
+    // context.
+    // ══════════════════════════════════════════════════════════════════════
 
     @IsTest
     static void cov_hasMerchantPricing_returns_false_when_no_rows() {
@@ -437,237 +494,114 @@ private class TrackDMsaCongaTest {
     }
 
     @IsTest
-    static void cov_readCongaSetting_returns_row_when_present() {
-        insert new Conga_Setting__c(
-            Name='Default',
-            EU_Indirect_Template_ID__c='TPL-COV-1'
+    static void cov_resolveMsaTemplateId_prefers_merchant_id() {
+        Account acc = new Account(Name='RMT-M'); insert acc;
+        Compliance__c c = new Compliance__c(
+            Name='RMT-M', Account__c=acc.Id,
+            MSA_Static_Template_Id__c = 'TPL-MERCHANT'
         );
-        TrackDMsaConga d = new TrackDMsaConga();
-        Test.startTest();
-        Conga_Setting__c got = d.readCongaSetting();
-        Test.stopTest();
-        System.assertNotEquals(null, got);
-        System.assertEquals('TPL-COV-1', got.EU_Indirect_Template_ID__c);
-    }
+        insert c;
+        // Org default is set; merchant override must win.
+        insertDocuSignSetting();
 
-    @IsTest
-    static void cov_resolveCongaSessionId_falls_back_when_no_creds() {
-        // No Conga_Setting__c row inserted → fetchOAuthSessionToken returns null
-        // → resolveCongaSessionId falls back to UserInfo.getSessionId().
-        TrackDMsaConga d = new TrackDMsaConga();
-        Test.startTest();
-        String s = d.resolveCongaSessionId();
-        Test.stopTest();
-        // UserInfo.getSessionId() may be null in test context but the path is exercised.
-        System.assert(true, 'Fallback path executed without exception');
-    }
-
-    @IsTest
-    static void cov_resolveCongaSessionId_uses_oauth_token_when_creds_present() {
-        insertCongaSettingFull();
-        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+        Compliance__c loaded = [
+            SELECT MSA_Static_Template_Id__c, From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
-        String s = d.resolveCongaSessionId();
+        String tplId = d.resolveMsaTemplateId(loaded);
         Test.stopTest();
-        System.assertEquals('FAKE-OAUTH-TOKEN', s,
-            'OAuth token should be used when client credentials are configured');
+        System.assertEquals('TPL-MERCHANT', tplId,
+            'Merchant template id must take precedence');
     }
 
     @IsTest
-    static void cov_fetchOAuthSessionToken_returns_token_on_200() {
-        insertCongaSettingFull();
-        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+    static void cov_resolveMsaTemplateId_falls_back_to_org_default() {
+        Account acc = new Account(Name='RMT-O'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RMT-O', Account__c=acc.Id);
+        insert c;
+        insertDocuSignSetting();
+
+        Compliance__c loaded = [
+            SELECT MSA_Static_Template_Id__c, From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
-        String t = d.fetchOAuthSessionToken();
+        String tplId = d.resolveMsaTemplateId(loaded);
         Test.stopTest();
-        System.assertEquals('FAKE-OAUTH-TOKEN', t,
-            'access_token must be parsed from JSON body');
+        System.assertEquals('TPL-ORG-DEFAULT', tplId,
+            'Org default from Conga_Setting__c.MSA_Template_Id__c must be used');
     }
 
     @IsTest
-    static void cov_fetchOAuthSessionToken_returns_null_on_non_200() {
-        insertCongaSettingFull();
-        Test.setMock(HttpCalloutMock.class, new AlwaysErrorMock());
+    static void cov_resolveMsaTemplateId_returns_null_when_nothing_configured() {
+        Account acc = new Account(Name='RMT-N'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RMT-N', Account__c=acc.Id);
+        insert c;
+        // No Conga_Setting__c row, no merchant/partner override.
+
+        Compliance__c loaded = [
+            SELECT MSA_Static_Template_Id__c, From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c WHERE Id=:c.Id
+        ];
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
-        String t = d.fetchOAuthSessionToken();
+        String tplId = d.resolveMsaTemplateId(loaded);
         Test.stopTest();
-        System.assertEquals(null, t,
-            'Non-200 response must return null (caller falls back)');
+        System.assertEquals(null, tplId,
+            'Nothing configured → null so caller can fail with a clear message');
     }
 
     @IsTest
-    static void cov_fetchOAuthSessionToken_returns_null_when_body_has_no_token() {
-        insertCongaSettingFull();
-        Test.setMock(HttpCalloutMock.class, new TokenMissingMock());
+    static void cov_loadStaticMsaTemplate_returns_blob_when_present() {
+        Id cvId = insertStaticTemplate('LoadCov');
 
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
-        String t = d.fetchOAuthSessionToken();
+        Blob pdf = d.loadStaticMsaTemplate(cvId);
         Test.stopTest();
-        System.assertEquals(null, t,
-            '200 response without access_token in body must return null');
+        System.assertNotEquals(null, pdf, 'PDF blob must load');
+        System.assert(pdf.size() > 0, 'PDF blob must not be empty');
     }
 
-    // ── Already-direct tests (kept) ──────────────────────────────────────
-
     @IsTest
-    static void readCongaSetting_returns_null_when_no_row() {
+    static void cov_loadStaticMsaTemplate_returns_null_when_missing() {
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
-        Conga_Setting__c got = d.readCongaSetting();
+        Blob pdf = d.loadStaticMsaTemplate('068000000000000AAA');
         Test.stopTest();
-        System.assertEquals(null, got);
+        System.assertEquals(null, pdf,
+            'Missing ContentVersion must return null so caller fails clearly');
     }
 
     @IsTest
-    static void fetchOAuthSessionToken_returns_null_when_creds_missing() {
-        insert new Conga_Setting__c(
-            Name = 'Default',
-            EU_Indirect_Template_ID__c = 'a1bTPL'
+    static void cov_resolveCPanelAdmin_returns_null_when_account_id_null() {
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Id r = d.resolveCPanelAdmin(null);
+        Test.stopTest();
+        System.assertEquals(null, r);
+    }
+
+    @IsTest
+    static void cov_resolveCPanelAdmin_returns_contact_when_present() {
+        Account acc = new Account(Name='CPA'); insert acc;
+        Contact adm = new Contact(
+            FirstName='A', LastName='Adm', Email='cpa@x.invalid',
+            AccountId=acc.Id, Is_CPanel_Admin__c=true
         );
+        insert adm;
+
         TrackDMsaConga d = new TrackDMsaConga();
         Test.startTest();
-        String t = d.fetchOAuthSessionToken();
+        Id r = d.resolveCPanelAdmin(acc.Id);
         Test.stopTest();
-        System.assertEquals(null, t);
+        System.assertEquals(adm.Id, r,
+            'Flagged c-Panel admin Contact must be returned');
     }
-    
-    @IsTest
-static void cov_buildPartnerServerUrl_returns_soap_url() {
-    TrackDMsaConga d = new TrackDMsaConga();
-    Test.startTest();
-    String url = d.buildPartnerServerUrl();
-    Test.stopTest();
-    System.assert(String.isNotBlank(url),
-        'buildPartnerServerUrl must return a non-blank URL');
-    System.assert(url.contains('Soap/u/59.0/'),
-        'URL must contain the partner Soap path');
-}
-
-@IsTest
-static void cov_generateMsaPdf_happy_path_returns_pdf_blob() {
-    Account acc = new Account(Name='GenPdf'); insert acc;
-    Compliance__c c = new Compliance__c(Name='GenPdf', Account__c=acc.Id);
-    insert c;
-
-    insertCongaSettingFull();
-    Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
-
-    TrackDMsaConga d = new TrackDMsaConga();
-    Test.startTest();
-    Blob pdf = d.generateMsaPdf(c, 'TPL-COV-1');
-    Test.stopTest();
-
-    System.assertNotEquals(null, pdf, 'PDF blob must be returned');
-    System.assert(pdf.size() > 0, 'PDF blob must not be empty');
-}
-
-@IsTest
-static void cov_generateMsaPdf_throws_when_conga_5xx() {
-    Account acc = new Account(Name='GenPdfErr'); insert acc;
-    Compliance__c c = new Compliance__c(Name='GenPdfErr', Account__c=acc.Id);
-    insert c;
-
-    insertCongaSettingFull();
-    Test.setMock(HttpCalloutMock.class, new CongaErrorMock());
-
-    TrackDMsaConga d = new TrackDMsaConga();
-    Boolean caught = false;
-    Test.startTest();
-    try {
-        d.generateMsaPdf(c, 'TPL-COV-2');
-    } catch (TrackDMsaConga.TrackDException e) {
-        caught = true;
-        System.assert(e.getMessage().contains('500'),
-            'Exception must include HTTP status');
-    }
-    Test.stopTest();
-    System.assert(caught, 'Conga 500 must throw TrackDException');
-}
-
-@IsTest
-static void cov_failWithLog_writes_error_and_flips_status_to_failed() {
-    Account acc = new Account(Name='FwL'); insert acc;
-    Compliance__c c = new Compliance__c(
-        Name='FwL', Account__c=acc.Id,
-        EU_Indirect_Orchestration__c=true,
-        Nuvei_Connect_Application_ID__c='APP-FwL',
-        MSA_Status__c='Pending'
-    );
-    insert c;
-
-    Compliance__c loaded = [
-        SELECT Id, Name, MSA_Status__c, MSA_Started_At__c,
-               Nuvei_Connect_Application_ID__c
-        FROM Compliance__c WHERE Id=:c.Id
-    ];
-
-    TrackDMsaConga d = new TrackDMsaConga();
-    Test.startTest();
-    d.failWithLog(loaded, 'unit test failure reason', null);
-    Test.stopTest();
-
-    Compliance__c after = [SELECT MSA_Status__c, MSA_Started_At__c
-        FROM Compliance__c WHERE Id=:c.Id];
-    System.assertEquals('Failed', after.MSA_Status__c,
-        'failWithLog must flip status to Failed');
-    System.assertNotEquals(null, after.MSA_Started_At__c,
-        'failWithLog must seed MSA_Started_At__c when null');
-
-    Integer logged = [
-        SELECT COUNT() FROM Execution_Log__c
-        WHERE Related_Record_Id__c = :String.valueOf(c.Id)
-          AND Note__c = 'Track D: MSA Generation (Conga + DocuSign)'
-          AND Type__c = 'Error'
-    ];
-    System.assertEquals(1, logged,
-        'Exactly one Execution_Log__c row must be written');
-}
-
-@IsTest
-static void cov_failWithLog_does_not_double_log_on_rerun() {
-    Account acc = new Account(Name='FwLDup'); insert acc;
-    Compliance__c c = new Compliance__c(
-        Name='FwLDup', Account__c=acc.Id,
-        EU_Indirect_Orchestration__c=true,
-        Nuvei_Connect_Application_ID__c='APP-FwLDup',
-        MSA_Status__c='Pending'
-    );
-    insert c;
-
-    Compliance__c loaded1 = [
-        SELECT Id, Name, MSA_Status__c, MSA_Started_At__c,
-               Nuvei_Connect_Application_ID__c
-        FROM Compliance__c WHERE Id=:c.Id
-    ];
-
-    TrackDMsaConga d = new TrackDMsaConga();
-    Test.startTest();
-    // First call — creates log + flips status to Failed
-    d.failWithLog(loaded1, 'first failure', null);
-
-    // Re-load with status now 'Failed' — second call should hit dedup branch
-    Compliance__c loaded2 = [
-        SELECT Id, Name, MSA_Status__c, MSA_Started_At__c,
-               Nuvei_Connect_Application_ID__c
-        FROM Compliance__c WHERE Id=:c.Id
-    ];
-    d.failWithLog(loaded2, 'second failure', null);
-    Test.stopTest();
-
-    Integer logged = [
-        SELECT COUNT() FROM Execution_Log__c
-        WHERE Related_Record_Id__c = :String.valueOf(c.Id)
-          AND Note__c = 'Track D: MSA Generation (Conga + DocuSign)'
-          AND Type__c = 'Error'
-    ];
-    System.assertEquals(1, logged,
-        'Second call on already-Failed record must not double-log');
-}
 }

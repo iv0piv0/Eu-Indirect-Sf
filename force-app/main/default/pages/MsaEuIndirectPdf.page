@@ -1,0 +1,355 @@
+<apex:page controller="MsaEuIndirectPdfController"
+           renderAs="pdf"
+           applyHtmlTag="true"
+           applyBodyTag="true"
+           showHeader="false"
+           sidebar="false"
+           standardStylesheets="false"
+           cache="false">
+<head>
+<style type="text/css">
+  @page { size: A4; margin: 1.8cm 2cm 2cm 2cm; }
+  body  { font-family: 'Helvetica', Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #000; }
+  h1    { font-size: 14pt; text-align: center; margin: 0 0 4pt 0; font-weight: bold; }
+  h2    { font-size: 12pt; text-align: center; margin: 0 0 18pt 0; font-weight: normal; }
+  h3    { font-size: 11pt; margin: 14pt 0 4pt 0; font-weight: bold; }
+  h4    { font-size: 10.5pt; margin: 10pt 0 4pt 0; font-weight: bold; }
+  p     { margin: 0 0 8pt 0; text-align: justify; }
+  .clause       { margin-left: 0; }
+  .subclause    { margin-left: 18pt; }
+  .small        { font-size: 9pt; }
+  table.fees    { width: 100%; border-collapse: collapse; margin-top: 6pt; margin-bottom: 8pt; }
+  table.fees td { padding: 3pt 6pt; border-bottom: 0.5pt solid #999; vertical-align: top; }
+  table.fees td.label { width: 55%; }
+  table.fees td.value { width: 45%; }
+  table.cpanel  { width: 100%; border-collapse: collapse; margin-top: 6pt; margin-bottom: 8pt; }
+  table.cpanel td { padding: 3pt 6pt; border: 0.5pt solid #999; vertical-align: top; }
+  table.sig     { width: 100%; margin-top: 24pt; border-collapse: collapse; }
+  table.sig td  { width: 50%; vertical-align: top; padding: 8pt 6pt; }
+  .sig-line     { border-bottom: 1px solid #000; padding-bottom: 1pt; margin-top: 8pt; min-height: 14pt; }
+  .anchor       { font-size: 1pt; color: #fff; }
+  .website-row td { padding: 3pt 6pt; border-bottom: 0.5pt solid #ccc; }
+  .page-break   { page-break-after: always; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SECTION 1 — STC (Specific Terms)
+     ============================================================ -->
+<h1>MERCHANT SERVICES AGREEMENT</h1>
+<h2>Specific Terms</h2>
+
+<p>
+THIS MERCHANT SERVICES AGREEMENT - Specific Terms (&ldquo;STC&rdquo;) is made on
+<strong><apex:outputText value="{0,date,MMMM d, yyyy}"><apex:param value="{!compliance.MSA_Effective_Date__c}"/></apex:outputText></strong>
+the date it is signed by both Parties (&quot;Effective Date&quot;) between
+Nuvei Limited, incorporated and registered in Cyprus with company number HE129880
+whose registered office is at 9 Kafkasou, Aglantzia, CY 2112, Nicosia, Cyprus
+(&ldquo;Nuvei&rdquo;) and
+<strong>{!compliance.Name}</strong>
+incorporated and registered in
+<strong>{!compliance.Registered_Country__c}</strong>
+with registration number
+<strong>{!compliance.Incorporation_number__c}</strong>
+whose registered office is at
+<strong>{!compliance.Registered_Address_New__c}</strong>
+(the &ldquo;Client&rdquo;). Each a &ldquo;Party&rdquo; and collectively the &ldquo;Parties&rdquo;.
+</p>
+
+<p>The Client has requested Nuvei to supply the Services (as defined below) and Nuvei has agreed to supply the Services, on the terms set out in the Agreement (as defined below).</p>
+
+<p>In consideration of the mutual promises, covenants, undertakings, understandings and agreements set out in the Agreement, Nuvei and the Client agree as follows:</p>
+
+<h3>1. The Agreement</h3>
+<p class="subclause">1.1. This Merchant Services Agreement &ndash; STC is subject to and is governed by the general terms and conditions available at: https://www.nuvei.com/service-pages/msa-gtc-limited (the &ldquo;GTC&rdquo;) which are specifically incorporated herein by this reference and made part of this Agreement.</p>
+<p class="subclause">1.2. Following the signature of this Merchant Services Agreement &ndash; STC by both Parties, a countersigned copy of it, together with a copy of the GTC will be sent to the Client via email. Such copy of the GTC sent by Nuvei, together with the countersigned copy of this Merchant Services Agreement - STC and any Schedules and other documents referenced in it or in the GTC, constitute the binding agreement between the Parties concerning this subject matter (jointly the &ldquo;Agreement&rdquo;). The Parties acknowledge that they have had the opportunity to review and agree to be bound by the terms and provisions of the Agreement.</p>
+<p class="subclause">1.3. Definitions and Interpretation. Unless the context otherwise requires, capitalized words and expressions used herein shall have the meaning given to them in the GTC or its Schedules and shall be interpreted accordingly.</p>
+<p class="subclause">&ldquo;C-Panel&rdquo; means Nuvei&rsquo;s client back-office portal, through which Nuvei makes available to the Client, free of charge, the information relating to the Transactions.</p>
+
+<h3>2. Supply of Services</h3>
+<p class="subclause">2.1. In consideration of the Fees (as defined below) and subject to the Client&rsquo;s continued compliance with the provisions of the Agreement, Nuvei shall provide the Client with, and the Client accepts, the following Services:</p>
+<p class="subclause">(i) acquiring and processing of the Transactions and Remittance as detailed and subject to the terms and conditions of Schedule 2 - Processing Services under the GTC;</p>
+<p class="subclause">(ii) additional services all as detailed in Appendix A herein and in subsequent offerings; and</p>
+<p class="subclause">(iii) any additional Services or products made available by Nuvei, as shall be mutually agreed by the Client and Nuvei from time to time;</p>
+<p class="subclause">(iv) subject to clause 6.2, access to the C-Panel forming part of the Platform.</p>
+<p class="subclause">(jointly and severally, the &ldquo;Services&rdquo;)</p>
+<p class="subclause">2.2. Nuvei shall provide the Services strictly to the Client and only the Client has the right to use them.</p>
+<p class="subclause">2.3. Subject to the provisions of this Agreement, Applicable Laws and/or Rules, the Remittances shall be made <strong>{!compliance.Remittance_Cycle_MSA_wording__c}</strong>. Payments shall be made to a bank account designated by the Client which Nuvei may credit with Remittances or debit as the case may be.</p>
+
+<h3>3. Fees</h3>
+<p>As a condition to receiving the Services, the Client shall pay Nuvei the fees set out in Appendix A herein and in accordance with the terms and conditions of the Agreement (&quot;Fees&quot;).</p>
+
+<h3>4. Client websites</h3>
+<p class="subclause">4.1. In the Agreement, &ldquo;Websites&rdquo; means jointly and severally the Client&rsquo;s wholly owned and operated URLs, websites and applications through which Transactions will be processed in connection with the Services.</p>
+<p class="subclause">4.2. The Client represents and warrants that it shall only permit Transactions originated from a Website which is listed under clause 4.3 below or has been approved in advance and in writing by Nuvei. Client undertakes further to fully comply with the provisions of Schedule 3 - Client Declaration with respect to Websites under the GTC.</p>
+<p class="subclause">4.3. List of Websites (please include ALL URLs including those disclosed in previous statements):</p>
+
+<table style="width:100%; border-collapse:collapse; margin-top:6pt;">
+  <apex:repeat value="{!websites}" var="w">
+    <tr class="website-row"><td>{!w.Name}</td></tr>
+  </apex:repeat>
+</table>
+
+<h3>5. Term and Termination</h3>
+<p>The Agreement shall commence on the Effective Date and shall continue in force until terminated in accordance with the provisions of the Agreement.</p>
+
+<h3>6. Miscellaneous Provisions</h3>
+<p class="subclause">6.1. Counterparts. This document may be executed in any number of counterparts, each of which shall constitute a duplicate original, but all the counterparts shall together constitute the one agreement.</p>
+<p class="subclause">6.2. C-Panel Form. The Client shall have access to and use of the C-Panel upon submitting to Nuvei the filled C-Panel form attached as Appendix B herein.</p>
+<p class="subclause">6.3. Governing Law and Jurisdiction. This Agreement and all matters (including any dispute relating to the existence, validity or termination of this Agreement or any contractual or non-contractual obligation) arising from it shall be governed by, and construed in accordance with, English law. English court shall have exclusive jurisdiction to settle any dispute or claim (including non-contractual disputes or claims) arising out of or in connection with this Agreement, its subject matter or formation.</p>
+
+<p style="margin-top:18pt;">IN WITNESS WHEREOF, the Parties have caused the Agreement to be executed by their duly authorized officers as of the day and year first above written.</p>
+
+<table class="sig">
+  <tr>
+    <td><strong>Signed for and on behalf of Nuvei:</strong></td>
+    <td><strong>Signed for and on behalf of the Client:</strong></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td class="small">I HEREBY REPRESENT THAT I AM AUTHORIZED BY THE CLIENT TO SIGN THE AGREEMENT, BIND THE CLIENT AND ACCEPT THE PROVISIONS OF THE AGREEMENT INCLUDING ITS SCHEDULES, THE GTC AND THE C-PANEL FORM</td>
+  </tr>
+  <tr>
+    <td><div class="sig-line">Signature: <span class="anchor">\s_nuvei\</span></div></td>
+    <td><div class="sig-line">Signature: <span class="anchor">\s1\</span></div></td>
+  </tr>
+  <tr>
+    <td>Name: Matityahu Nahum Darrin</td>
+    <td>Name: {!signerName}</td>
+  </tr>
+  <tr>
+    <td>Title: Director</td>
+    <td>Title: {!signerTitle}</td>
+  </tr>
+  <tr>
+    <td>Date: <span class="anchor">\d_nuvei\</span></td>
+    <td>Date: <span class="anchor">\d1\</span></td>
+  </tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ============================================================
+     SECTION 2 — APPENDIX A: FEES
+     ============================================================ -->
+<h2 style="margin-top:0;">Appendix A to Merchant Services Agreement-STC</h2>
+<h1 style="font-size:12pt; margin-bottom:14pt;">FEES</h1>
+
+<h3>A. Minimum commitments</h3>
+<p>The Client undertakes to comply with the following obligations and commitments as of the date the Client can process Transactions in production (the &ldquo;Go Live Date&rdquo;):</p>
+
+<p class="subclause">1. <strong>Minimum Monthly Fee</strong> - Commission and/or Acquiring Margin (as applicable) and processing fees (in the aggregate) (together, the &lsquo;Aggregated Fees&rsquo;) shall exceed: <strong>{!compliance.Minimum_Fee_SC_ACQIURER_MSA_section__c}</strong> (the &lsquo;Minimum Monthly Fee&rsquo;). It has been agreed that the Aggregated Fees actually accrued in an applicable calendar month shall be calculated against the Client&rsquo;s processing with the Nuvei group (where similar agreements have been signed with such group members) and not only under this Agreement. In calendar months in which the Minimum Monthly Fee has not been met, Nuvei shall be eligible to charge and the Client shall pay Nuvei the delta between the actual Aggregated Fees due for that calendar month and the Minimum Monthly Fee.</p>
+
+<p class="subclause">2. <strong>Minimum Period</strong> &ndash; The minimum term of the Agreement, in which the Client will process with Nuvei is a period of <strong><apex:outputText value="{0,number,#0}"><apex:param value="{!compliance.Contract_Term__c}"/></apex:outputText></strong> consecutive months as of the Go Live Date (Minimum Period). Should the Agreement terminate or expire for any reason during the Minimum Period, Nuvei shall be eligible to charge and the Client shall pay Nuvei an early termination fee, which shall be calculated by the multiplication of <strong>{!compliance.Fees_Currency__c} {!compliance.Minimum_commitment_calculation__c}</strong> times the number of months remaining in the Minimum Period.</p>
+
+<p class="subclause">3. The Parties acknowledge and agree that the provision of Services by Nuvei and the respective fees have been calculated and agreed to by Nuvei on the basis of the Client&rsquo;s aforementioned obligations.</p>
+
+<h3>B. Payment Processing Fees</h3>
+<h4>1. Cards.</h4>
+
+<apex:repeat value="{!merchantBanks}" var="b" >
+<p style="margin-top:8pt;"><strong>1.1. {!b.Bank_Name_for_Conga__c}.</strong> {!b.New_MSA_wording__c}</p>
+<p><em>Table 1.1.:</em></p>
+<table class="fees">
+  <tr><td class="label">Set up fee</td><td class="value"><apex:outputText value="{0,number,#,##0}"><apex:param value="{!b.Setup_fee_per_bank_Merchant_ID_MID__c}"/></apex:outputText></td></tr>
+  <tr><td class="label">Annual fee</td><td class="value"><apex:outputText value="{0,number,#,##0}"><apex:param value="{!b.Annual_Fee__c}"/></apex:outputText></td></tr>
+  <tr><td class="label">Monthly fee</td><td class="value">{!b.bank_Monthly_Fee__c}</td></tr>
+  <tr><td class="label">3D secure registration fee</td><td class="value">{!b.X3D_secure_registration_fee__c}</td></tr>
+  <tr><td class="label">Arbitration fee</td><td class="value">{!b.Arbitration_fee__c}</td></tr>
+  <tr><td class="label">Remittance fee</td><td class="value">{!b.Remittance_Fee__c}</td></tr>
+  <tr><td class="label">Monthly Risk and general account management fee</td><td class="value">{!b.Risk_fee__c}</td></tr>
+  <tr><td class="label">Processing fee</td><td class="value">{!b.Trx_Fee__c}</td></tr>
+  <tr><td class="label">Other Cards Commission</td><td class="value"><apex:outputText value="{0,number,#0.###}"><apex:param value="{!b.Other_Cards__c}"/></apex:outputText>%</td></tr>
+  <tr><td class="label">Refund fee</td><td class="value">{!b.Credit_Fee_Per_Credit__c}</td></tr>
+  <tr><td class="label">Mastercard Send/PT</td><td class="value">{!b.Mastercard_PT__c}</td></tr>
+  <tr><td class="label">Visa OCT/Visa Direct fee — England and EU issuer</td><td class="value">{!b.Visa_Direct_fee__c}</td></tr>
+  <tr><td class="label">Visa OCT/Visa Direct fee — All Other</td><td class="value">{!b.Visa_Direct_RoW__c}</td></tr>
+  <tr><td class="label">CMM Report fee</td><td class="value">{!b.CMM_Report_Fee__c}</td></tr>
+  <tr><td class="label">ECM Report fee</td><td class="value">{!b.ECM_Report_Fee__c}</td></tr>
+  <tr><td class="label">Charge Back Handling fee</td><td class="value">{!b.CHB_Handling__c}</td></tr>
+  <tr><td class="label">Carte Bancaire Chargeback Representment Service (see note under Part C below)</td><td class="value">{!b.CB_Chb_Representment__c}</td></tr>
+  <tr><td class="label">Holdback rate</td><td class="value">{!b.Holdback_rate_For_PQ__c}</td></tr>
+  <tr><td class="label">Retrieval fee</td><td class="value">{!b.Retrieval_Fee__c}</td></tr>
+  <tr><td class="label">Statement fee (per MID)</td><td class="value">{!b.Statement_Fee_per_MID__c}</td></tr>
+</table>
+</apex:repeat>
+
+<h4>2. Alternative payment methods.</h4>
+<p>Nuvei makes available to its clients an online &ldquo;APM Pricing Manager&rdquo; which requires a separate signing up and signing in. Through the APM Pricing Manager, Client in coordination with its liaison in Nuvei will manage Client&rsquo;s selection of APMs and their respective fees and terms. Subsequent changes and/or additions of APMs pricing and terms, would also be managed through the APM Pricing Manager unless otherwise advised by Nuvei.</p>
+<p>For the avoidance of doubt, in addition to Client&rsquo;s confirmation of an APM and its specified pricing and terms, processing of said APM is also subject to further configuration and activation by Nuvei.</p>
+<p><strong>Notes:</strong></p>
+<p class="subclause">&bull; Holdback rate for APMs - {!compliance.Holdback_rate_for_APMs_for_PQ_MSA__c}</p>
+<p class="subclause">&bull; Adding any of the above payment methods may be subject to the alternative payment method approval.</p>
+<p class="subclause">&bull; Chargeback handling fee for Alternative Payment Methods - {!compliance.APM_Chargeback_Fee__c}</p>
+
+<h4>3. Gateway Only Services.</h4>
+<p>The following Fees and terms shall apply to the transmission of Transactions via Nuvei Gateway (non acquiring).</p>
+<p>Notwithstanding anything to the contrary in the Agreement (including but not limited to the definition of &lsquo;Services&rsquo; or the provisions of Schedule 2 of the Agreement), Gateway Only Services provided under this item: (i) relate to the Acquirers, APMs, Cards and Card Schemes specifically acknowledged by Nuvei in writing as supported and falling herein (said list may change from time to time and Nuvei&rsquo;s discretion); (ii) are limited to Nuvei enabling a straight through technical connectivity by receiving Transactions from Client and communicating them to the supported Acquirers and APMs as requested by Client; (iii) do not and are not intended to include any related services (including but not limited to risk related services, reconciliation, settlement, tokenization or otherwise) as these shall be described and/or priced separately; and (iv) are subject at all times to Client securing and maintaining direct business relationships and MIDs with such Acquirers or APMs, said business relationships shall remain strictly between Client and the respective Acquirers and APM.</p>
+<p>For the avoidance of doubt: (i) pricing below is specific to the Nuvei service and is not meant to include or address fees and rates as agreed between Client and the respective Acquirers and APMs; (ii) the acquiring or aggregation of funds and/or the settlement or remittance of funds to or from the Client will be provided by the indicated Acquirer or APMP at their sole discretion and responsibility and not by Nuvei; and (iii) this section shall not apply to Acquirers and APMs which are the title of or are detailed in other engagements between the parties (e.g. in other payment schedules or sections).</p>
+<p>Rates for Nuvei&rsquo;s Gateway Only Services are as described below:</p>
+<table class="fees">
+  <tr><td class="label"><strong>Gateway only Service</strong></td><td class="value"><strong>Processing Fee</strong></td></tr>
+  <tr><td class="label">Payment Gateway Service</td><td class="value">{!compliance.GW_Processing_Fee__c}</td></tr>
+</table>
+
+<p><strong>Notes to Part B:</strong></p>
+<p class="subclause">&bull; Wire fee - {!compliance.Wire_Fee__c}, above cost</p>
+<p class="subclause">&bull; Where a Fee is scaled, rates for each scale reached shall only apply to the volumes processed within that scale for the specific payment method (i.e. progressive).</p>
+<p class="subclause">&bull; Chargeback and fraud related fees. Chargeback handling fees do not include Card Scheme respective charges. Additionally, for each month in which the Client has exceeded the Chargeback Ratios and/or Fraud Ratios, the Client will be charged by Nuvei an additional fee of 0.5% (half a percent) of the Client&rsquo;s overall processing volume during the 3 preceding months.</p>
+<p class="subclause">&bull; Nuvei, Card Schemes, Acquirers and/or APMPs may apply additional charges including ad hoc and/or periodical registration and/or set-up fees (applicable to Nuvei and/or the Client) or may change the then current charges and fees. Such charges and fees to be considered and affect the then current Fees and shall apply to the Client in the form, amounts and as of the date such institution(s) and/or Nuvei indicates. Nuvei is under no obligation to notify Client of Card Scheme, Acquirer and/or APM charges and fees or changes thereto.</p>
+<p class="subclause">&bull; Processing fees are calculated per attempt for all Transaction types.</p>
+<p class="subclause">&bull; Unless otherwise noted, all fees (for all Transaction types) will be charged in {!compliance.Fees_Currency__c} (&ldquo;Default Currency&rdquo;). For other processing currencies, fees will be charged in the Default Currency and converted into the specific processing currency. Where applicable, for &lsquo;gateway only&rsquo; services and fees that are not dependent on processing (e.g. fixed amounts), fees will be charged in the Default Currency.</p>
+<p class="subclause">&bull; Remittances will be due and payable in {!remittanceCurrencyDisplay}. When processing is in other currencies, the respective banks&rsquo; and payment methods&rsquo; (Card Scheme, Acquirer, APM and/or otherwise) and Nuvei&rsquo;s prevailing conversion rates and fees will apply to each Transaction type.</p>
+<p class="subclause">&bull; For services which include or require currency conversion (e.g. dynamic currency convertor), Nuvei&rsquo;s prevailing conversion rates and fees will apply.</p>
+
+<h3>C. Additional Services</h3>
+<p>Below are the lists of the additional services currently available to the Client:</p>
+<p style="margin-top:8pt;"><strong>ADDED VALUE SERVICES</strong></p>
+<table class="fees">
+  <tr><td class="label"><strong>Service</strong></td><td class="value"><strong>Fee</strong></td></tr>
+  <tr><td class="label">Standard Risk Services:<br/>&bull; Fraud screening Rules Engine<br/>&bull; Case Management System<br/>&bull; Automated Blacklist<br/>&bull; Daily Summary Alert<br/>&bull; Risk Support</td><td class="value">Rate per Transaction &ndash; included in the Processing Fee set forth above</td></tr>
+  <tr><td class="label">Chargeback Representment Service (see note below)</td><td class="value">15 per chargeback</td></tr>
+  <tr><td class="label">Rebilling System</td><td class="value">Rate per Transaction &ndash; included in the Processing Fee set forth above</td></tr>
+  <tr><td class="label">Mastercard Automatic Billing Updater (ABU) &amp; Visa Account Updater (VAU)</td><td class="value">{!compliance.Mastercard_Automatic_Billing_Updater_ABU__c}* per Card update</td></tr>
+  <tr><td class="label">Card Tokenization</td><td class="value">Rate per Transaction &ndash; included in the Processing Fee set forth above.<br/>Recurring Fee &ndash; <apex:outputText value="{0,number,#0}"><apex:param value="{!compliance.Tokenization_recurring__c}"/></apex:outputText> Yearly</td></tr>
+  <tr><td class="label">Cashier/Payment Page Fee</td><td class="value">{!compliance.Cashier_fee__c} per Transaction</td></tr>
+  <tr><td class="label">Smart 3D Secure:<br/>&bull; Merchant Plug In (MPI) for cardholder authentication via schemes networks<br/>&bull; Routing between 3DS and Non-3DS routes<br/>&bull; Exemptions management rules engine<br/>&bull; Transaction risk analysis<br/>&bull; Reports</td><td class="value">{!compliance.Smart_3D_Secure_Fee__c}* per Transaction</td></tr>
+  <tr><td class="label">3D Transactions fee (commission pricing only)</td><td class="value">{!compliance.X3D_Transactions_Fee__c} per Transaction</td></tr>
+  <tr><td class="label">Dynamic Currency Conversion (DCC)</td><td class="value">For currencies and as of dates the Parties mutually agree upon. Client is eligible to {!compliance.DCC__c}% from the foreign exchange rate applied on end user by Nuvei (above cost) to the sale Transaction. To be paid monthly in the form of a credit</td></tr>
+  <tr><td class="label">Mastercard Name Validation Service &amp; Visa Account Name Inquiry (ANI)</td><td class="value">{!compliance.Visa_Account_Name_Inquiry_ANI__c}* per check</td></tr>
+  <apex:repeat value="{!chargebackProtections}" var="cb">
+  <tr><td class="label">{!cb.MSA_Name__c}</td><td class="value">MC Notification fee - Pass through cost<br/>Refund request fee - {!cb.Success_Fee__c} (above cost)<br/>Set-up Fee &ndash; {!cb.Setup_Fee__c}</td></tr>
+  </apex:repeat>
+</table>
+<p class="small"><em>* In addition to applicable Card Scheme and Card Issuer fees. Rates are progressive.</em></p>
+
+<p style="margin-top:14pt;"><strong>Matching and Reconciliation Services</strong></p>
+<table class="fees">
+  <tr><td class="label"><strong>Service</strong></td><td class="value"><strong>Fee</strong></td></tr>
+  <tr><td class="label">Daily Payment method and PSP technical Transaction Matching</td><td class="value">0.20 per Transaction.<br/>Min. Monthly 5,000<br/>Max. Monthly 20,000<br/><br/>(to be calculated against the Client&rsquo;s processing with the Safecharge group (where similar agreements have been signed with such group members) and not only under this Agreement).</td></tr>
+  <tr><td class="label">Monthly/Weekly Reconciliation Cycle</td><td class="value">&nbsp;</td></tr>
+  <tr><td class="label">Monitoring the Client&rsquo;s accounts for funds required for daily activity (optional)</td><td class="value">&nbsp;</td></tr>
+  <tr><td class="label">Monthly/Weekly summary</td><td class="value">&nbsp;</td></tr>
+  <tr><td class="label">Weekly balance monitoring</td><td class="value">&nbsp;</td></tr>
+</table>
+
+<p><strong>Notes to Part C:</strong></p>
+<p class="subclause">&bull; Nuvei may offer additional services from time to time, such services once ordered shall be deemed to be included in this Schedule 1 and unless specifically indicated otherwise by Nuvei shall be subject to the provisions of this Agreement and the respective service&rsquo; terms and conditions.</p>
+<p class="subclause">&bull; Chargeback Representment Service - In certain cases the Client may purchase from Nuvei representation services for the purpose of appealing certain chargebacks. This fee is in addition to chargeback charges/handling fees/other periodical and/or ad hoc Scheme fees and relevant charges. The Client agrees to assist Nuvei when requested, at the Client&rsquo;s expense, to investigate any of the respective Transactions. It shall remain the Client&rsquo;s responsibility to prove to the reasonable satisfaction of the relevant Card Scheme, Acquirers or APMPs that the charge of an End User&rsquo;s account was authorized by such End User. Nuvei shall bear no responsibility or liability as to the Card Scheme, Acquirers or APMPs performance or decisions in such matters. Following such efforts any decision or determination of the relevant Acquirers or APMPs as to the validity and extent of any Chargeback shall be final and binding.</p>
+<p class="subclause">&bull; Unless otherwise noted, all fees (for all Transaction types) will be charged in {!compliance.Fees_Currency__c} (&ldquo;Default Currency&rdquo;). For other processing currencies, fees will be charged in the Default Currency and converted into the specific processing currency.</p>
+<p class="subclause">&bull; The aforementioned services are designed to support the Client&rsquo;s decision making activities in the services&rsquo; respective domain(s). This is always subject to the adequacy of the information/documentation provided to Nuvei. The services&rsquo; recommendation may not be viewed or relied upon as a legal opinion or as a guaranty or warranty to the authenticity or legality of the submitted information/documentation. The Client is always advised to review the results and apply proper discretion.</p>
+<p class="subclause">&bull; Any professional Services (for example purposes only: Special feature development), new Services or integrations which are not part of the scope of the Agreement shall be provided and charged based on an agreed Statement of Work (SOW) at the rate of 150 Euro per hour.</p>
+
+<div class="page-break"></div>
+
+<!-- ============================================================
+     SECTION 3 — APPENDIX B: C-PANEL FORM
+     ============================================================ -->
+<h2 style="margin-top:0;">Appendix B &ndash; C-PANEL FORM</h2>
+<h1 style="font-size:12pt; margin-bottom:14pt;">Merchant Application Form &ndash; Nuvei Control Panel</h1>
+
+<apex:outputPanel rendered="{!hasApplicationForm}" layout="block">
+<h3>Merchant Information</h3>
+<table class="cpanel">
+  <tr><td><strong>Company Name:</strong> {!applicationForm.Name}</td><td><strong>Date:</strong> <apex:outputText value="{0,date,MMMM d, yyyy}"><apex:param value="{!todayDate}"/></apex:outputText></td></tr>
+</table>
+
+<p><strong>Primary Contact:</strong></p>
+<table class="cpanel">
+  <tr>
+    <td><strong>First Name:</strong> {!applicationForm.Primary_Contact_First_Name_New__c}</td>
+    <td><strong>Last Name:</strong> {!applicationForm.Primary_Contact_Last_Name_New__c}</td>
+  </tr>
+  <tr>
+    <td><strong>Title:</strong> {!applicationForm.Primary_Contact_Title_New__c}</td>
+    <td><strong>Tel.:</strong> {!applicationForm.Primary_Contact_Tel_New__c}</td>
+  </tr>
+  <tr>
+    <td colspan="2"><strong>Email:</strong> {!applicationForm.Primary_Contact_Email_New__c}</td>
+  </tr>
+</table>
+
+<p>Access to the Nuvei Control Panel is offered to Merchants as part and subject to the business relations and the provisions of the agreement(s) in place between Merchant and certain Nuvei entity or entities (jointly and severally: &ldquo;Agreements&rdquo;). The Merchant hereby requests, as part and subject to the provisions of the Agreements, that Nuvei enables it access to the Nuvei online reporting system (&ldquo;Nuvei Control Panel&rdquo;).</p>
+<p>For that purpose, the Merchant hereby, subject to the conditions and with the permissions as detailed below, appoints the following roles:</p>
+
+<h4>A. Administrator:</h4>
+<table class="cpanel">
+  <tr><td colspan="2"><strong>Administrator*</strong></td></tr>
+  <tr>
+    <td><strong>First Name:</strong> {!applicationForm.C_Panel_Administrator_First_Name__c}</td>
+    <td><strong>Last Name:</strong> {!applicationForm.C_Panel_Administrator_Last_Name__c}</td>
+  </tr>
+  <tr><td colspan="2"><strong>Title/Position:</strong> {!applicationForm.C_Panel_Administrator_Title_Position__c}</td></tr>
+  <tr><td colspan="2"><strong>Email Address:</strong> {!applicationForm.C_Panel_Administrator_Email_Address__c}</td></tr>
+  <tr><td colspan="2"><strong>Secret Word:</strong> {!applicationForm.C_Panel_Administrator_Secret_Word__c}</td></tr>
+  <tr><td colspan="2"><strong>Telephone:</strong> {!applicationForm.C_Panel_Administrator_Phone__c}</td></tr>
+</table>
+<p class="small"><em>&#9744; No change in Administrator</em></p>
+<p class="small">* If no change to existing Administrator is required, please check the &lsquo;No change in Administrator&rsquo; checkbox and do not fill out any Administrator details. For existing Administrator(s), completion of the table will result in resetting existing permissions and passwords, and may cause temporary loss of access to the Nuvei Control Panel.</p>
+
+<p><strong>Administrator role and permissions</strong></p>
+<p class="subclause">1. Administrator is as the Merchant&rsquo;s prime contact person with Nuvei</p>
+<p class="subclause">2. It is recommended that the Administrator will be a senior position holder with the Merchant.</p>
+<p class="subclause">3. The Administrator is granted full access/action permission to the Merchant&rsquo;s account(s) on Nuvei&rsquo;s Control Panel with the exception of the APM Pricing Management Section (as defined below).</p>
+<p class="subclause">4. The Administrator may appoint additional authorized users to the Nuvei Control Panel and set/change permission to such authorized users. Such permission explicitly excludes appointment of or setting/changing permission to the APM Pricing Manager Section. Unless specifically requested by the Merchant or by the Administrator, the Administrator is the only person authorized on behalf of the Merchant to define, allocate, and manage the access of the Merchant&rsquo;s additional Authorized Users to the Nuvei Control Panel. This includes, but is not limited to, role management, requesting password re-allocation, granting a shared login, etc. (jointly: &ldquo;Administrator Permissions&rdquo;).</p>
+<p class="subclause">5. The Merchant specifically authorizes the Administrator to appoint Authorized Users with Administrator Permissions, same as the initial Administrator without the need for Merchant approval. Merchant is fully aware of the scope and potential consequences of such permission.</p>
+<p class="subclause">6. When approaching Nuvei, the Administrator and authorized users will be taken through security procedures to identify the caller.</p>
+
+<h4>B. APM Pricing Manager:</h4>
+<table class="cpanel">
+  <tr><td colspan="2"><strong>APM Pricing Manager</strong></td></tr>
+  <tr>
+    <td><strong>First Name:</strong> {!applicationForm.APM_Pricing_Manager_First_Name__c}</td>
+    <td><strong>Last Name:</strong> {!applicationForm.APM_Pricing_Manager_Last_Name__c}</td>
+  </tr>
+  <tr><td colspan="2"><strong>Title/Position:</strong> {!applicationForm.APM_Pricing_Manager_Title_Position__c}</td></tr>
+  <tr><td colspan="2"><strong>Email Address:</strong> {!applicationForm.APM_Pricing_Manager_Email__c}</td></tr>
+  <tr><td colspan="2"><strong>Secret Word:</strong> {!applicationForm.APM_Pricing_Manager_Secret_Word__c}</td></tr>
+  <tr><td colspan="2"><strong>Telephone:</strong> {!applicationForm.APM_Pricing_Manager_Phone__c}</td></tr>
+</table>
+</apex:outputPanel>
+
+<apex:outputPanel rendered="{!hasReseller}" layout="block">
+<p style="margin-top:14pt;"><strong>Partner Administrator: {!resellerName}</strong></p>
+<p>The Merchant hereby authorises {!resellerName} (&quot;Partner&quot;), as the Merchant&rsquo;s introducing partner, to access and manage the Merchant&rsquo;s Nuvei Control Panel account with Administrator permissions as defined in the Administrator section above. The Partner is granted full access/action permission to the Merchant&rsquo;s account(s) on Nuvei&rsquo;s Control Panel with the exception of the APM Pricing Management Section.</p>
+<p>The Partner may appoint additional Authorized Users to the Nuvei Control Panel and set/change permissions to such Authorized Users. Such permission explicitly excludes appointment of or setting/changing permission to the APM Pricing Manager Section. The Partner is authorised to define, allocate, and manage the access of Authorized Users to the Nuvei Control Panel on behalf of the Merchant, including role management, requesting password re-allocation, granting a shared login, etc.</p>
+<p>The Merchant specifically authorises the Partner to appoint Authorized Users with Administrator Permissions, same as the initial Administrator, without the need for Merchant approval. Merchant is fully aware of the scope and potential consequences of such permission.</p>
+<p class="small"><strong>WARNING:</strong> You are about to grant the selected Partner extensive rights and permissions. Users with Admin Login permissions have access to sensitive account keys and account credentials (for example, secret keys which can be used in API requests and authentications on behalf of your company) as well as perform sensitive actions (such as IP whitelisting, Event API configuration, changing Team permissions and creating additional users with Admin permissions).</p>
+</apex:outputPanel>
+
+<p style="margin-top:14pt;"><strong>APM Pricing Manager role and permissions:</strong></p>
+<p class="subclause">1. &ldquo;Alternative Payment Method&rdquo; or &ldquo;APM&rdquo; means a payment method (other than Cards) which Nuvei is able and has agreed to process (as notified by Nuvei to the Merchant from time to time)</p>
+<p class="subclause">2. APM Pricing Manager is appointed by the Merchant as its designated person and authorized signatory for the management of APMs using the Nuvei Control Panel. The APM Pricing Manager is authorized to: (i) confirm/decline processing selected APMs under their specified pricing and terms, and (ii) confirm/decline change to a selected APM&rsquo;s specified pricing (applicable for a previously approved APM).</p>
+<p class="subclause">For the avoidance of doubt, in addition to merchant confirmation of an APM and its specified pricing and terms, processing of said APM is also subject to further configuration and activation by Nuvei.</p>
+<p class="subclause">3. It is Mandatory that the APM Pricing Manager will be the Merchant&rsquo;s authorized signatory or be appointed by the Merchant&rsquo;s authorized signatory.</p>
+<p class="subclause">4. The APM Pricing Manager is granted full access/action permission to the Merchant&rsquo;s APM pricing management section on the Merchant&rsquo;s Nuvei&rsquo;s Control Panel account (the &ldquo;APM Pricing Management Section&rdquo;).</p>
+<p class="subclause">5. The APM Pricing Management Section is in addition to and does not derogate from the &lsquo;Alternative Payments Methods.&rsquo; section in the Agreements (the &ldquo;Agreements APM section&rdquo;). In case of any discrepancy between the terms of the Agreements and those of the APM Pricing Management Section the terms last agreed in writing prevails.</p>
+<p class="subclause">6. The APM Pricing Manager MAY NOT appoint additional Authorized Users or APM Pricing Manager roles. the APM Pricing Manager is the only person authorized on behalf of the Merchant to access the APM Pricing Management Section.</p>
+<p class="subclause">7. Merchant acknowledges that, notwithstanding anything to the contrary in the Agreement, actions taken by the APM Pricing Manager on the Nuvei Control Panel shall be considered as the Merchant&rsquo;s legal, valid, and binding obligation, enforceable against it. Such actions shall be considered as if executed in writing, as legally binding to the Merchant, and as amending the terms of the Agreement (where applicable), without requiring the written signature of Nuvei. Merchant is fully aware of the scope and potential consequences of such actions.</p>
+<p class="subclause">8. When approaching Nuvei, the APM Pricing Manager will be taken through security procedures to identify the caller.</p>
+
+<h3>Nuvei Control Panel Terms of Use</h3>
+<h4>A. Authorized Users</h4>
+<p class="subclause">1. Account Activation email shall be initiated by the Nuvei Control Panel directly to the email address of the APM Pricing Manager, Administrator and those users authorized by the Administrator. The Administrator and such authorized users, specifically excluding APM Pricing Manager role, shall be referred to jointly as &ldquo;Authorized User&rdquo;.</p>
+<p class="subclause">2. Unless expressly waived by Nuvei, only company email domain addresses are acceptable for Authorized Users and APM Pricing Manager (i.e. not Hotmail, Gmail, Yahoo, etc.).</p>
+<p class="subclause">3. Generic email accounts (e.g. admin@companyname.xxx) must be a role-based email account used only by the Administrator or APM Pricing Manager and may not be internal.</p>
+<p class="subclause">4. Change in Administrator/ APM Pricing Manager/password reset: Changing Administrator or APM Pricing Manager details and password resets are available by calling the Nuvei Technical Support Team. A password reset may only be initiated by the Administrator or APM Pricing Manager, and only for their respective roles. The Administrator is authorized to perform all of the above for the Authorized Users.</p>
+<p class="subclause">5. Changes in Administrator and/or APM Pricing Manager (unless more than one Administrator and/or APM Pricing Manager exists) would require re-submitting this form.</p>
+<p class="subclause">6. The Merchant shall not attempt, nor permit persons who are not identified in this document, or by the Administrator, and confirmed by Nuvei as Authorized Users or as APM Pricing Manager(s), to access the Nuvei Control Panel.</p>
+<p class="subclause">7. Nuvei treats any action taken whilst an Authorized User or APM Pricing Manager was logged into the Nuvei Control Panel as having been authorized by the Merchant. Nuvei shall not be responsible for any loss occurring as a result of a failure to maintain access permissions or to keep them sufficiently secure.</p>
+<p class="subclause">8. The Merchant is responsible to ensure that all Authorized Users and APM Pricing Manager(s) comply with the terms of this document and any other reasonable instructions or recommendations Nuvei may issue.</p>
+<p class="subclause">9. The Merchant is responsible to terminate permissions for Administrators, APM Pricing Manager or Authorized Users that have left the company.</p>
+
+<h4>B. General</h4>
+<p class="subclause">1. The Merchant represents and warrants that it has in place, and shall continue to maintain and enforce, stringent security policies that address, among others, the proper guidelines for Authorized Users and APM Pricing Manager(s) to the use of the Nuvei Control Panel, as well as how to retain and safeguard user IDs and passwords, such as periodical password changes, prohibition of usage of public computers/networks, and disablement of utilities/browsers that remember username/password, etc.</p>
+<p class="subclause">2. Any person who enters the correct account identification and security validation and verification information on the Nuvei Control Panel will be able to access the Merchant&rsquo;s account allowing Nuvei to treat any transaction conducted by that person as valid and authorized by Merchant. Nuvei will not be held responsible for any loss or damage the Merchant may incur as a result.</p>
+<p class="subclause">3. Breach or suspected breach &ndash; It is the Merchant&rsquo;s responsibility to notify Nuvei immediately (phone: +44-2030513031; email: enterprise.support@nuvei.com) when the Merchant Knows/suspects that an allocated User ID and/or password have been compromised or are the risk of being compromised. The Merchant is further responsible that the Authorized Users and/or APM Pricing Manager(s) immediately change passwords in the event of such breach or suspected breach.</p>
+<p class="subclause">4. The Merchant fully agrees to use the Nuvei Control Panel at the Merchant&rsquo;s sole risk. The Nuvei Control Panel is accessed through the Internet, which is a public system over which Nuvei has no control.</p>
+<p class="subclause">5. The service is provided on an &ldquo;as is&rdquo; and &rdquo;as available&rdquo; basis without any warranties of any kind, whether express, implied, statutory, or otherwise, and Nuvei will not be responsible if the service does not work properly. Nuvei does not warrant or make any representations regarding the use, or the results of the use, of the Nuvei Control Panel in terms of availability, correctness, accuracy, timelines, completeness, reliability, or otherwise and disclaims on behalf of itself and its affiliates and their respective directors, shareholders, employees and otherwise any liability or responsibility from any use or interpretation of, or reliance upon, the Nuvei Control Panel.</p>
+<p class="subclause">6. Nuvei reserves the right to change the terms of this service and the access guidelines and requirements to the Nuvei Control Panel at any time and without notice. Nuvei may at any time suspend or otherwise restrict certain or all functionalities and/or access permissions including where Nuvei suspects unauthorized access or use or compromise of the account security.</p>
+<p class="subclause">7. Any loss sustained by the Merchant due to non-compliance with these guidelines will be at the Merchant&rsquo;s own risk and responsibility, and Nuvei will not be liable for the same in any manner.</p>
+<p class="subclause">8. These terms of use and the use of Nuvei Control Panel are at all times subject to and governed by the Agreement, as such, Agreement provisions are adopted herein by reference and the availability of the Nuvei Control Panel is subject to the Agreement remaining in effect.</p>
+
+</body>
+</apex:page>

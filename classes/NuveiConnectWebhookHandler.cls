@@ -1,143 +1,80 @@
-@RestResource(urlMapping='/nuveiConnectWebhook')
-global without sharing class NuveiConnectWebhookHandler {
-    @HttpPost
-    global static void handlePost() {
-        RestRequest req = RestContext.request;
-        RestResponse res = RestContext.response;
-        res.addHeader('Content-Type', 'application/json');
-        try {
-            String body = req.requestBody == null ? '' : req.requestBody.toString();
-
-            // ── Inbound payload logging (always, regardless of outcome) ──
-            try {
-                insert new Execution_Log__c(
-                    Class_Name__c  = 'NuveiConnectWebhookHandler',
-                    Method_Name__c = 'handlePost',
-                    Type__c        = 'Info',
-                    Note__c        = 'NC Webhook Inbound Payload',
-                    Payload__c     = String.isBlank(body) ? '(empty body)' : body.left(131072)
-                );
-            } catch (Exception logEx) {
-                System.debug('Inbound log failed: ' + logEx.getMessage());
-            }
-            // ─────────────────────────────────────────────────────────────
-
-            Map<String, Object> envelope = (Map<String, Object>) JSON.deserializeUntyped(body);
-
-            // NC sends applicationData as an escaped JSON string — parse it twice
-            String appDataStr = (String) envelope.get('applicationData');
-            Map<String, Object> appData = (Map<String, Object>) JSON.deserializeUntyped(appDataStr);
-
-            // Merge applicationId and applicationStatus from envelope into appData
-            appData.put('applicationId', envelope.get('applicationId'));
-            appData.put('applicationStatus', envelope.get('applicationStatus'));
-
-            NuveiConnectRequest ncReq = (NuveiConnectRequest) JSON.deserialize(
-                JSON.serialize(appData), NuveiConnectRequest.class
-            );
-            WebhookResult result = processWebhook(ncReq);
-            res.statusCode = result.success ? 200 : 422;
-            res.responseBody = Blob.valueOf(JSON.serialize(result));
-        } catch (Exception e) {
-            res.statusCode = 500;
-            res.responseBody = Blob.valueOf('{"success":false,"message":"' + e.getMessage().replace('"','\\"') + '"}');
-        }
-    }
-
-    private static final Id RT_EL_NC = RecordTypeHelper.getRecordTypeIdByName('Execution_Log__c', 'NuveiConnect');
+/**
+ * NuveiConnectWebhookHandler
+ *
+ * Handles inbound webhooks from Nuvei Connect for both:
+ *   1. Initial application submission (INSERT path)  — creates 8 SF objects
+ *   2. Application updates / status changes (UPSERT path) — updates existing Compliance__c
+ *
+ * Supports both EU and North American (NA) payload schemas.
+ *
+ * EU payload key differences vs NA:
+ *   - businessInformation.contactInformation uses firstName/lastName/businessEmail/contactNumber
+ *     (NA uses mobile/landline/customerServiceContactNumber — no name fields)
+ *   - businessOwnerInformation uses ownerRole (EU extended enum) vs type (NA: BENEFICIAL_OWNER/AUTHORIZED_SIGNATORY)
+ *   - businessOwnerInformation uses contactNumber (EU) vs mobile (NA)
+ *   - bankingInformation uses iban+swiftCode for SEPA, accountNumber+sortCode for UK
+ *     (NA uses accountNumber+branchIdentifier/routingNumber)
+ *   - taxDetails uses taxIdentificationType: VAT (EU) vs EIN/SSN/ITIN (NA)
+ *   - additionalInformation uses consentToPrivacyPolicy + portalAdmin fields (EU)
+ *     vs personalGuarantor1/2 (NA)
+ *   - metadata.partnerId identifies the ISO/ISV partner
+ *
+ * Error handling:
+ *   - All errors logged to Boarding_Log_Entry__c (linked to Boarding_Log__c if exists,
+ *     errors logged via System.debug until Boarding_Log__c is deployed)
+ *   - Returns structured JSON response to caller (never throws unhandled exceptions)
+ *   - Partial failures: if record creation fails after some objects exist, logs which
+ *     step failed so ops team can retry from the correct point
+ *
+ * @author  Nuvei Development Team
+ * @version 2.1 — Fix: stamp Compliance__c.Industry__c before inserting Merchant_Bank__c
+ *               Fix: persist Nuvei_Partner_ID__c on Compliance__c
+ */
+public with sharing class NuveiConnectWebhookHandler {
 
     // ─── STATUS MAP: Nuvei Connect → Salesforce ─────────────────────────────
-private static final Map<String, String> NC_TO_SF_STATUS = new Map<String, String>{
-    // ── Legacy / short keys (kept for backward compatibility) ──────────
-    'SUBMITTED'                          => 'Oscilar Submitted',
-    'PENDING_REVIEW'                     => 'Oscilar Pending Review',
-    'IN_PROGRESS'                        => 'Oscilar In Progress',
-    'IN_REVIEW'                          => 'Oscilar In Review',
-    'ADDITIONAL_INFO_REQUESTED'          => 'Oscilar Additional Info Requested',
-    'PENDING_APPROVAL'                   => 'Oscilar Pending Approval',
-    'CONDITIONALLY_APPROVED'             => 'Oscilar Conditionally Approved',
-    'APPROVED'                           => 'Oscilar Approved',
-    'DECLINED'                           => 'Oscilar Declined',
-    'WITHDRAWN'                          => 'Oscilar Withdrawn',
+    private static final Map<String, String> NC_TO_SF_STATUS = new Map<String, String>{
+        'SUBMITTED'                => 'In Pre-approval',
+        'PENDING_REVIEW'           => 'Pre-Approved',
+        'IN_REVIEW'                => 'KYC',
+        'ADDITIONAL_INFO_REQUESTED'=> 'KYC',
+        'PENDING_APPROVAL'         => 'KYC',
+        'CONDITIONALLY_APPROVED'   => 'Live reversed',
+        'APPROVED'                 => 'Live',
+        'IN_PROGRESS'              => 'Pre-Approved',
+        'DECLINED'                 => 'Declined',
+        'WITHDRAWN'                => 'Dormant'
+    };
 
-    // ── NC's actual outbound event names (per NC channel config) ───────
-    'APPLICATION_SUBMITTED'              => 'Oscilar Submitted',
-    'APPLICATION_UPDATED'                => 'Oscilar In Review',
-    'APPLICATION_APPROVED'               => 'Oscilar Approved',
-    'APPLICATION_CONDITIONALLY_APPROVED' => 'Oscilar Conditionally Approved',
-    'APPLICATION_DECLINED'               => 'Oscilar Declined',
-    'ADDITIONAL_INFORMATION_REQUIRED'    => 'Oscilar Additional Info Requested'
-};
 
-// Helper: treat both old (APPROVED) and new (APPLICATION_APPROVED) as approval triggers
-private static Boolean isApprovedStatus(String ncStatus) {
-    return ncStatus == 'APPROVED' || ncStatus == 'APPLICATION_APPROVED';
-}
-
-        // ─── COMPANY TYPE: NC enum → SF picklist ────────────────────────────────────
-    // Wave 3 fix (gap #12): aligned to current Nuvei Connect API swagger spec
-    // for `BusinessType`. Source of truth: NC OpenAPI schema.
-    //
-    // SAFE-PICKLIST mode: 5 NC enum values do not yet have matching SF picklist
-    // entries (Compliance__c.Company_Type__c). To avoid INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST
-    // errors on insert, those 5 are temporarily mapped to the closest existing
-    // SF label. Round-trip is lossy for those 5 — they will outbound as `OTHER`
-    // (or `LIMITED_LIABILITY_PARTNERSHIP` for Scottish LP) on Track H.
-    //
-    // SF admin follow-up — add these picklist values to both
-    // Compliance__c.Company_Type__c and Application_Form__c.Company_Type__c,
-    // then change the 5 lines below to use them:
-    //   * Individual / Sole Proprietorship  → currently 'Sole Proprietorship'
-    //   * Trust                              → currently 'Other'
-    //   * Club or Society                    → currently 'Other'
-    //   * Unincorporated Association         → currently 'Other'
-    //   * Scottish Limited Partnership       → currently 'Limited Liability Partnership'
+    // ─── COMPANY TYPE: NC enum → SF picklist ────────────────────────────────────
     private static final Map<String, String> NC_TO_SF_COMPANY_TYPE =
         new Map<String, String>{
-            'INDIVIDUAL_OR_SOLE_PROPRIETORSHIP' => 'Sole Proprietorship',           // TODO: 'Individual / Sole Proprietorship'
-            'LIMITED_COMPANY'                   => 'Limited',
-            'PUBLIC_LIMITED_COMPANY'            => 'Public Limited',
-            'PARTNERSHIP'                       => 'Partnership',
-            'LIMITED_LIABILITY_PARTNERSHIP'     => 'Limited Liability Partnership',
-            'GOVERNMENT_LOCAL_AUTHORITY'        => 'Government/Local Authority',
-            'NON_PROFIT_ASSOCIATION_FOUNDATION' => 'Non-profit',
-            'TRUST'                             => 'Other',                         // TODO: 'Trust'
-            'CLUB_OR_SOCIETY'                   => 'Other',                         // TODO: 'Club or Society'
-            'UNINCORPORATED_ASSOCIATION'        => 'Other',                         // TODO: 'Unincorporated Association'
-            'SCOTTISH_LIMITED_PARTNERSHIP'      => 'Limited Liability Partnership', // TODO: 'Scottish Limited Partnership'
-            'OTHER'                             => 'Other',
-
-            // Legacy NC values — kept read-only for any historical webhooks
-            // that still send the old enums. Outbound (SF → NC) does not use these.
-            'SOLE_TRADER'                       => 'Sole Trader',
-            'SOLE_PROPRIETORSHIP'               => 'Sole Proprietorship',
-            'CORPORATION'                       => 'Corporation',
-            'PUBLICLY_TRADED'                   => 'Publicly Traded',
-            'GOVERNMENT'                        => 'Government/Local Authority',
-            'NON_PROFIT'                        => 'Non-profit'
+            'LIMITED_COMPANY'               => 'Limited',
+            'PUBLIC_LIMITED_COMPANY'        => 'Public Limited',
+            'LIMITED_LIABILITY_PARTNERSHIP' => 'Limited Liability Partnership',
+            'SOLE_TRADER'                   => 'Sole Trader',
+            'SOLE_PROPRIETORSHIP'           => 'Sole Proprietorship',
+            'PARTNERSHIP'                   => 'Partnership',
+            'CORPORATION'                   => 'Corporation',
+            'NON_PROFIT'                    => 'Non-profit',
+            'PUBLICLY_TRADED'               => 'Publicly Traded',
+            'GOVERNMENT'                    => 'Government/Local Authority',
+            'OTHER'                         => 'Other'
         };
-        
+
     // ─── FULFILLMENT TIME: NC enum → SF picklist ─────────────────────────────
     private static final Map<String, String> NC_TO_SF_FULFILLMENT =
-    new Map<String, String>{
-        'SAME_DAY'     => 'No delay',
-        'IMMEDIATE'    => 'No delay',
-        'INSTANT'      => 'No delay',
-        '1_5_DAYS'     => 'Up to 7 days',
-        '1_7_DAYS'     => 'Up to 7 days',
-        'UP_TO_7_DAYS' => 'Up to 7 days',
-        '7_20_DAYS'    => 'Between 7 - 20 days',
-        'OVER_20_DAYS' => 'More than 20 days',
-        'MORE_THAN_20' => 'More than 20 days'
-    };
-
-    // ─── UK STATE: NC ISO 3166-2 → SF State_USA__c picklist ─────────────────
-    private static final Map<String, String> NC_TO_SF_UK_STATE = new Map<String, String>{
-        'GB-ENG' => 'England and Wales',
-        'GB-WLS' => 'England and Wales',
-        'GB-SCT' => 'Scotland',
-        'GB-NIR' => 'Northern Ireland'
-    };
+        new Map<String, String>{
+            'IMMEDIATE'    => 'No delay',
+            'INSTANT'      => 'No delay',
+            '1_5_DAYS'     => 'Up to 7 days',
+            '1_7_DAYS'     => 'Up to 7 days',
+            'UP_TO_7_DAYS' => 'Up to 7 days',
+            '7_20_DAYS'    => 'Between 7 - 20 days',
+            'OVER_20_DAYS' => 'More than 20 days',
+            'MORE_THAN_20' => 'More than 20 days'
+        };
 
     // ─── CHARGEBACK RATIO: NC decimal → SF picklist band ─────────────────────
     private static String mapChargebackRatio(Decimal ratio) {
@@ -159,6 +96,8 @@ private static Boolean isApprovedStatus(String ncStatus) {
     }
 
     // ─── ISO COUNTRY CODE → SF TARGET MARKET picklist name ───────────────────
+    // Also used for Registered_Country__c on Compliance__c and Application_Form__c.
+    // NC sends ISO 2-letter codes; SF picklists use full English country names.
     private static final Map<String, String> ISO_TO_COUNTRY_NAME =
         new Map<String, String>{
             'AF' => 'Afghanistan',              'AL' => 'Albania',
@@ -268,7 +207,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
         String upper = code.toUpperCase().trim();
         return ISO_TO_COUNTRY_NAME.containsKey(upper)
             ? ISO_TO_COUNTRY_NAME.get(upper)
-            : code;
+            : code; // fall back to raw value if not in map
     }
 
     private static String resolveCountryList(List<String> codes) {
@@ -278,76 +217,86 @@ private static Boolean isApprovedStatus(String ncStatus) {
             String name = resolveCountry(code);
             if (String.isNotBlank(name)) names.add(name);
         }
-        return String.join(names, ';');
+        return String.join(names, ';'); // SF multi-select uses semicolon
     }
 
     // ─── PUBLIC ENTRY POINT ──────────────────────────────────────────────────
 
-    global static WebhookResult processWebhook(NuveiConnectRequest req) {
-    WebhookResult result = new WebhookResult();
+    /**
+     * Main entry point called by NuveiConnectWebhookService.
+     * Determines insert vs upsert and EU vs NA, then routes accordingly.
+     */
+    public static WebhookResult processWebhook(NuveiConnectRequest req) {
+        WebhookResult result = new WebhookResult();
 
-    try {
-        // Edit 5 — add City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
-        List<Compliance__c> existing = [
-            SELECT Id, Name, Account__c, Compliance_Status__c,
-                   Technical_Onboarding_Status__c,
-                   Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c,
-                   Manual_MCC_Code__c, Url__c, From_Reseller__c,
-                   EU_Indirect_Orchestration__c,
-                   City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
-            FROM   Compliance__c
-            WHERE  Nuvei_Connect_Application_ID__c = :req.applicationId
-            LIMIT  1
-        ];
+        try {
+            // ── DETECT: Is this an update to an existing application? ────────
+            List<Compliance__c> existing = [
+                SELECT Id, Name, Account__c, Compliance_Status__c,
+                       Technical_Onboarding_Status__c,
+                       Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c,
+                       Manual_MCC_Code__c, Url__c,
+                       From_Reseller__c, Nuvei_Connect_Application_ID__c
+                FROM   Compliance__c
+                WHERE  Nuvei_Connect_Application_ID__c = :req.applicationId
+                LIMIT  1
+            ];
 
-        if (!existing.isEmpty()) {
-            Boolean ok = handleStatusUpdate(existing[0], req);
-            result.complianceId = String.valueOf(existing[0].Id);
-            if (ok) {
+            if (!existing.isEmpty()) {
+                // ── UPSERT PATH ─────────────────────────────────────────────
+                handleStatusUpdate(existing[0], req);
                 result.success = true;
                 result.message = 'Status updated to: ' + req.applicationStatus;
+
             } else {
-                result.success = false;
-                result.message = 'Unknown NC status: ' + req.applicationStatus;
-                result.errorDetail = 'Status "' + req.applicationStatus
-                    + '" is not in NC_TO_SF_STATUS map. Compliance not updated.';
+                // ── INSERT PATH ─────────────────────────────────────────────
+                Id complianceId = createAllObjects(req);
+                result.success = true;
+                result.message = 'Application created. Compliance Id: ' + complianceId;
+                result.complianceId = String.valueOf(complianceId);
             }
-        } else {
-            Id complianceId = createAllObjects(req);
-            result.success = true;
-            result.message = 'Application created. Compliance Id: ' + complianceId;
-            result.complianceId = String.valueOf(complianceId);
+
+        } catch (Exception e) {
+            result.success = false;
+            result.message = 'Processing error: ' + e.getMessage();
+            result.errorDetail = e.getStackTraceString();
+            logLegacyError('NC Webhook Processing Error', e, req.applicationId);
         }
 
-    } catch (Exception e) {
-        result.success = false;
-        result.message = 'Processing error: ' + e.getMessage();
-        result.errorDetail = e.getStackTraceString();
-        logLegacyError('NC Webhook Processing Error', e, req.applicationId);
+        return result;
     }
 
-    return result;
-}
-        // ─── UPSERT PATH ────────────────────────────────────────────────────────
+    // NOTE: BoardingLogger integration (Boarding_Log__c / Boarding_Log_Entry__c)
+    // is stubbed out here pending Track I deployment. Once Boarding_Log__c and
+    // Boarding_Log_Entry__c are deployed to the org, restore the BoardingLogger
+    // calls here and in handleStatusUpdate / createAllObjects.
 
-    private static Boolean handleStatusUpdate(
+    // ─── UPSERT PATH ────────────────────────────────────────────────────────
+
+    /**
+     * Handles a status update from Nuvei Connect for an existing application.
+     * Also updates key fields if they have changed (company details, bank info, etc.)
+     */
+    private static void handleStatusUpdate(
         Compliance__c existing,
         NuveiConnectRequest req
     ) {
-        // ─── Status mapping ──────────────────────────────────────────────
+        // ── Map NC status → SF status ────────────────────────────────────────
         if (String.isNotBlank(req.applicationStatus)) {
             String sfStatus = NC_TO_SF_STATUS.get(req.applicationStatus);
             if (sfStatus == null) {
                 logLegacyError('Unknown NC status: ' + req.applicationStatus, null, req.applicationId);
-                return false;  // ← signal failure so caller returns 422 to NC
+                return;
             }
+            // Store raw NC status — picklist must contain all NC status values
             existing.Nuvei_Connect_Status__c = req.applicationStatus;
             if (sfStatus != existing.Compliance_Status__c) {
                 existing.Compliance_Status__c = sfStatus;
             }
         }
 
-        // Edit 4 — patch City_field__c on update path
+        // ── Update other changed fields if present in payload ─────────────────
+        // (NC may re-send the full payload on updates — only overwrite non-blank values)
         if (req.businessInformation != null) {
             if (String.isNotBlank(req.businessInformation.legalName)) {
                 existing.Name = req.businessInformation.legalName;
@@ -358,66 +307,18 @@ private static Boolean isApprovedStatus(String ncStatus) {
             if (String.isNotBlank(req.businessInformation.merchantCategoryCode)) {
                 existing.Manual_MCC_Code__c = req.businessInformation.merchantCategoryCode;
             }
-            // Wave 2 fix (gap #6) — also patch update path. Only set when blank
-            // so manual OCT edits are never overwritten.
-            if (req.businessInformation.contactInformation != null
-                && String.isBlank(existing.City_field__c)
-                && String.isNotBlank(req.businessInformation.contactInformation.contactNumber)) {
-                existing.City_field__c = req.businessInformation.contactInformation.contactNumber;
-            }
         }
 
-        // Edit 6 — idempotent fixes for Primary_Contact__c, Descriptor__c, Descriptor_Type__c
-        // Wave 2 fix (gap #7) — also patch update path. Only set when blank.
-        if (String.isBlank(existing.Primary_Contact__c)
-            && req.businessInformation != null
-            && req.businessInformation.contactInformation != null
-            && String.isNotBlank(req.businessInformation.contactInformation.businessEmail)) {
-            List<Contact> existingCons = [
-                SELECT Id FROM Contact
-                WHERE AccountId = :existing.Account__c
-                AND Email = :req.businessInformation.contactInformation.businessEmail
-                LIMIT 1
-            ];
-            if (!existingCons.isEmpty()) {
-                existing.Primary_Contact__c = existingCons[0].Id;
-            }
-        }
-
-        // Wave 2 fix (gap #8) — also patch update path. Only set when blank.
-        if (String.isBlank(existing.Descriptor__c)
-            && req.businessInformation != null
-            && String.isNotBlank(req.businessInformation.legalName)) {
-            Integer descMax = 22;
-            try {
-                Integer fieldLen = Compliance__c.Descriptor__c.getDescribe().getLength();
-                if (fieldLen > 0 && fieldLen < descMax) descMax = fieldLen;
-            } catch (Exception ignore) { /* keep 22 */ }
-            String descriptor = req.businessInformation.legalName.length() > descMax
-                ? req.businessInformation.legalName.substring(0, descMax)
-                : req.businessInformation.legalName;
-            existing.Descriptor__c = descriptor;
-        }
-
-        // Wave 2 fix (gap #9) — also patch update path. Only set when blank.
-        if (String.isBlank(existing.Descriptor_Type__c)) {
-            existing.Descriptor_Type__c = 'Static';
-        }
-
-        // CHANGED: use isApprovedStatus() so this also fires for APPLICATION_APPROVED
-        if (isApprovedStatus(req.applicationStatus) && existing.From_Reseller__c != null) {
+        // EU indirect orchestration: partner-linked merchants get post-APPROVED automation
+        if (req.applicationStatus == 'APPROVED' && existing.From_Reseller__c != null) {
             existing.EU_Indirect_Orchestration__c = true;
         }
-
-        // ── Wave 4 (gaps #24, #25): backfill owner Contacts + junction rows
-        // when missing. Idempotent — only inserts what doesn't exist yet.
-        backfillOwnerContactsAndJunctions(existing, req);
 
         existing.Nuvei_Connect_Last_Webhook__c = DateTime.now();
         update existing;
 
-        // CHANGED: use isApprovedStatus() so this also fires for APPLICATION_APPROVED
-        if (isApprovedStatus(req.applicationStatus)) {
+        // ── On APPROVED: verify banking and create Config Case ────────────────
+        if (req.applicationStatus == 'APPROVED') {
             List<Banking_Details__c> bankDetails = [
                 SELECT Id FROM Banking_Details__c
                 WHERE Compliance__c = :existing.Id
@@ -431,117 +332,45 @@ private static Boolean isApprovedStatus(String ncStatus) {
             }
             createConfigurationCase(existing);
         }
-
-        return true;
     }
-    
+
     // ─── INSERT PATH ─────────────────────────────────────────────────────────
 
-        private static Id createAllObjects(NuveiConnectRequest req) {
+    /**
+     * Creates all 8 Salesforce objects for a new merchant application.
+     * Returns the Id of the created Compliance__c record.
+     */
+    private static Id createAllObjects(NuveiConnectRequest req) {
+        // Step 1: Account
         Account acc = buildAccount(req);
         insert acc;
 
-        // ── Wave 4 (gap #24): build one Contact per business owner.
-        // Dedupe by lowercased email. cPanel admin merge: if portalAdminEmail
-        // matches an owner email (case-insensitive), set Is_CPanel_Admin__c=true
-        // on that single Contact (no duplicates).
+        // Step 2: Contact(s) — cPanel deduplication
+        // Case A: same email → one Contact, Is_CPanel_Admin__c = true
+        // Case B: different emails → two Contacts, second flagged as cPanel admin
         String primaryEmail = req.businessInformation?.contactInformation?.businessEmail;
         String cPanelEmail  = req.additionalInformation?.portalAdminEmail;
-        String cPanelLower  = String.isBlank(cPanelEmail) ? null : cPanelEmail.toLowerCase();
+        Boolean sameContact = String.isNotBlank(primaryEmail)
+                              && String.isNotBlank(cPanelEmail)
+                              && primaryEmail.equalsIgnoreCase(cPanelEmail);
 
-        Map<String, Contact> ownerContactsByEmail = new Map<String, Contact>();
-        Boolean cPanelMatchedOwner = false;
+        Contact con = buildContact(req, acc.Id, sameContact);
+        insert con;
 
-        if (req.businessOwnerInformation != null) {
-            for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
-                if (String.isBlank(bo.email)) continue;
-                String emailLower = bo.email.toLowerCase();
-                if (ownerContactsByEmail.containsKey(emailLower)) continue; // dedupe
-
-                Contact c = new Contact();
-                c.AccountId               = acc.Id;
-                c.FirstName               = bo.legalFirstName;
-                c.LastName                = String.isNotBlank(bo.legalLastName)
-                                              ? bo.legalLastName
-                                              : req.businessInformation.legalName;
-                c.Email                   = bo.email;
-                c.Phone                   = bo.contactNumber;
-                c.Authorized_Signature__c = bo.isAuthorizedSignatory == true; // Wave 4 (#24)
-
-                if (cPanelLower != null && emailLower == cPanelLower) {
-                    c.Is_CPanel_Admin__c = true;
-                    cPanelMatchedOwner   = true;
-                }
-                ownerContactsByEmail.put(emailLower, c);
-            }
+        if (!sameContact && String.isNotBlank(cPanelEmail)) {
+            Contact cPanelCon = buildCPanelContact(req, acc.Id);
+            insert cPanelCon;
         }
 
-        // Primary business contact (contactInformation): create if no owner
-        // shares the same email. Wave 4 keeps existing Wave 2 behaviour intact.
-        Contact primaryCon;
-        Boolean primaryMatchedOwner = false;
-        if (String.isNotBlank(primaryEmail)
-            && ownerContactsByEmail.containsKey(primaryEmail.toLowerCase())) {
-            primaryCon = ownerContactsByEmail.get(primaryEmail.toLowerCase());
-            primaryMatchedOwner = true;
-        }
-        if (primaryCon == null) {
-            // Build the legacy primary contact (existing buildContact logic).
-            Boolean primaryIsCPanel = String.isNotBlank(primaryEmail)
-                                      && String.isNotBlank(cPanelEmail)
-                                      && primaryEmail.equalsIgnoreCase(cPanelEmail);
-            primaryCon = buildContact(req, acc.Id, primaryIsCPanel);
-            if (primaryIsCPanel) cPanelMatchedOwner = true; // legacy already handled this
-        }
-
-        // Standalone cPanel contact: only if no owner AND not the primary email
-        // already matched it.
-        Contact cPanelOnlyCon;
-        if (!cPanelMatchedOwner
-            && String.isNotBlank(cPanelEmail)
-            && (String.isBlank(primaryEmail) || !primaryEmail.equalsIgnoreCase(cPanelEmail))) {
-            cPanelOnlyCon = buildCPanelContact(req, acc.Id);
-        }
-
-        // Insert all Contacts in one DML
-        List<Contact> toInsert = new List<Contact>();
-        if (!primaryMatchedOwner) toInsert.add(primaryCon); // primary is its own row
-        toInsert.addAll(ownerContactsByEmail.values());
-        if (cPanelOnlyCon != null) toInsert.add(cPanelOnlyCon);
-        if (!toInsert.isEmpty()) insert toInsert;
-
-        // Resolve the Contact Id used for DocuSign_Recipient__c / Primary_Contact__c.
-        // Preference order:
-        //   1. Authorized signatory owner (highest %ownership wins on ties)
-        //   2. Primary business contact (current default)
-        Id docuRecipientId = pickAuthorizedSignatoryId(req, ownerContactsByEmail);
-        if (docuRecipientId == null) docuRecipientId = primaryCon.Id;
-
+        // Step 3: Opportunity
         Opportunity opp = buildOpportunity(req, acc.Id);
         insert opp;
 
-        Compliance__c comp = buildCompliance(req, acc.Id, opp.Id, docuRecipientId);
+        // Step 4: Compliance__c (Company Profile)
+        Compliance__c comp = buildCompliance(req, acc.Id, opp.Id, con.Id);
         insert comp;
 
-        // ── Wave 4 (gap #25): one Compliance_Contact__c junction row per owner.
-        // Director__c is a formula on the junction → auto-fills from
-        // Contact__r.Authorized_Signature__c.
-        List<Compliance_Contact__c> junctions = new List<Compliance_Contact__c>();
-        for (Contact c : ownerContactsByEmail.values()) {
-            junctions.add(new Compliance_Contact__c(
-                Compliance__c = comp.Id,
-                Contact__c    = c.Id
-            ));
-        }
-        if (!junctions.isEmpty()) {
-            try {
-                insert junctions;
-            } catch (Exception e) {
-                logLegacyError('Wave 4 (gap #25): Compliance_Contact__c junction insert failed',
-                               e, req.applicationId);
-            }
-        }
-
+        // Step 4b: PCI__c — create on INSERT so PCI team workflow can trigger
         try {
             PCI__c pci = new PCI__c();
             pci.Company_Profile__c = comp.Id;
@@ -550,46 +379,26 @@ private static Boolean isApprovedStatus(String ncStatus) {
             System.debug(LoggingLevel.ERROR, 'NuveiConnectWebhook | PCI__c creation failed: ' + e.getMessage());
         }
 
+        // Step 5: Application_Form__c
         Application_Form__c appForm = buildApplicationForm(req, comp.Id);
         insert appForm;
 
+        // Step 6: Website__c
         if (String.isNotBlank(req.businessInformation?.websiteUrl)) {
             Website__c site = buildWebsite(req, comp.Id, appForm.Id);
             insert site;
         }
 
+        // Step 7: Directors_or_Ultimate_Beneficial_Owner__c (from businessOwnerInformation)
         List<Directors_or_Ultimate_Beneficial_Owner__c> directors = buildDirectors(req, comp.Id, appForm.Id);
         if (!directors.isEmpty()) insert directors;
 
+        // Step 8: Merchant_Bank__c
+        // Copy pricing templates from partner, then stamp merchant's actual bank
+        // account details (IBAN/sort code/account number etc.) onto the cloned records.
         copyPartnerMerchantBanks(comp.Id, req.partnerId, req.bankingInformation);
 
         return comp.Id;
-    }
-
-    /**
-     * Wave 4 helper — pick authorized signatory Contact Id from already-built
-     * owner Contact map. Tiebreaker: highest percentageOfOwnership wins.
-     * Returns null if no owner is flagged as signatory.
-     */
-    private static Id pickAuthorizedSignatoryId(
-        NuveiConnectRequest req,
-        Map<String, Contact> ownerContactsByEmail
-    ) {
-        if (req.businessOwnerInformation == null || ownerContactsByEmail.isEmpty()) return null;
-        BusinessOwnerWrapper best;
-        for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
-            if (bo.isAuthorizedSignatory != true) continue;
-            if (String.isBlank(bo.email)) continue;
-            if (best == null
-                || (bo.percentageOfOwnership != null
-                    && (best.percentageOfOwnership == null
-                        || bo.percentageOfOwnership > best.percentageOfOwnership))) {
-                best = bo;
-            }
-        }
-        if (best == null) return null;
-        Contact c = ownerContactsByEmail.get(best.email.toLowerCase());
-        return c == null ? null : c.Id;
     }
 
     // ─── OBJECT BUILDERS ─────────────────────────────────────────────────────
@@ -599,12 +408,22 @@ private static Boolean isApprovedStatus(String ncStatus) {
         Account acc = new Account();
         acc.Name = bi.legalName;
         acc.AccountNumber = bi.businessRegistrationNumber;
+
+        // Address — find BUSINESS_ADDRESS from addresses array
+        // Account billing address fields (BillingStreet, BillingCity etc.) are not set.
+        // Per Plamen: pw_cc package owns those fields. Use Compliance__c.Registered_*
+        // fields for address — those are already populated in buildCompliance().
+
+        // Website
         if (String.isNotBlank(bi.websiteUrl)) {
             acc.Website = bi.websiteUrl;
         }
+
+        // Phone — EU uses contactInformation.contactNumber; NA uses contactInformation.mobile
         if (bi.contactInformation != null) {
             acc.Phone = bi.contactInformation.contactNumber;
         }
+
         acc.Type = 'Merchant';
         return acc;
     }
@@ -621,6 +440,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
             con.Phone     = ci.contactNumber;
         }
 
+        // Fallback: use first business owner if contact info incomplete
         if (String.isBlank(con.LastName) && req.businessOwnerInformation != null
             && !req.businessOwnerInformation.isEmpty()) {
             BusinessOwnerWrapper bo = req.businessOwnerInformation[0];
@@ -634,6 +454,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return con;
     }
 
+    // Case B — dedicated cPanel admin contact (different person from MSA signatory)
     private static Contact buildCPanelContact(NuveiConnectRequest req, Id accountId) {
         AdditionalInfoWrapper ai = req.additionalInformation;
         Contact con = new Contact();
@@ -654,18 +475,6 @@ private static Boolean isApprovedStatus(String ncStatus) {
         opp.AccountId = accountId;
         opp.StageName = 'Prospecting';
         opp.CloseDate = Date.today().addDays(30);
-
-        List<RecordType> rts = [
-            SELECT Id FROM RecordType
-            WHERE SObjectType = 'Opportunity'
-            AND DeveloperName = 'Safecharge'
-            AND IsActive = true
-            LIMIT 1
-        ];
-        if (!rts.isEmpty()) {
-            opp.RecordTypeId = rts[0].Id;
-        }
-
         return opp;
     }
 
@@ -678,76 +487,62 @@ private static Boolean isApprovedStatus(String ncStatus) {
         BusinessInformationWrapper bi = req.businessInformation;
         Compliance__c comp = new Compliance__c();
 
-        comp.Name                             = bi.legalName;
-        comp.Account__c                       = accountId;
-        comp.Opportunity__c                   = oppId;
+        comp.Name                  = bi.legalName;
+        comp.Account__c            = accountId;
+        comp.Opportunity__c        = oppId;
         comp.Nuvei_Connect_Application_ID__c  = req.applicationId;
-        comp.Compliance_Status__c             = NC_TO_SF_STATUS.get(
+        comp.Compliance_Status__c  = NC_TO_SF_STATUS.get(
             String.isNotBlank(req.applicationStatus) ? req.applicationStatus : 'SUBMITTED'
         );
-        comp.From_Reseller__c    = resolvePartnerId(req.partnerId);
-        comp.Nuvei_Partner_ID__c = req.partnerId;
-        if (comp.From_Reseller__c != null) {
-            seedRolesFromPartner(comp);
-        }
-        comp.Manual_MCC_Code__c               = bi.merchantCategoryCode;
-        comp.Company_Type__c                  = NC_TO_SF_COMPANY_TYPE.containsKey(bi.businessType)
-            ? NC_TO_SF_COMPANY_TYPE.get(bi.businessType) : bi.businessType;
-        comp.Url__c                           = bi.websiteUrl;
-        comp.Foundation_date__c               = parseDate(bi.businessStartDate);
-        comp.Trading_Name__c                  = String.isNotBlank(bi.doingBusinessAs)
-            ? bi.doingBusinessAs : bi.legalName;
-        comp.Incorporation_number__c          = bi.businessRegistrationNumber;
+        comp.From_Reseller__c      = resolvePartnerId(req.partnerId);
 
+        // FIX: persist the raw NC partner UUID so future resolvePartnerId lookups
+        // on this merchant's own record succeed (e.g. for re-webhooks / updates).
+        comp.Nuvei_Partner_ID__c   = req.partnerId;
+
+        comp.Manual_MCC_Code__c    = bi.merchantCategoryCode;
+        comp.Company_Type__c       = NC_TO_SF_COMPANY_TYPE.containsKey(bi.businessType)
+            ? NC_TO_SF_COMPANY_TYPE.get(bi.businessType) : bi.businessType;
+        comp.Url__c                = bi.websiteUrl;
+        comp.Foundation_date__c    = parseDate(bi.businessStartDate);
+
+        // Trading name
+        comp.Trading_Name__c = String.isNotBlank(bi.doingBusinessAs)
+            ? bi.doingBusinessAs : bi.legalName;
+
+        // Registration number
+        comp.Incorporation_number__c = bi.businessRegistrationNumber;
+
+        // Address — registered / business address
         AddressWrapper bizAddr = getAddressByType(bi.addresses, 'BUSINESS_ADDRESS');
         if (bizAddr != null) {
             comp.Registered_Country__c         = resolveCountry(bizAddr.country);
             comp.Registered_City__c            = bizAddr.city;
             comp.Registered_Street__c          = bizAddr.addressLine1;
             comp.Registered_Zip_Postal_Code__c = bizAddr.postalCode;
-            if (bizAddr.country == 'GB' && String.isNotBlank(bizAddr.stateOrProvince)) {
-                String sfState = NC_TO_SF_UK_STATE.get(bizAddr.stateOrProvince.toUpperCase());
-                if (String.isNotBlank(sfState)) {
-                    comp.State_USA__c = sfState;
-                }
-            }
         }
 
+        // Tax details
         if (req.taxDetails != null) {
             comp.VAT_Number__c  = req.taxDetails.taxIdentificationNumber;
             comp.Tax_ID_Type__c = req.taxDetails.taxIdentificationType;
         }
 
+        // EU: set DocuSign_Recipient__c lookup to the primary Contact so the
+        // Recipient_Email__c formula resolves automatically for MSA sending.
         if (contactId != null) {
             comp.DocuSign_Recipient__c = contactId;
-            // Wave 2 fix (gap #7): seed Primary_Contact__c so MerchantPayload can
-            // resolve top-level email, paymentProcessing.email, and
-            // clientManagementDetails.contact[0].
-            comp.Primary_Contact__c = contactId;
         }
 
-        // Wave 2 fix (gap #6): seed City_field__c from NC contactNumber so
-        // MerchantPayload can populate merchant.phoneNumber and
-        // paymentProcessing.phoneNumber without manual entry.
-        if (bi.contactInformation != null && String.isNotBlank(bi.contactInformation.contactNumber)) {
-            comp.City_field__c = bi.contactInformation.contactNumber;
+        // Static MSA PDF template (ContentVersion Id) from NC metadata — per merchant.
+        if (req.metadata != null && String.isNotBlank(req.metadata.msaTemplateId)) {
+            comp.MSA_Static_Template_Id__c = req.metadata.msaTemplateId.trim();
         }
 
-        // Wave 2 fix (gap #8): default Descriptor__c from legal name (truncated
-        // to the field's max length) so Track G has a value to send to Finance.
-        if (String.isNotBlank(bi.legalName)) {
-            Integer descMax = 22;
-            try {
-                Integer fieldLen = Compliance__c.Descriptor__c.getDescribe().getLength();
-                if (fieldLen > 0 && fieldLen < descMax) descMax = fieldLen;
-            } catch (Exception ignore) { /* keep 22 */ }
-            String descriptor = bi.legalName.length() > descMax ? bi.legalName.substring(0, descMax) : bi.legalName;
-            comp.Descriptor__c = descriptor;
-        }
-
-        // Wave 2 fix (gap #9): default Descriptor_Type__c to 'Static'.
-        comp.Descriptor_Type__c = 'Static';
-
+        // Sales profile fields (averageTransactionValue, highestTicketSize,
+        // expectedRevenue, percentageOnlineTransactions) are written to
+        // Application_Form__c in buildApplicationForm() — that is the correct
+        // object for business detail fields. Compliance__c holds KYC/status only.
         return comp;
     }
 
@@ -758,45 +553,55 @@ private static Boolean isApprovedStatus(String ncStatus) {
         Application_Form__c af = new Application_Form__c();
         af.Company_Profile__c = complianceId;
 
-        Id rtId = getAppFormRecordTypeId(req);
-        if (rtId != null) af.RecordTypeId = rtId;
-
+        // ── Business info ──────────────────────────────────────────────────────
         if (req.businessInformation != null) {
-            af.Company_name__c         = req.businessInformation.legalName;
-            af.Company_DBA__c          = req.businessInformation.doingBusinessAs;
-            af.Company_Type__c         = NC_TO_SF_COMPANY_TYPE.containsKey(req.businessInformation.businessType)
+            af.Company_name__c   = req.businessInformation.legalName;
+            af.Company_DBA__c    = req.businessInformation.doingBusinessAs;
+            af.Company_Type__c   = NC_TO_SF_COMPANY_TYPE.containsKey(req.businessInformation.businessType)
                 ? NC_TO_SF_COMPANY_TYPE.get(req.businessInformation.businessType)
                 : req.businessInformation.businessType;
             af.Incorporation_number__c = req.businessInformation.businessRegistrationNumber;
-            af.Tax_ID_Number__c        = req.taxDetails?.taxIdentificationNumber;
-            af.Tax_ID_Type__c          = req.taxDetails?.taxIdentificationType;
-            af.VAT__c                  = req.taxDetails?.taxIdentificationNumber;
+            af.Tax_ID_Number__c  = req.taxDetails?.taxIdentificationNumber;
+            af.Tax_ID_Type__c    = req.taxDetails?.taxIdentificationType;
+            af.VAT__c            = req.taxDetails?.taxIdentificationNumber;
 
+            // Address
             AddressWrapper bizAddr = getAddressByType(req.businessInformation.addresses, 'BUSINESS_ADDRESS');
             if (bizAddr != null) {
-                af.Registered_Country__c         = resolveCountry(bizAddr.country);
+                af.Registered_Country__c      = resolveCountry(bizAddr.country);
                 af.Registered_City__c            = bizAddr.city;
                 af.Registered_Street__c          = bizAddr.addressLine1;
                 af.Registered_Zip_Postal_Code__c = bizAddr.postalCode;
+                af.Registered_State__c        = bizAddr.stateOrProvince;
             }
 
+            // Product
             af.Type_of_product__c = req.businessInformation.productDescription;
         }
 
+        // ── Sales profile ──────────────────────────────────────────────────────
         if (req.salesProfile != null) {
+            // Volume and transaction size
             af.Expected_Monthly_Volume__c    = req.salesProfile.expectedSalesValue?.expectedRevenue;
             af.Average_transaction_value__c  = req.salesProfile.averageTransactionValue;
             af.Maximum_Ticket_Value_1__c     = req.salesProfile.highestTicketSize;
-            af.E_comm__c                     = req.salesProfile.percentageOnlineTransactions;
-            af.Swipe__c                      = req.salesProfile.percentageInStoreTransactions;
-            af.MOTO_Keyed__c                 = req.salesProfile.percentageMotoTransactions;
+
+            // Transaction mix — must sum to 100
+            af.E_comm__c     = req.salesProfile.percentageOnlineTransactions;
+            af.Swipe__c      = req.salesProfile.percentageInStoreTransactions;
+            af.MOTO_Keyed__c = req.salesProfile.percentageMotoTransactions;
+
+            // Fulfilment and billing
             af.Average_fulfillment_period__c = NC_TO_SF_FULFILLMENT.containsKey(req.salesProfile.averageOrderFulfillmentTime)
                 ? NC_TO_SF_FULFILLMENT.get(req.salesProfile.averageOrderFulfillmentTime)
                 : req.salesProfile.averageOrderFulfillmentTime;
-            af.Rebilling_Required__c                  = req.salesProfile.recurringBilling;
-            af.Average_Chargeback_amount_ratio__c     = mapChargebackRatio(req.salesProfile.averageChargebackRatio);
-            af.Average_Refund_amount_ratio__c         = mapRefundRatio(req.salesProfile.averageRefundRatio);
+            af.Rebilling_Required__c = req.salesProfile.recurringBilling;
 
+            // Chargeback and refund ratios
+            af.Average_Chargeback_amount_ratio__c = mapChargebackRatio(req.salesProfile.averageChargebackRatio);
+            af.Average_Refund_amount_ratio__c     = mapRefundRatio(req.salesProfile.averageRefundRatio);
+
+            // Processing currencies and target markets — stored as comma-separated strings
             if (req.salesProfile.transactionCurrencies != null && !req.salesProfile.transactionCurrencies.isEmpty()) {
                 af.Processing_Currencies_New__c = String.join(req.salesProfile.transactionCurrencies, ';');
             }
@@ -804,12 +609,14 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 af.Target_Market__c = resolveCountryList(req.salesProfile.targetMarkets);
             }
 
+            // Current processor
             if (req.salesProfile.currentProcessor != null &&
                 String.isNotBlank(req.salesProfile.currentProcessor.currentProcessorName)) {
                 af.Other_CC_processors_used__c = req.salesProfile.currentProcessor.currentProcessorName;
             }
         }
 
+        // ── cPanel administrator — used in Track F for cPanel user creation ───
         if (req.additionalInformation != null) {
             af.C_Panel_Administrator_First_Name__c    = req.additionalInformation.portalAdminFirstName;
             af.C_Panel_Administrator_Last_Name__c     = req.additionalInformation.portalAdminLastName;
@@ -818,36 +625,6 @@ private static Boolean isApprovedStatus(String ncStatus) {
         }
 
         return af;
-    }
-
-    private static Id getAppFormRecordTypeId(NuveiConnectRequest req) {
-        String country = '';
-        AddressWrapper bizAddr = getAddressByType(
-            req.businessInformation?.addresses, 'BUSINESS_ADDRESS'
-        );
-        if (bizAddr != null) {
-            country = bizAddr.country?.toUpperCase();
-        }
-
-        String devName;
-        if (country == 'GB') {
-            devName = 'UK';
-        } else if (new Set<String>{'MX'}.contains(country)) {
-            devName = 'Mexico';
-        } else if (new Set<String>{'US', 'CA'}.contains(country)) {
-            devName = 'US_Ecommerce';
-        } else {
-            devName = 'Ecommerce';
-        }
-
-        List<RecordType> rts = [
-            SELECT Id FROM RecordType
-            WHERE SObjectType = 'Application_Form__c'
-            AND DeveloperName = :devName
-            AND IsActive = true
-            LIMIT 1
-        ];
-        return rts.isEmpty() ? null : rts[0].Id;
     }
 
     private static Website__c buildWebsite(NuveiConnectRequest req, Id complianceId, Id appFormId) {
@@ -871,33 +648,49 @@ private static Boolean isApprovedStatus(String ncStatus) {
             Directors_or_Ultimate_Beneficial_Owner__c d = new Directors_or_Ultimate_Beneficial_Owner__c();
             d.Company_Profile__c  = complianceId;
             d.Application_Form__c = appFormId;
-            d.First_Name__c       = bo.legalFirstName;
-            d.Last_Name__c        = bo.legalLastName;
-            d.Email__c            = bo.email;
-            d.Date_of_Birth__c    = parseDate(bo.dateOfBirth);
+            d.First_Name__c    = bo.legalFirstName;
+            d.Last_Name__c     = bo.legalLastName;
+            d.Email__c         = bo.email;
+            d.Date_of_Birth__c = parseDate(bo.dateOfBirth);
             d.If_Owner_Percentage_held__c = bo.percentageOfOwnership;
-            d.Phone__c            = bo.contactNumber;
-            d.Nationality__c      = resolveCountry(bo.nationality);
+            d.Phone__c         = bo.contactNumber;
+            d.Nationality__c   = resolveCountry(bo.nationality);
             d.Organization_Role__c = bo.ownerRole;
 
+            // Home address
             if (bo.homeAddress != null) {
                 d.Country__c         = resolveCountry(bo.homeAddress.country);
                 d.City__c            = bo.homeAddress.city;
                 d.Street__c          = bo.homeAddress.addressLine1;
                 d.Zip_Postal_Code__c = bo.homeAddress.postalCode;
             }
+
             directors.add(d);
         }
         return directors;
     }
 
     // ─── PARTNER BANK COPY + BANKING_DETAILS__c ──────────────────────────────
+    //
+    // Two separate concerns:
+    //   1. Merchant_Bank__c  — cloned from partner template → carries PRICING only
+    //   2. Banking_Details__c — created fresh from NC payload → carries BANK ACCOUNT details
+    //
+    // EU banking variants:
+    //   SEPA: IBAN + swift_code__c
+    //   UK:   Account_number__c + branchCode__c (sort code)
+    //
+    // FIX: Compliance__c.Industry__c MUST be stamped before inserting Merchant_Bank__c.
+    // The "Never change industry" validation rule on Merchant_Bank__c checks that
+    // Industry__c matches the parent Compliance__c.Industry__c at insert time.
+    // Previous code inserted the bank records first, then updated Compliance__c — reversed here.
 
     private static void copyPartnerMerchantBanks(
         Id complianceId,
         String partnerId,
         List<BankingInfoWrapper> bankingInfo
     ) {
+        // ── Phase 1: Copy pricing templates from partner ──────────────────────
         if (String.isBlank(partnerId)) {
             createBankingDetails(complianceId, bankingInfo);
             return;
@@ -924,6 +717,12 @@ private static Boolean isApprovedStatus(String ncStatus) {
             ];
 
             if (!templates.isEmpty()) {
+
+                // ── Step A: stamp Industry__c on Compliance__c FIRST ─────────
+                // The Merchant_Bank__c validation rule "Never change industry"
+                // requires Industry__c to equal the parent Compliance__c.Industry__c
+                // at the time of insert. Updating Compliance__c before the insert
+                // prevents the FIELD_CUSTOM_VALIDATION_EXCEPTION.
                 String templateIndustry = templates[0].Industry__c;
                 if (String.isNotBlank(templateIndustry)) {
                     update new Compliance__c(
@@ -932,6 +731,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
                     );
                 }
 
+                // ── Step B: clone and insert the pricing templates ────────────
                 List<Merchant_Bank__c> newBanks = new List<Merchant_Bank__c>();
                 for (Merchant_Bank__c t : templates) {
                     Merchant_Bank__c nb = t.clone(false, true, false, false);
@@ -945,9 +745,14 @@ private static Boolean isApprovedStatus(String ncStatus) {
             logLegacyError('Failed to copy partner merchant banks', e, partnerId);
         }
 
+        // ── Phase 2: Create Banking_Details__c with merchant bank account info ─
         createBankingDetails(complianceId, bankingInfo);
     }
 
+    /**
+     * Creates Banking_Details__c records from the NC payload banking information.
+     * One record per bank account submitted by the merchant.
+     */
     private static void createBankingDetails(
         Id complianceId,
         List<BankingInfoWrapper> bankingInfo
@@ -960,19 +765,18 @@ private static Boolean isApprovedStatus(String ncStatus) {
             bd.Compliance__c          = complianceId;
             bd.Account_Holder_Name__c = bank.accountHolderName;
             bd.bankCountry__c         = resolveCountry(bank.bankCountry);
-            // Wave 2 fix (gap #16): also seed Beneficiary_Country__c from the
-            // NC bankCountry so FinanceIntegration's payload has a value to send
-            // to Finance Admin (Track G HTTP 400 root cause).
-            bd.Beneficiary_Country__c = resolveCountry(bank.bankCountry);
             bd.Target_Currency__c     = bank.accountCurrency;
 
             if (String.isNotBlank(bank.iban)) {
+                // SEPA: IBAN + SWIFT
                 bd.IBAN__c       = bank.iban;
                 bd.swift_code__c = bank.swiftCode;
             } else if (String.isNotBlank(bank.sortCode)) {
+                // UK: account number + sort code
                 bd.Account_number__c = bank.accountNumber;
                 bd.branchCode__c     = bank.sortCode;
             }
+
             records.add(bd);
         }
         if (!records.isEmpty()) insert records;
@@ -995,6 +799,9 @@ private static Boolean isApprovedStatus(String ncStatus) {
         try { return Date.valueOf(val); } catch (Exception e) { return null; }
     }
 
+    /**
+     * Resolves a partnerId string (NC entityId or SF Id) to a Compliance__c Id.
+     */
     private static Id resolvePartnerId(String partnerId) {
         if (String.isBlank(partnerId)) return null;
         List<Compliance__c> partners = [
@@ -1003,23 +810,6 @@ private static Boolean isApprovedStatus(String ncStatus) {
             LIMIT  1
         ];
         return partners.isEmpty() ? null : partners[0].Id;
-    }
-        private static void seedRolesFromPartner(Compliance__c comp) {
-        Id partnerComplianceId = comp.From_Reseller__c;
-        List<Compliance__c> partners = [
-            SELECT Sales_Rep__c, Account_Manager__c, Underwriting_Mgr__c
-            FROM Compliance__c
-            WHERE Id = :partnerComplianceId
-            LIMIT 1
-        ];
-        if (partners.isEmpty()) {
-            return;
-        }
-        Compliance__c p = partners[0];
-
-        if (comp.Sales_Rep__c == null)         comp.Sales_Rep__c         = p.Sales_Rep__c;
-        if (comp.Account_Manager__c == null)   comp.Account_Manager__c   = p.Account_Manager__c;
-        if (comp.Underwriting_Mgr__c == null)  comp.Underwriting_Mgr__c  = p.Underwriting_Mgr__c;
     }
 
     private static void createConfigurationCase(Compliance__c comp) {
@@ -1047,172 +837,53 @@ private static Boolean isApprovedStatus(String ncStatus) {
             c.Status             = 'In Progress';
             c.Reason             = 'New Merchant';
             c.Type               = 'Create new GW account with a new Multi';
+            c.Profile__c         = 'Merchant and merchantSite onboarding NCP acquiring CNP';
             c.Profile_Type__c    = 'None';
             if (!cPanelContacts.isEmpty()) {
-                c.ContactId              = cPanelContacts[0].Id;
-                c.SB_PPP_Username__c     = cPanelContacts[0].Email;
-                // Wave 2 fix (gap #11): seed Contact_Information__c so OCT
-                // doesn't have to fill it manually.
-                c.Contact_Information__c = cPanelContacts[0].Email;
+                c.ContactId          = cPanelContacts[0].Id;
+                c.SB_PPP_Username__c = cPanelContacts[0].Email;
             }
             List<ExpressConfig__c> cfgRows = [
-                SELECT SB_Template__c FROM ExpressConfig__c LIMIT 1
+                SELECT SB_Template__c
+                FROM ExpressConfig__c
+                LIMIT 1
             ];
-            // Wave 2 fix (gap #10): SB_Template__c falls back to 'Ecommerce' when
-            // ExpressConfig is missing or its SB_Template__c is blank.
             if (!cfgRows.isEmpty() && String.isNotBlank(cfgRows[0].SB_Template__c)) {
                 c.SB_Template__c = cfgRows[0].SB_Template__c;
-            } else {
-                c.SB_Template__c = 'Ecommerce';
-                System.debug(LoggingLevel.WARN,
-                    'NuveiConnectWebhook | gap #10 fallback — ExpressConfig.SB_Template__c blank, defaulted Case.SB_Template__c to Ecommerce');
             }
             insert c;
         } catch (Exception e) {
-            logLegacyError('createConfigurationCase failed', e, comp.Nuvei_Connect_Application_ID__c);
+            System.debug(LoggingLevel.ERROR,
+                'NuveiConnectWebhook ERROR | createConfigurationCase | ' + e.getMessage());
         }
     }
-    
-        private static void backfillOwnerContactsAndJunctions(
-        Compliance__c existing,
-        NuveiConnectRequest req
-    ) {
-        if (req.businessOwnerInformation == null || req.businessOwnerInformation.isEmpty()) return;
-
-        // Existing junction rows for this Compliance — keyed by Contact email lowercase
-        Set<String> alreadyLinkedEmails = new Set<String>();
-        for (Compliance_Contact__c cc : [
-            SELECT Contact__c, Contact__r.Email
-            FROM Compliance_Contact__c
-            WHERE Compliance__c = :existing.Id
-        ]) {
-            if (cc.Contact__r != null && String.isNotBlank(cc.Contact__r.Email)) {
-                alreadyLinkedEmails.add(cc.Contact__r.Email.toLowerCase());
-            }
-        }
-
-        // Existing Contacts on the Account by email (lowercase key)
-        Map<String, Contact> existingByEmail = new Map<String, Contact>();
-        for (Contact c : [
-            SELECT Id, Email, Authorized_Signature__c, Is_CPanel_Admin__c
-            FROM Contact
-            WHERE AccountId = :existing.Account__c AND Email != null
-        ]) {
-            existingByEmail.put(c.Email.toLowerCase(), c);
-        }
-
-        String cPanelEmail = req.additionalInformation?.portalAdminEmail;
-        String cPanelLower = String.isBlank(cPanelEmail) ? null : cPanelEmail.toLowerCase();
-
-        List<Contact> contactsToInsert = new List<Contact>();
-        List<Contact> contactsToUpdate = new List<Contact>();
-
-        for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
-            if (String.isBlank(bo.email)) continue;
-            String emailLower = bo.email.toLowerCase();
-
-            if (existingByEmail.containsKey(emailLower)) {
-                Contact existingC = existingByEmail.get(emailLower);
-                Boolean dirty = false;
-                if (bo.isAuthorizedSignatory == true && existingC.Authorized_Signature__c != true) {
-                    existingC.Authorized_Signature__c = true;
-                    dirty = true;
-                }
-                if (cPanelLower != null && emailLower == cPanelLower
-                    && existingC.Is_CPanel_Admin__c != true) {
-                    existingC.Is_CPanel_Admin__c = true;
-                    dirty = true;
-                }
-                if (dirty) contactsToUpdate.add(existingC);
-            } else {
-                Contact c = new Contact();
-                c.AccountId               = existing.Account__c;
-                c.FirstName               = bo.legalFirstName;
-                c.LastName                = String.isNotBlank(bo.legalLastName)
-                                              ? bo.legalLastName
-                                              : (req.businessInformation != null
-                                                    ? req.businessInformation.legalName : 'Unknown');
-                c.Email                   = bo.email;
-                c.Phone                   = bo.contactNumber;
-                c.Authorized_Signature__c = bo.isAuthorizedSignatory == true;
-                if (cPanelLower != null && emailLower == cPanelLower) {
-                    c.Is_CPanel_Admin__c = true;
-                }
-                contactsToInsert.add(c);
-            }
-        }
-
-        if (!contactsToUpdate.isEmpty()) {
-            try { update contactsToUpdate; }
-            catch (Exception e) { logLegacyError('Wave 4: contact update failed', e, req.applicationId); }
-        }
-        if (!contactsToInsert.isEmpty()) {
-            try { insert contactsToInsert; }
-            catch (Exception e) { logLegacyError('Wave 4: contact insert failed', e, req.applicationId); }
-        }
-
-        Map<String, Id> emailToId = new Map<String, Id>();
-        for (Contact c : [
-            SELECT Id, Email FROM Contact
-            WHERE AccountId = :existing.Account__c AND Email != null
-        ]) {
-            emailToId.put(c.Email.toLowerCase(), c.Id);
-        }
-
-        List<Compliance_Contact__c> junctions = new List<Compliance_Contact__c>();
-        for (BusinessOwnerWrapper bo : req.businessOwnerInformation) {
-            if (String.isBlank(bo.email)) continue;
-            String emailLower = bo.email.toLowerCase();
-            if (alreadyLinkedEmails.contains(emailLower)) continue;
-            if (!emailToId.containsKey(emailLower)) continue;
-            junctions.add(new Compliance_Contact__c(
-                Compliance__c = existing.Id,
-                Contact__c    = emailToId.get(emailLower)
-            ));
-        }
-        if (!junctions.isEmpty()) {
-            try { insert junctions; }
-            catch (Exception e) { logLegacyError('Wave 4: junction insert failed', e, req.applicationId); }
-        }
-    }
-
-    // ─── ERROR LOGGING ───────────────────────────────────────────────────────
 
     private static void logLegacyError(String message, Exception e, String context) {
-        String errorMsg = message != null ? message : 'Unknown error';
-        System.debug(LoggingLevel.ERROR,
-            'NuveiConnectWebhook ERROR | context=' + context
-            + ' | message=' + errorMsg
-            + (e != null ? ' | exception=' + e.getTypeName()
-               + ' | trace=' + e.getStackTraceString() : ''));
-        try {
-            Execution_Log__c el = new Execution_Log__c(
-                RecordTypeId         = RT_EL_NC,
-                Class_Name__c        = 'NuveiConnectWebhookHandler',
-                Initiated_By__c      = UserInfo.getUserId(),
-                Method_Name__c       = 'logLegacyError',
-                Note__c              = errorMsg,
-                Payload__c           = context,
-                Description__c       = e != null ? e.getMessage() : errorMsg,
-                Path__c              = e != null ? e.getStackTraceString() : '',
-                Related_Record_Id__c = context,
-                Status_Code__c       = 400,
-                Type__c              = 'Error'
-            );
-            WithoutSharingUtils.insertRecord(el);
-        } catch (Exception logEx) {
-            System.debug(LoggingLevel.ERROR,
-                'NuveiConnectWebhook | Failed to write Execution_Log__c: '
-                + logEx.getMessage());
+        // Webhook_Error_Log__c object not yet deployed — log to debug only.
+        // TODO: replace with proper error object once Boarding_Log__c is deployed.
+        String logMsg = 'NuveiConnectWebhook ERROR'
+            + ' | context=' + context
+            + ' | message=' + message;
+        if (e != null) {
+            logMsg += ' | exception=' + e.getTypeName()
+                    + ' | trace=' + e.getStackTraceString();
         }
+        System.debug(LoggingLevel.ERROR, logMsg);
     }
 
-    // ─── WRAPPER CLASSES ─────────────────────────────────────────────────────
+    // ─── WRAPPER CLASSES — EU/NA unified ─────────────────────────────────────
 
-    global class NuveiConnectRequest {
+    /**
+     * Top-level request wrapper.
+     * Populated by NuveiConnectWebhookService via JSON.deserialize.
+     */
+    public class NuveiConnectRequest {
+        // Common
         public String applicationId;
         public String applicationStatus;
-        public String rawPayload;
+        public String rawPayload; // set by service before deserializing, for logging
+
+        // Sections
         public BusinessInformationWrapper businessInformation;
         public List<BusinessOwnerWrapper> businessOwnerInformation;
         public List<BankingInfoWrapper>   bankingInformation;
@@ -1220,12 +891,17 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public TaxDetailsWrapper          taxDetails;
         public AdditionalInfoWrapper      additionalInformation;
         public MetadataWrapper            metadata;
+
+        // Convenience getter — partnerId comes from metadata.partnerId
+        public String getPartnerId() {
+            return metadata?.partnerId;
+        }
         public String partnerId {
             get { return metadata?.partnerId; }
         }
     }
 
-    global class BusinessInformationWrapper {
+    public class BusinessInformationWrapper {
         public String legalName;
         public String doingBusinessAs;
         public String businessType;
@@ -1239,15 +915,15 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public ContactInfoWrapper   contactInformation;
     }
 
-    global class ContactInfoWrapper {
+    public class ContactInfoWrapper {
         public String firstName;
         public String lastName;
         public String businessEmail;
         public String contactNumber;
     }
 
-    global class AddressWrapper {
-        public String addressType;
+    public class AddressWrapper {
+        public String addressType;  // BUSINESS_ADDRESS | TRADING_ADDRESS
         public String country;
         public String stateOrProvince;
         public String city;
@@ -1256,7 +932,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public String addressLine2;
     }
 
-    global class BusinessOwnerWrapper {
+    public class BusinessOwnerWrapper {
         public String  legalFirstName;
         public String  legalLastName;
         public String  dateOfBirth;
@@ -1264,22 +940,23 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public String  email;
         public String  contactNumber;
         public Decimal percentageOfOwnership;
-        public String  ownerRole;
-        public Boolean isAuthorizedSignatory;   // ← Wave 4 (gap #23)
+        public String  ownerRole;        // EU enum: DIRECTOR, UBO, PSC etc.
         public AddressWrapper homeAddress;
     }
 
-    global class BankingInfoWrapper {
+    public class BankingInfoWrapper {
         public String bankCountry;
         public String accountHolderName;
         public String accountCurrency;
+        // SEPA (EU/EEA countries)
         public String iban;
         public String swiftCode;
+        // UK
         public String accountNumber;
         public String sortCode;
     }
 
-    global class SalesProfileWrapper {
+    public class SalesProfileWrapper {
         public Decimal averageTransactionValue;
         public Decimal highestTicketSize;
         public ExpectedSalesWrapper expectedSalesValue;
@@ -1295,38 +972,45 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public CurrentProcessorWrapper currentProcessor;
     }
 
-    global class CurrentProcessorWrapper {
+    public class CurrentProcessorWrapper {
         public String  currentProcessorName;
         public Integer yearsWithCurrentProcessor;
+        // document (base64 processing statement) intentionally ignored
     }
 
-    global class ExpectedSalesWrapper {
-        public String  period;
+    public class ExpectedSalesWrapper {
+        public String  period;          // MONTHLY | ANNUAL
         public Decimal expectedRevenue;
         public Decimal expectedTransactionVolume;
     }
 
-    global class TaxDetailsWrapper {
+    public class TaxDetailsWrapper {
         public String  taxIdentificationNumber;
-        public String  taxIdentificationType;
+        public String  taxIdentificationType;  // EU: VAT
         public String  taxIssuingCountry;
         public String  taxRegistrationState;
         public String  taxClassificationType;
         public Boolean isGstExempt;
     }
 
-    global class AdditionalInfoWrapper {
+    public class AdditionalInfoWrapper {
+        // consentToPrivacyPolicy and applicationSignedDate intentionally not stored
         public String portalAdminFirstName;
         public String portalAdminLastName;
         public String portalAdminEmail;
         public String portalAdminContactNumber;
+        // notificationSubscribers intentionally not stored
     }
 
-    global class MetadataWrapper {
+    public class MetadataWrapper {
         public String partnerId;
+        /** ContentVersion Id of the static MSA PDF template for this merchant. */
+        public String msaTemplateId;
     }
 
-    global class WebhookResult {
+    // ─── RESULT CLASS ────────────────────────────────────────────────────────
+
+    public class WebhookResult {
         public Boolean success = false;
         public String  message;
         public String  errorDetail;

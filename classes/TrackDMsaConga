@@ -1,5 +1,5 @@
 /**
- * Track D — EU Indirect MSA generation (Conga) + DocuSign send, fully server-side.
+ * Track D — EU Indirect MSA send, fully server-side (static PDF + DocuSign).
  *
  * Flow (spec §6):
  *   tryAdvance()
@@ -7,36 +7,35 @@
  *     ├─ pricing gate (§18)   → no Merchant_Bank__c pricing yet ⇒ stay Pending, return false
  *     ├─ signatory (§17)      → resolve R1 from Compliance_Contact__c (Director__c=true);
  *     │                         hard-fail (Failed + Execution_Log) if none — NO silent fallback
- *     ├─ Step 1: Conga        → server-side PDF via Composer Qmode=12 (Option B)
- *     ├─ Step 2: DocuSign      → MsaDocuSignService.sendMsaEnvelope (eSignature REST)
+ *     ├─ Step 1: template     → load static MSA PDF from a ContentVersion (no callout)
+ *     ├─ Step 2: DocuSign      → MsaDocuSignService.sendMsaEnvelope (eSignature REST);
+ *     │                         all merchant fields injected as LOCKED prefill text tabs
  *     └─ Step 3: persist       → DocuSign_Envelope_Id__c + MSA_Status__c = 'sent'
  *   On any error: MSA_Status__c = 'Failed' + Execution_Log__c row.
  *
+ * Static PDF approach (replaces Conga):
+ *   The MSA is a pre-styled PDF (pricing tables baked in) stored as a Salesforce
+ *   File. Track D resolves which ContentVersion to load:
+ *     1. Compliance__c.MSA_Static_Template_Id__c (merchant — from NC payload)
+ *     2. From_Reseller__r.MSA_Static_Template_Id__c (partner profile default)
+ *     3. Conga_Setting__c.MSA_Template_Id__c (org-wide fallback)
+ *   DocuSign overlays dynamic fields as locked prefill tabs. No Conga callout.
+ *
  * Callout ordering:
- *   No DML is performed before the Conga / DocuSign callouts. All gate checks
- *   are SOQL-only; the status/envelope write happens only after both callouts
- *   return. (Same "no DML before callout" rule that applies to Track F.)
+ *   The template load is a SOQL read (not a callout). The only callout is the
+ *   DocuSign send, performed after all gate checks; the status/envelope write
+ *   happens only after it returns. (Same "no DML before callout" rule as Track F.)
  *
  * Status values are the Compliance__c.MSA_Status__c picklist API names — note
  * 'started'/'sent'/'signed' are lowercase. Track D writes 'sent' after a
  * successful DocuSign send; DocuSignStatusToMsa later advances 'sent' →
  * 'Counter Signed' from the dsfs webhook, which gates Track F.
- *
- * Conga session note (Option B):
- *   Composer Qmode=12 needs a Salesforce session to read the merge data. In
- *   asynchronous Apex (this runs inside IndirectBoardingQueueable)
- *   UserInfo.getSessionId() may not return an API-capable session, so
- *   resolveCongaSessionId() first mints an OAuth client-credentials token from
- *   the Conga_Setting__c credentials (fixed integration user) and only falls
- *   back to the running-user session. This keeps Option B context-independent.
  */
 public with sharing class TrackDMsaConga implements IMsaTrack {
 
     public class TrackDException extends Exception {}
 
-    @TestVisible private static final String COMPOSER_ENDPOINT =
-        'https://composer.congamerge.com/composer8/index.html';
-    @TestVisible private static final String TRACK_LABEL = 'Track D: MSA Generation (Conga + DocuSign)';
+    @TestVisible private static final String TRACK_LABEL = 'Track D: MSA Generation (Static PDF + DocuSign)';
 
     // MSA_Status__c picklist API names (note the lowercase 'sent' — the picklist
     // value is lowercase and DocuSignStatusToMsa maps the dsfs webhook to it).
@@ -74,18 +73,29 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
                 return true;
             }
 
-            String templateId = readEuIndirectTemplateId();
+            String templateId = resolveMsaTemplateId(c);
             if (String.isBlank(templateId)) {
                 failWithLog(c,
-                    'Conga_Setting__c.EU_Indirect_Template_ID__c is not configured', null);
+                    'No MSA PDF template configured — set MSA_Static_Template_Id__c on the '
+                    + 'merchant or partner profile, or Conga_Setting__c.MSA_Template_Id__c '
+                    + 'as org default', null);
                 return true;
             }
 
-            // Step 1 — Conga server-side PDF (callout, no DML before this point)
-            Blob pdf = generateMsaPdf(c, templateId);
+            // Step 1 — load the static MSA PDF template (SOQL, no callout)
+            Blob pdf = loadStaticMsaTemplate(templateId);
+            if (pdf == null || pdf.size() == 0) {
+                failWithLog(c,
+                    'Static MSA PDF template not found or empty for ContentVersion Id ' + templateId, null);
+                return true;
+            }
 
-            // Step 2 — DocuSign send via eSignature REST API (callout)
-            String envelopeId = MsaDocuSignService.sendMsaEnvelope(c, pdf, signerContactId);
+            // cPanel admin (Appendix B) — same resolution pattern as Track F.
+            // Absence is non-fatal: the merge data falls back to blanks.
+            Id cPanelContactId = resolveCPanelAdmin(c.Account__c);
+
+            // Step 2 — DocuSign send via eSignature REST API (the only callout)
+            String envelopeId = MsaDocuSignService.sendMsaEnvelope(c, pdf, signerContactId, cPanelContactId);
 
             // Step 3 — persist success (DML only after both callouts)
             Compliance__c upd = new Compliance__c(
@@ -122,7 +132,14 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
                 MSA_Effective_Date__c,
                 MSA_Started_At__c,
                 Underwriting_Mgr__c,
-                OwnerId
+                OwnerId,
+                Account__c,
+                Registered_Address_New__c,
+                Registered_Country__c,
+                Incorporation_number__c,
+                MSA_Static_Template_Id__c,
+                From_Reseller__r.Name,
+                From_Reseller__r.MSA_Static_Template_Id__c
             FROM Compliance__c
             WHERE Id = :complianceId
             LIMIT 1
@@ -184,137 +201,67 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         return signers.isEmpty() ? null : signers[0].Contact__c;
     }
 
-    private String readEuIndirectTemplateId() {
-        Conga_Setting__c cfg = readCongaSetting();
-        return cfg == null ? null : cfg.EU_Indirect_Template_ID__c;
+    /**
+     * Resolve the ContentVersion Id for the static MSA PDF:
+     *   1. Merchant MSA_Static_Template_Id__c (from NC payload at onboarding)
+     *   2. Partner From_Reseller__r.MSA_Static_Template_Id__c
+     *   3. Conga_Setting__c.MSA_Template_Id__c (org default)
+     */
+    @TestVisible
+    private String resolveMsaTemplateId(Compliance__c c) {
+        if (String.isNotBlank(c.MSA_Static_Template_Id__c)) {
+            return c.MSA_Static_Template_Id__c.trim();
+        }
+        if (c.From_Reseller__r != null
+            && String.isNotBlank(c.From_Reseller__r.MSA_Static_Template_Id__c)) {
+            return c.From_Reseller__r.MSA_Static_Template_Id__c.trim();
+        }
+        List<Conga_Setting__c> rows = [
+            SELECT MSA_Template_Id__c FROM Conga_Setting__c LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0].MSA_Template_Id__c;
     }
 
+    // ─── cPanel admin (Appendix B) ───────────────────────────────────────────
+
+    /**
+     * Resolve the c-Panel administrator Contact for the merchant account — the
+     * same flag and pattern used by Track F (IndirectBoardingRouter.tryTrackNcp).
+     * Returns null when the account is missing or no flagged Contact exists;
+     * the merge data then falls back to blanks (signing can still proceed).
+     */
     @TestVisible
-    private Conga_Setting__c readCongaSetting() {
-        List<Conga_Setting__c> rows = [
-            SELECT EU_Indirect_Template_ID__c,
-                   Session_Token_Endpoint__c,
-                   Session_Client_Id__c,
-                   Session_Client_Secret__c
-            FROM Conga_Setting__c
+    private Id resolveCPanelAdmin(Id accountId) {
+        if (accountId == null) {
+            return null;
+        }
+        List<Contact> admins = [
+            SELECT Id
+            FROM Contact
+            WHERE AccountId = :accountId
+            AND Is_CPanel_Admin__c = true
             LIMIT 1
         ];
-        return rows.isEmpty() ? null : rows[0];
+        return admins.isEmpty() ? null : admins[0].Id;
     }
 
-    // ─── Step 1: Conga Composer (Option B — Qmode=12 background PDF) ──────────
+    // ─── Step 1: static MSA PDF template ─────────────────────────────────────
 
     /**
-     * Calls Conga Composer in background mode (Qmode=12) and returns the MSA PDF
-     * blob. Reuses the existing Conga template (template id from Conga_Setting__c).
-     */
-    private Blob generateMsaPdf(Compliance__c c, String templateId) {
-        String sessionId = resolveCongaSessionId();
-        if (String.isBlank(sessionId)) {
-            // Neither the Conga_Setting__c OAuth credentials nor the running-user
-            // session yielded a usable token. Surface clearly instead of letting
-            // Conga fail opaquely.
-            throw new TrackDException(
-                'No API session available for Conga Composer. Set the OAuth '
-                + 'client-credentials fields on Conga_Setting__c (Session_Token_Endpoint__c / '
-                + 'Session_Client_Id__c / Session_Client_Secret__c) or run Conga '
-                + 'via Conga Trigger (Option A).');
-        }
-
-        String endpoint = COMPOSER_ENDPOINT
-            + '?sessionId=' + EncodingUtil.urlEncode(sessionId, 'UTF-8')
-            + '&serverUrl=' + EncodingUtil.urlEncode(buildPartnerServerUrl(), 'UTF-8')
-            + '&id=' + c.Id
-            + '&TemplateId=' + EncodingUtil.urlEncode(templateId, 'UTF-8')
-            + '&QMode=12'
-            + '&DefaultPDF=1';
-
-        HttpRequest req = new HttpRequest();
-        req.setEndpoint(endpoint);
-        req.setMethod('GET');
-        req.setTimeout(120000);
-
-        HttpResponse res = new Http().send(req);
-        if (res.getStatusCode() < 200 || res.getStatusCode() >= 300) {
-            throw new TrackDException(
-                'Conga Composer returned HTTP ' + res.getStatusCode()
-                + (res.getBody() == null ? '' : ' | ' + res.getBody().abbreviate(500)));
-        }
-        Blob pdf = res.getBodyAsBlob();
-        if (pdf == null || pdf.size() == 0) {
-            throw new TrackDException('Conga Composer returned an empty document');
-        }
-        return pdf;
-    }
-
-    /**
-     * Conga session token.
-     *
-     * Prefers an OAuth client-credentials access token minted from the
-     * Connected App credentials stored on Conga_Setting__c (same config-driven
-     * pattern as MerchantOnboardingController/ExpressConfig__c). The Connected
-     * App runs as a fixed integration user, so the token is a real API session
-     * regardless of whether Track D runs synchronously or inside the queueable —
-     * where UserInfo.getSessionId() is not API-capable.
-     *
-     * Falls back to the running user's session when the credentials are not
-     * configured, so nothing breaks before the admin sets them.
+     * Load the static MSA PDF from its ContentVersion. The pricing tables and
+     * legal boilerplate are baked into this artwork; DocuSign overlays the
+     * dynamic merchant fields as locked prefill tabs. Returns null when the
+     * ContentVersion is missing or has no data so the caller can fail clearly.
      */
     @TestVisible
-    private String resolveCongaSessionId() {
-        try {
-            String token = fetchOAuthSessionToken();
-            if (String.isNotBlank(token)) {
-                return token;
-            }
-        } catch (Exception e) {
-            // Credentials not configured / token endpoint unreachable — degrade to
-            // the running-user session rather than hard-failing here.
-            System.debug(LoggingLevel.WARN,
-                'TrackDMsaConga | Conga OAuth session unavailable: '
-                + e.getTypeName() + ': ' + e.getMessage());
-        }
-        return UserInfo.getSessionId();
-    }
-
-    /**
-     * Mint a Salesforce session via OAuth client-credentials using the
-     * Conga_Setting__c credentials. Returns null (not an exception) when the
-     * credentials are absent or no token comes back, so the caller can fall back.
-     */
-    @TestVisible
-    private String fetchOAuthSessionToken() {
-        Conga_Setting__c cfg = readCongaSetting();
-        if (cfg == null
-            || String.isBlank(cfg.Session_Token_Endpoint__c)
-            || String.isBlank(cfg.Session_Client_Id__c)
-            || String.isBlank(cfg.Session_Client_Secret__c)) {
-            return null;
-        }
-
-        HttpRequest req = new HttpRequest();
-        req.setEndpoint(cfg.Session_Token_Endpoint__c);
-        req.setMethod('POST');
-        req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-        req.setBody(
-            'grant_type=client_credentials'
-            + '&client_id=' + EncodingUtil.urlEncode(cfg.Session_Client_Id__c, 'UTF-8')
-            + '&client_secret=' + EncodingUtil.urlEncode(cfg.Session_Client_Secret__c, 'UTF-8')
-        );
-        req.setTimeout(60000);
-
-        HttpResponse res = new Http().send(req);
-        if (res.getStatusCode() != 200) {
-            return null;
-        }
-        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-        Object token = body.get('access_token');
-        return token == null ? null : String.valueOf(token);
-    }
-
-    private String buildPartnerServerUrl() {
-        return URL.getOrgDomainUrl().toExternalForm()
-            + '/services/Soap/u/59.0/' + UserInfo.getOrganizationId();
+    private Blob loadStaticMsaTemplate(String templateId) {
+        List<ContentVersion> versions = [
+            SELECT VersionData
+            FROM ContentVersion
+            WHERE Id = :templateId
+            LIMIT 1
+        ];
+        return versions.isEmpty() ? null : versions[0].VersionData;
     }
 
     // ─── Failure path ────────────────────────────────────────────────────────

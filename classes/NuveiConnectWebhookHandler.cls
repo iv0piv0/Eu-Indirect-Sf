@@ -740,6 +740,15 @@ private static Boolean isApprovedStatus(String ncStatus) {
             comp.Primary_Contact__c = contactId;
         }
 
+        // Static MSA PDF template (ContentVersion Id) from NC metadata — per merchant.
+        // Read from NC payload's metadata.msaTemplateId so each merchant can be
+        // routed to a different PDF (per-partner pricing tables baked in).
+        // Falls back to From_Reseller__r.MSA_Static_Template_Id__c (partner default)
+        // or Conga_Setting__c.MSA_Template_Id__c (org default) — see Track D.
+        if (req.metadata != null && String.isNotBlank(req.metadata.msaTemplateId)) {
+            comp.MSA_Static_Template_Id__c = req.metadata.msaTemplateId.trim();
+        }
+
         // Wave 2 fix (gap #6): seed City_field__c from NC contactNumber so
         // MerchantPayload can populate merchant.phoneNumber and
         // paymentProcessing.phoneNumber without manual entry.
@@ -1336,9 +1345,10 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public String portalAdminContactNumber;
     }
 
-    global class MetadataWrapper {
-        public String partnerId;
-    }
+global class MetadataWrapper {
+    public String partnerId;
+    public String msaTemplateId;
+}
 
     global class WebhookResult {
         public Boolean success = false;

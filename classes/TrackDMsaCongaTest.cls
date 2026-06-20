@@ -128,6 +128,31 @@ private class TrackDMsaCongaTest {
         return [SELECT Id FROM ContentVersion WHERE Id = :cv.Id LIMIT 1].Id;
     }
 
+    /**
+     * Build a Compliance__c populated with the same fields that loadCompliance
+     * SELECTs in production, so coverage tests can pass an in-memory record
+     * straight into executeSendFlow without going through the full DML chain.
+     */
+    private static Compliance__c buildLoadedCompliance(Id complianceId) {
+        return [
+            SELECT
+                Id, Name,
+                EU_Indirect_Orchestration__c,
+                Nuvei_Connect_Status__c,
+                Nuvei_Connect_Application_ID__c,
+                MSA_Status__c, MSA_Effective_Date__c, MSA_Started_At__c,
+                Underwriting_Mgr__c, OwnerId, Account__c,
+                Registered_Address_New__c, Registered_Country__c,
+                Incorporation_number__c,
+                MSA_Static_Template_Id__c,
+                From_Reseller__r.Name,
+                From_Reseller__r.MSA_Static_Template_Id__c
+            FROM Compliance__c
+            WHERE Id = :complianceId
+            LIMIT 1
+        ];
+    }
+
     // ── Null / orchestration guards ──────────────────────────────────────
 
     @IsTest
@@ -435,12 +460,12 @@ private class TrackDMsaCongaTest {
             'Dedup branch must keep error-log row count at 0 or 1, got ' + logged);
     }
 
-    // ══════════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════
     // Coverage boost — direct @TestVisible method calls.
     // These exercise paths that can't always be reached via tryAdvance()
     // because org validation rules block Merchant_Bank__c inserts in test
     // context.
-    // ══════════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════
 
     @IsTest
     static void cov_hasMerchantPricing_returns_false_when_no_rows() {
@@ -603,5 +628,161 @@ private class TrackDMsaCongaTest {
         Test.stopTest();
         System.assertEquals(adm.Id, r,
             'Flagged c-Panel admin Contact must be returned');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // executeSendFlow coverage — call the @TestVisible extracted method
+    // directly to exercise the lines inside the try { ... } block without
+    // going through the merchant-pricing gate. This is the same pattern
+    // IBRCovBoostTest uses ("NO Merchant_Bank inserts -> avoids your org
+    // validations").
+    // ════════════════════════════════════════════════════════════════════
+
+    @IsTest
+    static void cov_executeSendFlow_happy_path_marks_sent() {
+        Account acc = new Account(Name='AccExHappy'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='exhappy@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('ExHappyTpl');
+
+        Compliance__c c = newCompliance('ExHappy', acc.Id, adm.Id);
+        c.MSA_Static_Template_Id__c = cvId;
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertDocuSignSetting();
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r);
+
+        Compliance__c after = [SELECT MSA_Status__c, DocuSign_Envelope_Id__c
+                               FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('sent', after.MSA_Status__c,
+            'Happy path must set MSA_Status__c to sent');
+        System.assertNotEquals(null, after.DocuSign_Envelope_Id__c,
+            'Envelope Id must be persisted after successful DocuSign send');
+    }
+
+    @IsTest
+    static void cov_executeSendFlow_no_signatory_logs_and_fails() {
+        Account acc = new Account(Name='AccExNoSig'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='exnosig@x.invalid', AccountId=acc.Id);
+        insert adm;
+
+        Compliance__c c = newCompliance('ExNoSig', acc.Id, adm.Id);
+        insert c;
+        // NOTE: no signatory inserted on purpose
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r, 'Failure branch must still return true');
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'Missing signatory must set MSA_Status__c to Failed');
+    }
+
+    @IsTest
+    static void cov_executeSendFlow_no_template_logs_and_fails() {
+        Account acc = new Account(Name='AccExNoTpl'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='exnotpl@x.invalid', AccountId=acc.Id);
+        insert adm;
+
+        Compliance__c c = newCompliance('ExNoTpl', acc.Id, adm.Id);
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        // NOTE: no template configured anywhere → resolveMsaTemplateId
+        // returns null → executeSendFlow takes the "blank template" branch.
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r, 'Blank template branch must return true');
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'Blank template must set MSA_Status__c to Failed');
+    }
+
+    @IsTest
+    static void cov_executeSendFlow_missing_contentversion_logs_and_fails() {
+        Account acc = new Account(Name='AccExBadCv'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='exbadcv@x.invalid', AccountId=acc.Id);
+        insert adm;
+
+        Compliance__c c = newCompliance('ExBadCv', acc.Id, adm.Id);
+        // Syntactically-valid but non-existent ContentVersion Id so
+        // loadStaticMsaTemplate's SOQL returns empty → executeSendFlow takes
+        // the "template not found / empty" branch.
+        c.MSA_Static_Template_Id__c = '068000000000000AAA';
+        insert c;
+        addSignatory(c.Id, acc.Id);
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r);
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'Missing ContentVersion must set MSA_Status__c to Failed');
+    }
+
+    @IsTest
+    static void cov_executeSendFlow_catch_block_when_docusign_throws() {
+        Account acc = new Account(Name='AccExCatch'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='excatch@x.invalid', AccountId=acc.Id);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('ExCatchTpl');
+
+        Compliance__c c = newCompliance('ExCatch', acc.Id, adm.Id);
+        c.MSA_Static_Template_Id__c = cvId;
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertDocuSignSetting();
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        // DocuSign error mock so MsaDocuSignService throws → executeSendFlow
+        // hits its outer catch block → failWithLog runs → status flips to Failed.
+        Test.setMock(HttpCalloutMock.class, new DocuSignErrorMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r, 'Catch block must still return true');
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'DocuSign 5xx must set MSA_Status__c to Failed via catch branch');
     }
 }

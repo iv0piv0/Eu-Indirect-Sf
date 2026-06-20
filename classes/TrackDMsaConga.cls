@@ -30,6 +30,14 @@
  * 'started'/'sent'/'signed' are lowercase. Track D writes 'sent' after a
  * successful DocuSign send; DocuSignStatusToMsa later advances 'sent' →
  * 'Counter Signed' from the dsfs webhook, which gates Track F.
+ *
+ * Testability:
+ *   The body of tryAdvance()'s try { ... } block is extracted into the
+ *   @TestVisible executeSendFlow(Compliance__c) method so coverage tests
+ *   can exercise it directly without going through the merchant-pricing
+ *   gate. The pricing gate is impossible to satisfy in test context due
+ *   to the org's Industry / SC Acquirer validation cascade — see
+ *   IBRCovBoostTest's header comment for the established workaround.
  */
 public with sharing class TrackDMsaConga implements IMsaTrack {
 
@@ -62,6 +70,30 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
             return false;
         }
 
+        return executeSendFlow(c);
+    }
+
+    /**
+     * Extracted body of the original try { ... } block. @TestVisible so that
+     * coverage tests can call this directly with a hand-built Compliance__c,
+     * bypassing the merchant-pricing gate (which is impossible to satisfy in
+     * test context due to the sandbox's Industry / SC Acquirer validation
+     * cascade; see IBRCovBoostTest header comment for the team's established
+     * workaround pattern).
+     *
+     * Callers must:
+     *   - Pass a Compliance__c that has already passed loadCompliance()
+     *     (i.e. with all SELECT'd fields populated).
+     *   - Have already verified eligibility and the pricing gate themselves
+     *     (or be in a test context that intentionally bypasses these gates
+     *     for coverage purposes).
+     *
+     * Returns: always true once invoked — either success (status='sent') or
+     * a logged failure (status='Failed'). Mirrors the original try { ... }
+     * block's return semantics exactly.
+     */
+    @TestVisible
+    private Boolean executeSendFlow(Compliance__c c) {
         try {
             // §17 — resolve R1 (authorized signatory). Hard-fail on none.
             Id signerContactId = resolveAuthorizedSignatory(c.Id);
@@ -264,7 +296,7 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         return versions.isEmpty() ? null : versions[0].VersionData;
     }
 
-    // ─── Failure path ────────────────────────────────────────────────────────
+    // ─── Failure path ───────────────────────────────────────────────────────
 
     private void failWithLog(Compliance__c c, String reason, Exception ex) {
         // Track D writing MSA_Status__c='Failed' re-fires the orchestration

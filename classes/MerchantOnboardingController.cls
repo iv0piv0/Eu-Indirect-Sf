@@ -305,6 +305,9 @@ public with sharing class MerchantOnboardingController {
                         Technical_Onboarding_Status__c = 'Failed NCP'
                     );
                 }
+
+                casEx.Create_Account_Response__c = e.getMessage();            
+                update casEx;
             } catch (Exception ignore) {
                 System.debug('sendMerchantRequest | secondary error handling failed');
             }

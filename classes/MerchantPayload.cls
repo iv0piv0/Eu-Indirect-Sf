@@ -183,12 +183,21 @@ public class MerchantPayload {
      * is the correct place to carry the phone number; that field IS required by
      * NCP and is populated from Compliance__c.City_field__c above.
      *
-     * ROLE ASSIGNMENT:
+     * ROLE & ADMIN-OF-ADMINS ASSIGNMENT:
      *   - Legacy / non-EU-indirect prod flow: prod accounts get 'tempUser'.
-     *   - EU Indirect Orchestration flow: prod accounts must get 'management'.
-     *     We detect our flow via Compliance__c.EU_Indirect_Orchestration__c
-     *     (already on the Case's Company_Profile__r — no new params needed).
+     *     adminOfAdmins is NOT set (left null) so the JSON serializer omits it
+     *     entirely — preserving the exact request body legacy callers expect.
+     *   - EU Indirect Orchestration flow: prod accounts must get 'management'
+     *     AND adminOfAdmins=true so the cPanel admin can manage other admin
+     *     users within their NCP merchant. We detect this flow via
+     *     Compliance__c.EU_Indirect_Orchestration__c (already on the Case's
+     *     Company_Profile__r — no new params needed).
      *   - Sandbox (non-prod) always gets 'management' regardless of flow.
+     *     adminOfAdmins is NOT set — preserving prior sandbox behavior.
+     *
+     * Null-serialization note: callers serialize the payload with
+     * JSON.serialize(payload, true); the second arg suppresses nulls so a
+     * null adminOfAdmins is silently dropped from the request body.
      */
     public class User {
         public Name name { get; set; }
@@ -196,6 +205,8 @@ public class MerchantPayload {
         public List<String> roles { get; set; }
         public String password { get; set; }
         public String username { get; set; }
+        // Only populated for EU Indirect prod (see constructor + class doc).
+        public Boolean adminOfAdmins { get; set; }
         
         public User(Case cas, Boolean isProd) {
             if (cas != null && cas.Contact != null) {
@@ -205,13 +216,23 @@ public class MerchantPayload {
                 email = cas.Contact.Email;
                 password = cas.SB_PPP_Password__c != null ? cas.SB_PPP_Password__c : MerchantValidator.genPassword(8);
 
-                // EU Indirect flow: prod accounts must be 'management', not 'tempUser'.
+                // EU Indirect flow: prod accounts must be 'management', not 'tempUser',
+                // AND must carry adminOfAdmins=true so the cPanel admin can manage
+                // other admin users within their NCP merchant. For every other path
+                // (non-EU-indirect prod, any sandbox) adminOfAdmins is left null and
+                // therefore omitted from the serialized JSON — preserving the exact
+                // request body legacy callers have been sending all along.
                 Boolean isEuIndirect = cas.Company_Profile__r != null
                     && cas.Company_Profile__r.EU_Indirect_Orchestration__c == true;
                 if (isProd && !isEuIndirect) {
+                    // Legacy prod path — unchanged.
                     roles = new List<String>{ 'tempUser' };
                 } else {
+                    // Either EU Indirect prod, or any sandbox flow.
                     roles = new List<String>{ 'management' };
+                    if (isProd && isEuIndirect) {
+                        adminOfAdmins = true;
+                    }
                 }
             }
         }

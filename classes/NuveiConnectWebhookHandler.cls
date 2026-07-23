@@ -580,7 +580,9 @@ private static Boolean isApprovedStatus(String ncStatus) {
         Id docuRecipientId = pickAuthorizedSignatoryId(req, ownerContactsByEmail);
         if (docuRecipientId == null) docuRecipientId = primaryCon.Id;
 
-        Opportunity opp = buildOpportunity(req, acc.Id);
+               // Post-demo Batch C: resolve partner Sales Rep once, reuse for Opp.
+        Id partnerSalesRepId = resolvePartnerSalesRep(req.partnerId);
+        Opportunity opp = buildOpportunity(req, acc.Id, partnerSalesRepId);
         insert opp;
 
         Compliance__c comp = buildCompliance(req, acc.Id, opp.Id, docuRecipientId);
@@ -711,12 +713,18 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return con;
     }
 
-    private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountId) {
+       private static Opportunity buildOpportunity(NuveiConnectRequest req, Id accountId, Id salesRepId) {
         Opportunity opp = new Opportunity();
         opp.Name      = req.businessInformation.legalName + ' — Merchant Onboarding';
         opp.AccountId = accountId;
-        opp.StageName = 'Prospecting';
+        // Post-demo Batch C: Oscilar is 'Submitted' at creation → In Pre-Approval.
+        opp.StageName = 'In Pre-Approval';
         opp.CloseDate = Date.today().addDays(30);
+
+        // Post-demo Batch C: mirror partner Sales Rep onto the Opportunity.
+        if (salesRepId != null) {
+            opp.Sales_Rep__c = salesRepId;
+        }
 
         List<RecordType> rts = [
             SELECT Id FROM RecordType
@@ -731,7 +739,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
 
         return opp;
     }
-
+    
     private static Compliance__c buildCompliance(
         NuveiConnectRequest req,
         Id accountId,
@@ -1100,6 +1108,19 @@ private static Boolean isApprovedStatus(String ncStatus) {
         ];
         return partners.isEmpty() ? null : partners[0].Id;
     }
+    
+        // Post-demo Batch C: resolve partner Sales Rep upfront so we can stamp it
+    // onto the Opportunity (which is inserted before Compliance).
+    private static Id resolvePartnerSalesRep(String partnerId) {
+        if (String.isBlank(partnerId)) return null;
+        List<Compliance__c> partners = [
+            SELECT Sales_Rep__c FROM Compliance__c
+            WHERE Nuvei_Partner_ID__c = :partnerId
+            LIMIT 1
+        ];
+        return partners.isEmpty() ? null : partners[0].Sales_Rep__c;
+    }
+    
         private static void seedRolesFromPartner(Compliance__c comp) {
         Id partnerComplianceId = comp.From_Reseller__c;
         List<Compliance__c> partners = [

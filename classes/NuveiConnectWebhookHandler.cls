@@ -129,6 +129,55 @@ private static Boolean isApprovedStatus(String ncStatus) {
             'NON_PROFIT'                        => 'Non-profit'
         };
         
+          // ─── Post-demo Batch A: Managing Company + Account Record Type ───────────
+    // Mapping locked with Compliance team:
+    //   UK / Gibraltar → RecordType "Nuvei UK" (DevName Safecharge_Financial_Services)
+    //   Rest of EU     → RecordType "Nuvei Global" (DevName Safecharge)
+    //   Managing_Company__c API values are picklist API names (not display labels).
+
+    private static final Set<String> UK_COUNTRIES        = new Set<String>{ 'United Kingdom' };
+    private static final Set<String> GIBRALTAR_COUNTRIES = new Set<String>{ 'Gibraltar' };
+    private static final Set<String> EU_COUNTRIES        = new Set<String>{
+        'Germany','France','Spain','Italy','The Netherlands','Ireland','Belgium',
+        'Poland','Portugal','Sweden','Denmark','Finland','Norway','Austria',
+        'Switzerland','Luxembourg','Czech Republic','Hungary','Romania','Bulgaria',
+        'Greece','Cyprus','Malta','Estonia','Latvia','Lithuania','Slovakia',
+        'Slovenia','Croatia'
+        // Extend as more geos come online — keep aligned with SF_TO_NC_COUNTRY.
+    };
+
+    private static String resolveManagingCompany(String sfCountry) {
+        if (String.isBlank(sfCountry)) return null;
+        if (UK_COUNTRIES.contains(sfCountry))        return 'Safecharge Financial Services';
+        if (GIBRALTAR_COUNTRIES.contains(sfCountry)) return 'Nuvei Financial Services, Gibraltar branch';
+        if (EU_COUNTRIES.contains(sfCountry))        return 'Safecharge Limited';
+        return null;
+    }
+
+    private static Map<String, Id> accountRtIdByDevName;
+    private static Id resolveAccountRecordTypeId(String sfCountry) {
+        if (String.isBlank(sfCountry)) return null;
+        String devName;
+        if (UK_COUNTRIES.contains(sfCountry) || GIBRALTAR_COUNTRIES.contains(sfCountry)) {
+            devName = 'Safecharge_Financial_Services';   // Label: Nuvei UK
+        } else if (EU_COUNTRIES.contains(sfCountry)) {
+            devName = 'Safecharge';                       // Label: Nuvei Global
+        } else {
+            return null;
+        }
+        if (accountRtIdByDevName == null) {
+            accountRtIdByDevName = new Map<String, Id>();
+            for (RecordType rt : [
+                SELECT Id, DeveloperName FROM RecordType
+                WHERE SObjectType = 'Account'
+                AND DeveloperName IN ('Safecharge','Safecharge_Financial_Services')
+            ]) {
+                accountRtIdByDevName.put(rt.DeveloperName, rt.Id);
+            }
+        }
+        return accountRtIdByDevName.get(devName);
+    }  
+     
     // ─── FULFILLMENT TIME: NC enum → SF picklist ─────────────────────────────
     private static final Map<String, String> NC_TO_SF_FULFILLMENT =
     new Map<String, String>{
@@ -732,13 +781,24 @@ private static Boolean isApprovedStatus(String ncStatus) {
             comp.Tax_ID_Type__c = req.taxDetails.taxIdentificationType;
         }
 
-        if (contactId != null) {
+                if (contactId != null) {
             comp.DocuSign_Recipient__c = contactId;
             // Wave 2 fix (gap #7): seed Primary_Contact__c so MerchantPayload can
             // resolve top-level email, paymentProcessing.email, and
             // clientManagementDetails.contact[0].
             comp.Primary_Contact__c = contactId;
+            // Post-demo fix (Batch B): MSA Recipient lookup mirrors the
+            // authorized signatory Contact (same Id already resolved for
+            // DocuSign_Recipient__c by pickAuthorizedSignatoryId()).
+            comp.MSA_Recipient__c = contactId;
         }
+
+        // ─── Post-demo fix (Batch B): Compliance defaults at creation ────────
+        // Underwriting team requires these to be set on every new EU indirect
+        // merchant. All three are safe defaults — UW can override manually.
+        comp.Risk_Level__c                 = 'Low';
+        comp.Checklist_Type__c             = 'Simplified';
+        comp.Customer_Due_Diligence_New__c = 'Simplified';
 
         // Static MSA PDF template (ContentVersion Id) from NC metadata — per merchant.
         // Read from NC payload's metadata.msaTemplateId so each merchant can be

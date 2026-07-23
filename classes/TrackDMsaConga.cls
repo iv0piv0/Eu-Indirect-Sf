@@ -1,52 +1,70 @@
 /**
- * Track D — EU Indirect MSA send, fully server-side (static PDF + DocuSign).
+ * Track D — EU Indirect MSA generation + DocuSign send, fully server-side.
  *
- * Flow (spec §6):
+ * Two interchangeable PDF sources, selected by the feature flag
+ * Conga_Setting__c.Use_Conga_Trigger__c (default off):
+ *
+ *   OFF — Static PDF (synchronous, single transaction)
+ *     tryAdvance() loads a pre-styled MSA PDF from a ContentVersion (SOQL,
+ *     no callout) and sends it straight to DocuSign in the same transaction.
+ *
+ *   ON  — Conga Trigger (headless, asynchronous, two-phase)
+ *     Conga Trigger composes a per-merchant, properly styled MSA in its own
+ *     background job and stores the result as a Salesforce File on the
+ *     Compliance record. Because nothing comes back to Apex in-transaction,
+ *     the send is split:
+ *       Phase 1 (this class, tryAdvance): resolve the Conga template, write
+ *         the Conga parameters, flip Fire_Conga_MSA__c, set MSA_Status__c =
+ *         'started', and return. No callout here.
+ *       Phase 2 (ContentDocumentLinkTriggerHandler → MsaCongaDocuSignQueueable
+ *         → completeCongaMsaSend): when Conga's output File lands on the
+ *         Compliance, load the composed PDF and run the same DocuSign send +
+ *         persist as the static path.
+ *
+ * Flow (both paths):
  *   tryAdvance()
  *     ├─ eligibility gate     (APPROVED + Configuration Case + status rerunnable)
  *     ├─ pricing gate (§18)   → no Merchant_Bank__c pricing yet ⇒ stay Pending, return false
  *     ├─ signatory (§17)      → resolve R1 from Compliance_Contact__c (Director__c=true);
  *     │                         hard-fail (Failed + Execution_Log) if none — NO silent fallback
- *     ├─ Step 1: template     → load static MSA PDF from a ContentVersion (no callout)
- *     ├─ Step 2: DocuSign      → MsaDocuSignService.sendMsaEnvelope (eSignature REST);
- *     │                         all merchant fields injected as LOCKED prefill text tabs
+ *     ├─ Step 1: template     → static: load ContentVersion PDF | conga: fire Conga Trigger
+ *     ├─ Step 2: DocuSign      → MsaDocuSignService.sendMsaEnvelope (eSignature REST)
  *     └─ Step 3: persist       → DocuSign_Envelope_Id__c + MSA_Status__c = 'sent'
  *   On any error: MSA_Status__c = 'Failed' + Execution_Log__c row.
  *
- * Static PDF approach (replaces Conga):
- *   The MSA is a pre-styled PDF (pricing tables baked in) stored as a Salesforce
- *   File. Track D resolves which ContentVersion to load:
- *     1. Compliance__c.MSA_Static_Template_Id__c (merchant — from NC payload)
- *     2. From_Reseller__r.MSA_Static_Template_Id__c (partner profile default)
- *     3. Conga_Setting__c.MSA_Template_Id__c (org-wide fallback)
- *   DocuSign overlays dynamic fields as locked prefill tabs. No Conga callout.
+ * Template resolution:
+ *   Static : Compliance MSA_Static_Template_Id__c → partner → Conga_Setting__c.MSA_Template_Id__c
+ *   Conga  : single org template — Conga_Setting__c.EU_Indirect_Template_ID__c. Conga merges
+ *            all merchant data itself off the Compliance record, so there is no per-merchant
+ *            Conga template.
  *
  * Callout ordering:
- *   The template load is a SOQL read (not a callout). The only callout is the
- *   DocuSign send, performed after all gate checks; the status/envelope write
- *   happens only after it returns. (Same "no DML before callout" rule as Track F.)
+ *   No DML precedes a callout in any transaction. Static path: SOQL load then
+ *   DocuSign send then persist. Conga Phase 1: DML only (no callout; the Conga
+ *   managed trigger owns its async callout). Conga Phase 2 (queueable): SOQL
+ *   load then DocuSign send then persist.
  *
  * Status values are the Compliance__c.MSA_Status__c picklist API names — note
- * 'started'/'sent'/'signed' are lowercase. Track D writes 'sent' after a
- * successful DocuSign send; DocuSignStatusToMsa later advances 'sent' →
- * 'Counter Signed' from the dsfs webhook, which gates Track F.
- *
- * Testability:
- *   The body of tryAdvance()'s try { ... } block is extracted into the
- *   @TestVisible executeSendFlow(Compliance__c) method so coverage tests
- *   can exercise it directly without going through the merchant-pricing
- *   gate. The pricing gate is impossible to satisfy in test context due
- *   to the org's Industry / SC Acquirer validation cascade — see
- *   IBRCovBoostTest's header comment for the established workaround.
+ * 'started'/'sent'/'signed' are lowercase. 'started' is only ever set by the
+ * Conga path and is the discriminator Phase 2 keys off. DocuSignStatusToMsa
+ * later advances 'sent' → 'Counter Signed' from the dsfs webhook, gating Track F.
  */
 public with sharing class TrackDMsaConga implements IMsaTrack {
 
     public class TrackDException extends Exception {}
 
-    @TestVisible private static final String TRACK_LABEL = 'Track D: MSA Generation (Static PDF + DocuSign)';
+    @TestVisible private static final String TRACK_LABEL = 'Track D: MSA Generation (Conga Trigger / Static PDF + DocuSign)';
 
-    // MSA_Status__c picklist API names (note the lowercase 'sent' — the picklist
-    // value is lowercase and DocuSignStatusToMsa maps the dsfs webhook to it).
+    // Deterministic output filename prefix for Conga-composed MSAs. Phase 2
+    // detection (ContentDocumentLinkTriggerHandler) matches on this prefix, so
+    // the Conga Trigger solution must be configured to name its output the same
+    // way (OFN below builds it). Public so the file trigger can reuse it.
+    public static final String OUTPUT_FILENAME_PREFIX = 'EU-MSA-';
+
+    // MSA_Status__c picklist API names (note the lowercase 'sent'/'started' —
+    // the picklist values are lowercase and DocuSignStatusToMsa maps the dsfs
+    // webhook to them).
+    @TestVisible private static final String STATUS_STARTED = 'started';
     @TestVisible private static final String STATUS_SENT    = 'sent';
     @TestVisible private static final String STATUS_FAILED  = 'Failed';
     @TestVisible private static final String STATUS_PENDING = 'Pending';
@@ -88,14 +106,15 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
      *     (or be in a test context that intentionally bypasses these gates
      *     for coverage purposes).
      *
-     * Returns: always true once invoked — either success (status='sent') or
-     * a logged failure (status='Failed'). Mirrors the original try { ... }
-     * block's return semantics exactly.
+     * Returns: always true once invoked — either a successful send (status
+     * 'sent'), a fired Conga composition (status 'started'), or a logged
+     * failure (status 'Failed'). Mirrors the original return semantics.
      */
     @TestVisible
     private Boolean executeSendFlow(Compliance__c c) {
         try {
-            // §17 — resolve R1 (authorized signatory). Hard-fail on none.
+            // §17 — resolve R1 (authorized signatory). Hard-fail on none, for
+            // both paths — never fire Conga / send DocuSign without a signer.
             Id signerContactId = resolveAuthorizedSignatory(c.Id);
             if (signerContactId == null) {
                 failWithLog(c,
@@ -105,6 +124,21 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
                 return true;
             }
 
+            if (useCongaTrigger()) {
+                // Conga path, Phase 1 — fire headless composition, then wait
+                // for the output File (resumed by Phase 2). No callout here.
+                String congaTemplateId = resolveCongaTemplateId(c);
+                if (String.isBlank(congaTemplateId)) {
+                    failWithLog(c,
+                        'No Conga MSA template configured — set '
+                        + 'Conga_Setting__c.EU_Indirect_Template_ID__c', null);
+                    return true;
+                }
+                triggerCongaComposition(c, congaTemplateId);
+                return true;
+            }
+
+            // Static path — load the pre-styled PDF and send synchronously.
             String templateId = resolveMsaTemplateId(c);
             if (String.isBlank(templateId)) {
                 failWithLog(c,
@@ -114,7 +148,6 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
                 return true;
             }
 
-            // Step 1 — load the static MSA PDF template (SOQL, no callout)
             Blob pdf = loadStaticMsaTemplate(templateId);
             if (pdf == null || pdf.size() == 0) {
                 failWithLog(c,
@@ -122,32 +155,126 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
                 return true;
             }
 
-            // cPanel admin (Appendix B) — same resolution pattern as Track F.
-            // Absence is non-fatal: the merge data falls back to blanks.
             Id cPanelContactId = resolveCPanelAdmin(c.Account__c);
-
-            // Step 2 — DocuSign send via eSignature REST API (the only callout)
-            String envelopeId = MsaDocuSignService.sendMsaEnvelope(c, pdf, signerContactId, cPanelContactId);
-
-            // Step 3 — persist success (DML only after both callouts)
-            Compliance__c upd = new Compliance__c(
-                Id = c.Id,
-                DocuSign_Envelope_Id__c = envelopeId,
-                MSA_Status__c = STATUS_SENT
-            );
-            if (c.MSA_Started_At__c == null) {
-                upd.MSA_Started_At__c = DateTime.now();
-            }
-            if (c.MSA_Effective_Date__c == null) {
-                upd.MSA_Effective_Date__c = Date.today();
-            }
-            update upd;
+            sendViaDocuSignAndPersist(c, pdf, signerContactId, cPanelContactId);
             return true;
 
         } catch (Exception e) {
             failWithLog(c, 'Track D send failed: ' + e.getMessage(), e);
             return true;
         }
+    }
+
+    /**
+     * Phase 2 entry point (called by MsaCongaDocuSignQueueable after Conga
+     * stores its output File). Loads the composed PDF from the ContentVersion
+     * and runs the same DocuSign send + persist as the static path.
+     *
+     * Idempotent: only proceeds while MSA_Status__c is still 'started', so a
+     * duplicate File link or a re-enqueued job cannot double-send.
+     */
+    public void completeCongaMsaSend(Id complianceId, Id contentVersionId) {
+        if (complianceId == null || contentVersionId == null) {
+            return;
+        }
+        Compliance__c c = loadCompliance(complianceId);
+        if (c == null) {
+            return;
+        }
+        // Only the in-flight Conga composition should be completed here.
+        if (c.MSA_Status__c != STATUS_STARTED) {
+            return;
+        }
+
+        try {
+            Id signerContactId = resolveAuthorizedSignatory(c.Id);
+            if (signerContactId == null) {
+                failWithLog(c,
+                    'Conga MSA composed but no authorized signatory (Director__c=true) is set — '
+                    + 'cannot send for signature.', null);
+                return;
+            }
+
+            Blob pdf = loadStaticMsaTemplate(contentVersionId);
+            if (pdf == null || pdf.size() == 0) {
+                failWithLog(c,
+                    'Conga MSA output ContentVersion ' + contentVersionId + ' was empty or missing', null);
+                return;
+            }
+
+            Id cPanelContactId = resolveCPanelAdmin(c.Account__c);
+            sendViaDocuSignAndPersist(c, pdf, signerContactId, cPanelContactId);
+
+        } catch (Exception e) {
+            failWithLog(c, 'Track D Conga send (Phase 2) failed: ' + e.getMessage(), e);
+        }
+    }
+
+    // ─── Step 2/3: DocuSign send + persist (shared by both paths) ─────────────
+
+    /**
+     * The only callout plus the success write. Extracted so the static path
+     * and the Conga Phase 2 queueable share one code path. DML happens only
+     * after the DocuSign send returns (no DML before callout).
+     */
+    @TestVisible
+    private void sendViaDocuSignAndPersist(Compliance__c c, Blob pdf, Id signerContactId, Id cPanelContactId) {
+        String envelopeId = MsaDocuSignService.sendMsaEnvelope(c, pdf, signerContactId, cPanelContactId);
+
+        Compliance__c upd = new Compliance__c(
+            Id = c.Id,
+            DocuSign_Envelope_Id__c = envelopeId,
+            MSA_Status__c = STATUS_SENT
+        );
+        if (c.MSA_Started_At__c == null) {
+            upd.MSA_Started_At__c = DateTime.now();
+        }
+        if (c.MSA_Effective_Date__c == null) {
+            upd.MSA_Effective_Date__c = Date.today();
+        }
+        update upd;
+    }
+
+    // ─── Step 1 (Conga path): fire headless composition ───────────────────────
+
+    /**
+     * Phase 1 of the Conga path — write the Conga Composer parameters and flip
+     * the trigger flag the Conga Trigger managed configuration watches, then
+     * move MSA_Status__c to 'started'. Conga composes asynchronously and stores
+     * the output File; Phase 2 resumes from there.
+     *
+     * The parameter string injects the dynamic template Id and a deterministic
+     * output filename (EU-MSA-<ComplianceId>) so Phase 2 can recognise the
+     * resulting File. Email-off and store-as-File behaviour are governed by the
+     * Conga Trigger solution configuration (see the post-deploy admin steps).
+     */
+    @TestVisible
+    private void triggerCongaComposition(Compliance__c c, String congaTemplateId) {
+        String ofn = OUTPUT_FILENAME_PREFIX + c.Id;
+        String params = String.join(new List<String>{
+            'TemplateId=' + congaTemplateId,
+            'DefaultPDF=1',   // compose a PDF
+            'OFN=' + ofn      // output filename → Phase 2 detection prefix
+        }, '&');
+
+        Compliance__c upd = new Compliance__c(
+            Id = c.Id,
+            Conga_MSA_Params__c = params,
+            Fire_Conga_MSA__c   = true,
+            MSA_Status__c       = STATUS_STARTED
+        );
+        if (c.MSA_Started_At__c == null) {
+            upd.MSA_Started_At__c = DateTime.now();
+        }
+        update upd;
+    }
+
+    private Boolean useCongaTrigger() {
+        // Conga_Setting__c is a List custom setting (queried, not getOrgDefaults).
+        List<Conga_Setting__c> rows = [
+            SELECT Use_Conga_Trigger__c FROM Conga_Setting__c LIMIT 1
+        ];
+        return !rows.isEmpty() && rows[0].Use_Conga_Trigger__c == true;
     }
 
     // ─── Loaders / gating ────────────────────────────────────────────────────
@@ -194,6 +321,8 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         }
         String s = c.MSA_Status__c;
         // Track D fires only when status is unset / Pending / Failed (rerun).
+        // 'started' (Conga in flight) and 'sent' are deliberately excluded so
+        // the orchestration never re-fires a composition that is already running.
         return String.isBlank(s) || s == STATUS_PENDING || s == STATUS_FAILED;
     }
 
@@ -254,6 +383,20 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         return rows.isEmpty() ? null : rows[0].MSA_Template_Id__c;
     }
 
+    /**
+     * Resolve the Conga template Id — a single org-wide template held in
+     * Conga_Setting__c.EU_Indirect_Template_ID__c (the field from the original
+     * design). Conga merges every merchant field itself off the Compliance
+     * record, so no per-merchant / per-partner template is needed.
+     */
+    @TestVisible
+    private String resolveCongaTemplateId(Compliance__c c) {
+        List<Conga_Setting__c> rows = [
+            SELECT EU_Indirect_Template_ID__c FROM Conga_Setting__c LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0].EU_Indirect_Template_ID__c;
+    }
+
     // ─── cPanel admin (Appendix B) ───────────────────────────────────────────
 
     /**
@@ -277,20 +420,20 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         return admins.isEmpty() ? null : admins[0].Id;
     }
 
-    // ─── Step 1: static MSA PDF template ─────────────────────────────────────
+    // ─── PDF loader (ContentVersion) ─────────────────────────────────────────
 
     /**
-     * Load the static MSA PDF from its ContentVersion. The pricing tables and
-     * legal boilerplate are baked into this artwork; DocuSign overlays the
-     * dynamic merchant fields as locked prefill tabs. Returns null when the
-     * ContentVersion is missing or has no data so the caller can fail clearly.
+     * Load a PDF Blob from its ContentVersion. Used for both the static MSA
+     * template (flag off) and the Conga-composed output File (flag on, Phase 2).
+     * Returns null when the ContentVersion is missing or has no data so the
+     * caller can fail clearly.
      */
     @TestVisible
-    private Blob loadStaticMsaTemplate(String templateId) {
+    private Blob loadStaticMsaTemplate(String contentVersionId) {
         List<ContentVersion> versions = [
             SELECT VersionData
             FROM ContentVersion
-            WHERE Id = :templateId
+            WHERE Id = :contentVersionId
             LIMIT 1
         ];
         return versions.isEmpty() ? null : versions[0].VersionData;
@@ -330,6 +473,9 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         update new Compliance__c(
             Id = c.Id,
             MSA_Status__c = STATUS_FAILED,
+            // Clear the Conga trigger flag so a later rerun (Failed → true) is a
+            // genuine field change that re-fires the Conga Trigger managed config.
+            Fire_Conga_MSA__c = false,
             MSA_Started_At__c = c.MSA_Started_At__c == null ? DateTime.now() : c.MSA_Started_At__c
         );
     }

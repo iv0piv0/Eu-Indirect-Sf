@@ -153,6 +153,21 @@ private class TrackDMsaCongaTest {
         ];
     }
 
+    /**
+     * Conga_Setting__c with the feature flag ON plus the single org-wide Conga
+     * template Id (EU_Indirect_Template_ID__c) and the DocuSign account id (a
+     * single List custom setting row — Name must be unique). Used by the
+     * Conga-path tests.
+     */
+    private static void insertCongaTriggerSetting() {
+        insert new Conga_Setting__c(
+            Name = 'Default',
+            EU_Indirect_Template_ID__c = 'TPL-CONGA-DEFAULT',
+            DocuSign_Account_Id__c = 'test-ds-account',
+            Use_Conga_Trigger__c = true
+        );
+    }
+
     // ── Null / orchestration guards ──────────────────────────────────────
 
     @IsTest
@@ -784,5 +799,322 @@ private class TrackDMsaCongaTest {
         Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
         System.assertEquals('Failed', after.MSA_Status__c,
             'DocuSign 5xx must set MSA_Status__c to Failed via catch branch');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Conga Trigger path (Use_Conga_Trigger__c = true).
+    //
+    // Phase 1 (executeSendFlow / tryAdvance) fires the Conga composition and
+    // makes NO DocuSign callout — it only writes the params + flag and moves
+    // MSA_Status__c to 'started'. Phase 2 (completeCongaMsaSend, driven in
+    // production by MsaCongaDocuSignQueueable) performs the DocuSign send.
+    // ════════════════════════════════════════════════════════════════════
+
+    @IsTest
+    static void cov_executeSendFlow_conga_phase1_fires_and_marks_started() {
+        Account acc = new Account(Name='AccCongaP1'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='congap1@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Compliance__c c = newCompliance('CongaP1', acc.Id, adm.Id);
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertCongaTriggerSetting();
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r);
+
+        Compliance__c after = [
+            SELECT MSA_Status__c, Fire_Conga_MSA__c, Conga_MSA_Params__c,
+                   MSA_Started_At__c, DocuSign_Envelope_Id__c
+            FROM Compliance__c WHERE Id = :c.Id
+        ];
+        System.assertEquals('started', after.MSA_Status__c,
+            'Conga Phase 1 must move MSA_Status__c to started');
+        System.assertEquals(true, after.Fire_Conga_MSA__c,
+            'Conga Phase 1 must flip Fire_Conga_MSA__c on');
+        System.assertNotEquals(null, after.Conga_MSA_Params__c,
+            'Conga Phase 1 must write the Conga parameter string');
+        System.assert(after.Conga_MSA_Params__c.contains('TPL-CONGA-DEFAULT'),
+            'Params must carry the org Conga template id (EU_Indirect_Template_ID__c)');
+        System.assert(after.Conga_MSA_Params__c.contains('EU-MSA-' + c.Id),
+            'Params must carry the deterministic output filename');
+        System.assertEquals(null, after.DocuSign_Envelope_Id__c,
+            'Conga Phase 1 must NOT send DocuSign yet');
+        System.assertNotEquals(null, after.MSA_Started_At__c);
+    }
+
+    @IsTest
+    static void cov_executeSendFlow_conga_no_signatory_fails_before_trigger() {
+        Account acc = new Account(Name='AccCongaNoSig'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='congansig@x.invalid', AccountId=acc.Id);
+        insert adm;
+
+        Compliance__c c = newCompliance('CongaNoSig', acc.Id, adm.Id);
+        insert c;
+        // no signatory on purpose
+        insertCongaTriggerSetting();
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r);
+
+        Compliance__c after = [SELECT MSA_Status__c, Fire_Conga_MSA__c
+                               FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'No signatory must fail before firing Conga');
+        System.assertEquals(false, after.Fire_Conga_MSA__c,
+            'Conga must not be fired when the signatory gate fails');
+    }
+
+    @IsTest
+    static void cov_executeSendFlow_conga_no_template_fails() {
+        Account acc = new Account(Name='AccCongaNoTpl'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='congantpl@x.invalid', AccountId=acc.Id);
+        insert adm;
+
+        Compliance__c c = newCompliance('CongaNoTpl', acc.Id, adm.Id);
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        // Flag on but NO Conga template configured anywhere.
+        insert new Conga_Setting__c(
+            Name = 'Default',
+            DocuSign_Account_Id__c = 'test-ds-account',
+            Use_Conga_Trigger__c = true
+        );
+
+        Compliance__c loaded = buildLoadedCompliance(c.Id);
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        Boolean r = d.executeSendFlow(loaded);
+        Test.stopTest();
+
+        System.assertEquals(true, r);
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'Missing Conga template must set MSA_Status__c to Failed');
+    }
+
+    @IsTest
+    static void cov_resolveCongaTemplateId_reads_org_setting() {
+        Account acc = new Account(Name='RCTO'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RCTO', Account__c=acc.Id);
+        insert c;
+        insertCongaTriggerSetting();
+
+        Compliance__c loaded = [
+            SELECT Id FROM Compliance__c WHERE Id=:c.Id
+        ];
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        String tplId = d.resolveCongaTemplateId(loaded);
+        Test.stopTest();
+        System.assertEquals('TPL-CONGA-DEFAULT', tplId,
+            'Single org Conga template id (EU_Indirect_Template_ID__c) must be used');
+    }
+
+    @IsTest
+    static void cov_resolveCongaTemplateId_returns_null_when_unset() {
+        Account acc = new Account(Name='RCTN'); insert acc;
+        Compliance__c c = new Compliance__c(Name='RCTN', Account__c=acc.Id);
+        insert c;
+        // No Conga_Setting__c row at all.
+
+        Compliance__c loaded = [SELECT Id FROM Compliance__c WHERE Id=:c.Id];
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        String tplId = d.resolveCongaTemplateId(loaded);
+        Test.stopTest();
+        System.assertEquals(null, tplId,
+            'No setting → null so the caller fails with a clear message');
+    }
+
+    @IsTest
+    static void cov_completeCongaMsaSend_happy_path_marks_sent() {
+        Account acc = new Account(Name='AccP2Happy'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='p2happy@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        // The Conga-composed PDF, already stored as a ContentVersion.
+        Id cvId = insertStaticTemplate('EU-MSA-P2Happy');
+
+        Compliance__c c = newCompliance('P2Happy', acc.Id, adm.Id);
+        c.MSA_Status__c = 'started';
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertCongaTriggerSetting();
+
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        d.completeCongaMsaSend(c.Id, cvId);
+        Test.stopTest();
+
+        Compliance__c after = [
+            SELECT MSA_Status__c, DocuSign_Envelope_Id__c
+            FROM Compliance__c WHERE Id = :c.Id
+        ];
+        System.assertEquals('sent', after.MSA_Status__c,
+            'Phase 2 happy path must move MSA_Status__c to sent');
+        System.assertEquals('a1b2c3d4-0000-1111-2222-deadbeefcafe',
+            after.DocuSign_Envelope_Id__c,
+            'Envelope Id from DocuSign response must be persisted in Phase 2');
+    }
+
+    @IsTest
+    static void cov_completeCongaMsaSend_docusign_error_marks_failed() {
+        Account acc = new Account(Name='AccP2Err'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='p2err@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('EU-MSA-P2Err');
+
+        Compliance__c c = newCompliance('P2Err', acc.Id, adm.Id);
+        c.MSA_Status__c = 'started';
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertCongaTriggerSetting();
+
+        Test.setMock(HttpCalloutMock.class, new DocuSignErrorMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        d.completeCongaMsaSend(c.Id, cvId);
+        Test.stopTest();
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('Failed', after.MSA_Status__c,
+            'DocuSign failure in Phase 2 must set MSA_Status__c to Failed');
+    }
+
+    @IsTest
+    static void cov_completeCongaMsaSend_is_idempotent_when_not_started() {
+        Account acc = new Account(Name='AccP2Idem'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='p2idem@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Id cvId = insertStaticTemplate('EU-MSA-P2Idem');
+
+        Compliance__c c = newCompliance('P2Idem', acc.Id, adm.Id);
+        c.MSA_Status__c = 'sent'; // already completed
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertCongaTriggerSetting();
+
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        TrackDMsaConga d = new TrackDMsaConga();
+        Test.startTest();
+        d.completeCongaMsaSend(c.Id, cvId);
+        Test.stopTest();
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('sent', after.MSA_Status__c,
+            'Phase 2 must be a no-op when the record is no longer started');
+    }
+
+    // ── Phase 2 resume via the ContentDocumentLink trigger ────────────────
+
+    @IsTest
+    static void congaOutput_file_link_resumes_and_sends() {
+        Account acc = new Account(Name='AccCdlResume'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='cdlresume@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Compliance__c c = newCompliance('CdlResume', acc.Id, adm.Id);
+        c.MSA_Status__c = 'started';
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertCongaTriggerSetting();
+
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        Test.startTest();
+        // Simulate Conga storing its composed MSA as a File on the Compliance.
+        ContentVersion cv = new ContentVersion(
+            Title          = 'EU-MSA-' + c.Id,
+            PathOnClient   = 'EU-MSA.pdf',
+            VersionData    = Blob.valueOf('CONGA-COMPOSED-PDF'),
+            IsMajorVersion = true
+        );
+        insert cv;
+        Id docId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
+
+        insert new ContentDocumentLink(
+            ContentDocumentId = docId,
+            LinkedEntityId    = c.Id,
+            ShareType         = 'V'
+        );
+        Test.stopTest(); // drains MsaCongaDocuSignQueueable → DocuSign send
+
+        Compliance__c after = [
+            SELECT MSA_Status__c, DocuSign_Envelope_Id__c
+            FROM Compliance__c WHERE Id = :c.Id
+        ];
+        System.assertEquals('sent', after.MSA_Status__c,
+            'A Conga MSA File linked to a started Compliance must resume and send');
+        System.assertNotEquals(null, after.DocuSign_Envelope_Id__c,
+            'Resume path must persist the DocuSign envelope Id');
+    }
+
+    @IsTest
+    static void congaOutput_ignores_non_matching_files() {
+        // A non-MSA file linked to a started Compliance must NOT trigger a send.
+        Account acc = new Account(Name='AccCdlIgnore'); insert acc;
+        Contact adm = new Contact(FirstName='A', LastName='Adm',
+            Email='cdlignore@x.invalid', AccountId=acc.Id, Is_CPanel_Admin__c=true);
+        insert adm;
+
+        Compliance__c c = newCompliance('CdlIgnore', acc.Id, adm.Id);
+        c.MSA_Status__c = 'started';
+        insert c;
+        addSignatory(c.Id, acc.Id);
+        insertCongaTriggerSetting();
+
+        Test.setMock(HttpCalloutMock.class, new TrackDFullMock());
+
+        Test.startTest();
+        ContentVersion cv = new ContentVersion(
+            Title          = 'Some-Other-Document',
+            PathOnClient   = 'other.pdf',
+            VersionData    = Blob.valueOf('UNRELATED'),
+            IsMajorVersion = true
+        );
+        insert cv;
+        Id docId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
+
+        insert new ContentDocumentLink(
+            ContentDocumentId = docId,
+            LinkedEntityId    = c.Id,
+            ShareType         = 'V'
+        );
+        Test.stopTest();
+
+        Compliance__c after = [SELECT MSA_Status__c FROM Compliance__c WHERE Id = :c.Id];
+        System.assertEquals('started', after.MSA_Status__c,
+            'A non EU-MSA- file must not resume the send');
     }
 }

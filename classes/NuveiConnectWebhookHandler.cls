@@ -793,12 +793,25 @@ private static Boolean isApprovedStatus(String ncStatus) {
             comp.MSA_Recipient__c = contactId;
         }
 
-        // ─── Post-demo fix (Batch B): Compliance defaults at creation ────────
+                // ─── Post-demo fix (Batch B): Compliance defaults at creation ────────
         // Underwriting team requires these to be set on every new EU indirect
         // merchant. All three are safe defaults — UW can override manually.
         comp.Risk_Level__c                 = 'Low';
         comp.Checklist_Type__c             = 'Simplified';
         comp.Customer_Due_Diligence_New__c = 'Simplified';
+
+        // ─── Post-demo Batch A: Managing Company + Record Type by country ────
+        // Reuses Registered_Country__c set above from BUSINESS_ADDRESS block.
+        //   UK / Gibraltar → RecordType "Nuvei UK" (Safecharge_Financial_Services)
+        //   Rest of EU     → RecordType "Nuvei Global" (Safecharge)
+        String managingCo = resolveManagingCompany(comp.Registered_Country__c);
+        if (String.isNotBlank(managingCo)) {
+            comp.Managing_Company__c = managingCo;
+        }
+        Id compRtId = resolveComplianceRecordTypeId(comp.Registered_Country__c);
+        if (compRtId != null) {
+            comp.RecordTypeId = compRtId;
+        }
 
         // Static MSA PDF template (ContentVersion Id) from NC metadata — per merchant.
         // Read from NC payload's metadata.msaTemplateId so each merchant can be

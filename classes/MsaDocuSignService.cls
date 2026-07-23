@@ -91,7 +91,7 @@ public with sharing class MsaDocuSignService {
      * fully unit-testable.
      */
     @TestVisible
-    class MsaMergeData {
+    public class MsaMergeData {
         public String companyName;
         public String registeredAddress;
         public String registeredCountry;
@@ -111,7 +111,7 @@ public with sharing class MsaDocuSignService {
      * without constructing managed-package types.
      */
     @TestVisible
-    class EnvelopeRecipient {
+    public class EnvelopeRecipient {
         public String email;
         public String fullName;
         public String type;          // 'Signer' | 'CarbonCopy'
@@ -119,7 +119,7 @@ public with sharing class MsaDocuSignService {
         public Integer routingOrder;
         public Integer recipientId;
 
-        EnvelopeRecipient(String email, String fullName, String type, String roleName,
+        public EnvelopeRecipient(String email, String fullName, String type, String roleName,
                           Integer routingOrder, Integer recipientId) {
             this.email = email;
             this.fullName = fullName;

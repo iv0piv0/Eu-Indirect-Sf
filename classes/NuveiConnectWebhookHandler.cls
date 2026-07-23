@@ -154,8 +154,8 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return null;
     }
 
-    private static Map<String, Id> accountRtIdByDevName;
-    private static Id resolveAccountRecordTypeId(String sfCountry) {
+        private static Map<String, Id> complianceRtIdByDevName;
+    private static Id resolveComplianceRecordTypeId(String sfCountry) {
         if (String.isBlank(sfCountry)) return null;
         String devName;
         if (UK_COUNTRIES.contains(sfCountry) || GIBRALTAR_COUNTRIES.contains(sfCountry)) {
@@ -165,18 +165,18 @@ private static Boolean isApprovedStatus(String ncStatus) {
         } else {
             return null;
         }
-        if (accountRtIdByDevName == null) {
-            accountRtIdByDevName = new Map<String, Id>();
+        if (complianceRtIdByDevName == null) {
+            complianceRtIdByDevName = new Map<String, Id>();
             for (RecordType rt : [
                 SELECT Id, DeveloperName FROM RecordType
-                WHERE SObjectType = 'Account'
+                WHERE SObjectType = 'Compliance__c'
                 AND DeveloperName IN ('Safecharge','Safecharge_Financial_Services')
             ]) {
-                accountRtIdByDevName.put(rt.DeveloperName, rt.Id);
+                complianceRtIdByDevName.put(rt.DeveloperName, rt.Id);
             }
         }
-        return accountRtIdByDevName.get(devName);
-    }  
+        return complianceRtIdByDevName.get(devName);
+    }
      
     // ─── FULFILLMENT TIME: NC enum → SF picklist ─────────────────────────────
     private static final Map<String, String> NC_TO_SF_FULFILLMENT =

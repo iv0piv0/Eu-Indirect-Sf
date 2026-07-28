@@ -342,6 +342,22 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return String.join(names, ';');
     }
 
+// ─── Post-demo Batch E: Application Form address-match helper ────────────
+        private static Boolean addressesMatch(AddressWrapper a, AddressWrapper b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return equalsIgnoreCaseTrim(a.addressLine1, b.addressLine1)
+            && equalsIgnoreCaseTrim(a.city,         b.city)
+            && equalsIgnoreCaseTrim(a.postalCode,   b.postalCode)
+            && equalsIgnoreCaseTrim(a.country,      b.country);
+    }
+
+    private static Boolean equalsIgnoreCaseTrim(String s1, String s2) {
+        if (s1 == null && s2 == null) return true;
+        if (s1 == null || s2 == null) return false;
+        return s1.trim().equalsIgnoreCase(s2.trim());
+    }
+
     // ─── PUBLIC ENTRY POINT ──────────────────────────────────────────────────
 
     global static WebhookResult processWebhook(NuveiConnectRequest req) {
@@ -521,7 +537,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 String emailLower = bo.email.toLowerCase();
                 if (ownerContactsByEmail.containsKey(emailLower)) continue; // dedupe
 
-                Contact c = new Contact();
+                               Contact c = new Contact();
                 c.AccountId               = acc.Id;
                 c.FirstName               = bo.legalFirstName;
                 c.LastName                = String.isNotBlank(bo.legalLastName)
@@ -530,6 +546,9 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 c.Email                   = bo.email;
                 c.Phone                   = bo.contactNumber;
                 c.Authorized_Signature__c = bo.isAuthorizedSignatory == true; // Wave 4 (#24)
+                // Post-demo Batch D: flag Director role from NC ownerRole string.
+                c.Director__c             = String.isNotBlank(bo.ownerRole)
+                                            && bo.ownerRole.containsIgnoreCase('Director');
 
                 if (cPanelLower != null && emailLower == cPanelLower) {
                     c.Is_CPanel_Admin__c = true;
@@ -914,11 +933,25 @@ private static Boolean isApprovedStatus(String ncStatus) {
             }
         }
 
-        if (req.additionalInformation != null) {
+               if (req.additionalInformation != null) {
             af.C_Panel_Administrator_First_Name__c    = req.additionalInformation.portalAdminFirstName;
             af.C_Panel_Administrator_Last_Name__c     = req.additionalInformation.portalAdminLastName;
             af.C_Panel_Administrator_Email_Address__c = req.additionalInformation.portalAdminEmail;
             af.C_Panel_Administrator_Phone__c         = req.additionalInformation.portalAdminContactNumber;
+        }
+
+        // ─── Post-demo Batch E: Application Form checkboxes ──────────────────
+        // Webhook always represents an application that has been submitted
+        // through Nuvei Connect, so Submit__c is always true.
+        af.Submit__c = true;
+
+        // Operational_address_same_as_registered__c: compare OPERATION_ADDRESS
+        // to BUSINESS_ADDRESS. If OPERATION_ADDRESS is missing, default to
+        // true (assume same as registered).
+        if (req.businessInformation != null) {
+            AddressWrapper bizAddr = getAddressByType(req.businessInformation.addresses, 'BUSINESS_ADDRESS');
+            AddressWrapper opAddr  = getAddressByType(req.businessInformation.addresses, 'OPERATION_ADDRESS');
+            af.Operational_address_same_as_registered__c = addressesMatch(bizAddr, opAddr);
         }
 
         return af;
@@ -983,6 +1016,10 @@ private static Boolean isApprovedStatus(String ncStatus) {
             d.Phone__c            = bo.contactNumber;
             d.Nationality__c      = resolveCountry(bo.nationality);
             d.Organization_Role__c = bo.ownerRole;
+            // Post-demo Batch D: mirror the NC authorized-signatory flag onto
+            // the Director/UBO row (Contact side is already set — this makes
+            // the KYC-side reporting consistent with the Contact side).
+            d.Authorized_Signatory__c = bo.isAuthorizedSignatory == true;
 
             if (bo.homeAddress != null) {
                 d.Country__c         = resolveCountry(bo.homeAddress.country);

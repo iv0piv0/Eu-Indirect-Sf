@@ -987,12 +987,30 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return rts.isEmpty() ? null : rts[0].Id;
     }
 
-    private static Website__c buildWebsite(NuveiConnectRequest req, Id complianceId, Id appFormId) {
+       private static Website__c buildWebsite(NuveiConnectRequest req, Id complianceId, Id appFormId) {
         Website__c site = new Website__c();
         site.Compliance__c       = complianceId;
         site.Application_Form__c = appFormId;
         site.URL__c              = req.businessInformation.websiteUrl;
         site.Primary_URL__c      = true;
+
+        // ─── Post-demo Batch F: populate Name (Field Label "URL") and MCC ────
+        // Name is the standard record label. Was previously auto-generated
+        // (looked like a Salesforce Id) because we never set it. Set it to
+        // the URL string, truncated to the field's 80-char max.
+        if (String.isNotBlank(req.businessInformation.websiteUrl)) {
+            String url = req.businessInformation.websiteUrl.trim();
+            site.Name = url.length() > 80 ? url.substring(0, 80) : url;
+        }
+
+        // MCC_Code__c (text 10) mirrors the raw NC MCC. Kept separate from
+        // the Company_profile_MCC__c formula so it survives if the Compliance
+        // MCC is manually edited later.
+        if (String.isNotBlank(req.businessInformation.merchantCategoryCode)) {
+            String mcc = req.businessInformation.merchantCategoryCode.trim();
+            site.MCC_Code__c = mcc.length() > 10 ? mcc.substring(0, 10) : mcc;
+        }
+
         return site;
     }
 

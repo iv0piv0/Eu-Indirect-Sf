@@ -645,7 +645,8 @@ private static Boolean isApprovedStatus(String ncStatus) {
         List<Directors_or_Ultimate_Beneficial_Owner__c> directors = buildDirectors(req, comp.Id, appForm.Id);
         if (!directors.isEmpty()) insert directors;
 
-        copyPartnerMerchantBanks(comp.Id, req.partnerId, req.bankingInformation);
+        copyPartnerMerchantBanks(comp.Id, req.partnerId, req.bankingInformation,
+                                 req.businessInformation != null ? req.businessInformation.legalName : null);
 
         return comp.Id;
     }
@@ -987,7 +988,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return rts.isEmpty() ? null : rts[0].Id;
     }
 
-       private static Website__c buildWebsite(NuveiConnectRequest req, Id complianceId, Id appFormId) {
+        private static Website__c buildWebsite(NuveiConnectRequest req, Id complianceId, Id appFormId) {
         Website__c site = new Website__c();
         site.Compliance__c       = complianceId;
         site.Application_Form__c = appFormId;
@@ -1052,20 +1053,21 @@ private static Boolean isApprovedStatus(String ncStatus) {
 
     // ─── PARTNER BANK COPY + BANKING_DETAILS__c ──────────────────────────────
 
-    private static void copyPartnerMerchantBanks(
+     private static void copyPartnerMerchantBanks(
         Id complianceId,
         String partnerId,
-        List<BankingInfoWrapper> bankingInfo
+        List<BankingInfoWrapper> bankingInfo,
+        String legalName
     ) {
         if (String.isBlank(partnerId)) {
-            createBankingDetails(complianceId, bankingInfo);
+            createBankingDetails(complianceId, bankingInfo, legalName);
             return;
         }
 
         Id partnerComplianceId = resolvePartnerId(partnerId);
         if (partnerComplianceId == null) {
             logLegacyError('Partner not found for partnerId: ' + partnerId, null, partnerId);
-            createBankingDetails(complianceId, bankingInfo);
+            createBankingDetails(complianceId, bankingInfo, legalName);
             return;
         }
 
@@ -1100,18 +1102,34 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 }
                 insert newBanks;
             }
+            
         } catch (Exception e) {
             logLegacyError('Failed to copy partner merchant banks', e, partnerId);
         }
 
-        createBankingDetails(complianceId, bankingInfo);
+        createBankingDetails(complianceId, bankingInfo, legalName);
     }
 
     private static void createBankingDetails(
         Id complianceId,
         List<BankingInfoWrapper> bankingInfo
     ) {
+        createBankingDetails(complianceId, bankingInfo, null);
+    }
+
+    private static void createBankingDetails(
+        Id complianceId,
+        List<BankingInfoWrapper> bankingInfo,
+        String legalName
+    ) {
         if (bankingInfo == null || bankingInfo.isEmpty()) return;
+
+        // Post-demo Batch G: mirror the same "Multi" suffix used by
+        // MerchantOnboardingController when it creates GW_Name records after
+        // NCP boarding. Keeps identity consistent across GW_Name and Banking.
+        String multiClientName = String.isNotBlank(legalName)
+            ? legalName + ' Multi'
+            : null;
 
         List<Banking_Details__c> records = new List<Banking_Details__c>();
         for (BankingInfoWrapper bank : bankingInfo) {
@@ -1124,6 +1142,10 @@ private static Boolean isApprovedStatus(String ncStatus) {
             // to Finance Admin (Track G HTTP 400 root cause).
             bd.Beneficiary_Country__c = resolveCountry(bank.bankCountry);
             bd.Target_Currency__c     = bank.accountCurrency;
+            // Post-demo Batch G: mirror merchant identity onto Banking row.
+            if (String.isNotBlank(multiClientName)) {
+                bd.MultiClient_Name__c = multiClientName;
+            }
 
             if (String.isNotBlank(bank.iban)) {
                 bd.IBAN__c       = bank.iban;

@@ -645,8 +645,13 @@ private static Boolean isApprovedStatus(String ncStatus) {
         List<Directors_or_Ultimate_Beneficial_Owner__c> directors = buildDirectors(req, comp.Id, appForm.Id);
         if (!directors.isEmpty()) insert directors;
 
-        copyPartnerMerchantBanks(comp.Id, req.partnerId, req.bankingInformation,
-                                 req.businessInformation != null ? req.businessInformation.legalName : null);
+                copyPartnerMerchantBanks(
+            comp.Id,
+            req.partnerId,
+            req.bankingInformation,
+            req.businessInformation != null ? req.businessInformation.legalName : null,
+            req.metadata != null ? req.metadata.msaTemplateId : null
+        );
 
         return comp.Id;
     }
@@ -841,15 +846,13 @@ private static Boolean isApprovedStatus(String ncStatus) {
             comp.RecordTypeId = compRtId;
         }
 
-        // Static MSA PDF template (ContentVersion Id) from NC metadata — per merchant.
-        // Read from NC payload's metadata.msaTemplateId so each merchant can be
-        // routed to a different PDF (per-partner pricing tables baked in).
-        // Falls back to From_Reseller__r.MSA_Static_Template_Id__c (partner default)
-        // or Conga_Setting__c.MSA_Template_Id__c (org default) — see Track D.
-        if (req.metadata != null && String.isNotBlank(req.metadata.msaTemplateId)) {
-            comp.MSA_Static_Template_Id__c = req.metadata.msaTemplateId.trim();
-        }
-
+                // NOTE: metadata.msaTemplateId is NOT a static-PDF ContentVersion Id
+        // (that was legacy from the abandoned static-PDF + DocuSign flow).
+        // It is the Salesforce Id of a specific partner Merchant_Bank__c
+        // (Partner_Template_Pricing__c = true) that NC wants us to clone as
+        // the merchant's pricing when the partner has multiple templates.
+        // Consumed in copyPartnerMerchantBanks below.
+        
         // Wave 2 fix (gap #6): seed City_field__c from NC contactNumber so
         // MerchantPayload can populate merchant.phoneNumber and
         // paymentProcessing.phoneNumber without manual entry.
@@ -1053,11 +1056,34 @@ private static Boolean isApprovedStatus(String ncStatus) {
 
     // ─── PARTNER BANK COPY + BANKING_DETAILS__c ──────────────────────────────
 
-     private static void copyPartnerMerchantBanks(
+    /**
+     * Copy the partner's pricing template Merchant_Bank__c onto the merchant
+     * Compliance being created.
+     *
+     * Selection rules (fail loud — pricing errors are expensive to unwind):
+     *   1. No partnerId → skip cloning entirely (proceed with Banking_Details__c).
+     *   2. Partner not found → log + skip cloning.
+     *   3. msaTemplateId supplied:
+     *        - Matches a partner Merchant_Bank__c with Partner_Template_Pricing__c=true
+     *          → clone that one row.
+     *        - No match → log clear error + clone nothing. Track D's pricing gate
+     *          (hasMerchantPricing) will then hold MSA composition until the
+     *          admin manually adds a Merchant_Bank__c.
+     *   4. msaTemplateId NOT supplied:
+     *        - Partner has 0 template rows → skip cloning (nothing to do).
+     *        - Partner has exactly 1 template row → clone it.
+     *        - Partner has 2+ template rows → log clear error + clone nothing.
+     *          NC MUST send metadata.msaTemplateId in this case to disambiguate.
+     *
+     * Banking_Details__c is always created regardless — those describe the
+     * merchant's own bank account, not partner pricing.
+     */
+    private static void copyPartnerMerchantBanks(
         Id complianceId,
         String partnerId,
         List<BankingInfoWrapper> bankingInfo,
-        String legalName
+        String legalName,
+        String msaTemplateId
     ) {
         if (String.isBlank(partnerId)) {
             createBankingDetails(complianceId, bankingInfo, legalName);
@@ -1072,7 +1098,9 @@ private static Boolean isApprovedStatus(String ncStatus) {
         }
 
         try {
-            List<Merchant_Bank__c> templates = [
+            String trimmedTemplateId = String.isBlank(msaTemplateId) ? null : msaTemplateId.trim();
+
+            List<Merchant_Bank__c> allPartnerTemplates = [
                 SELECT Id, RecordTypeId,
                        CHB_Handling__c, Credit_Fee_Per_Credit__c, Trx_Fee__c,
                        Discount_Fee_ALL_Value_1__c,
@@ -1084,8 +1112,47 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 AND    Partner_Template_Pricing__c = true
             ];
 
-            if (!templates.isEmpty()) {
-                String templateIndustry = templates[0].Industry__c;
+            List<Merchant_Bank__c> chosen = new List<Merchant_Bank__c>();
+
+            if (String.isNotBlank(trimmedTemplateId)) {
+                // NC specified which template to use — must find an exact match.
+                for (Merchant_Bank__c t : allPartnerTemplates) {
+                    if (String.valueOf(t.Id) == trimmedTemplateId) {
+                        chosen.add(t);
+                        break;
+                    }
+                }
+                if (chosen.isEmpty()) {
+                    logLegacyError(
+                        'metadata.msaTemplateId "' + trimmedTemplateId + '" does not match any '
+                        + 'Merchant_Bank__c with Partner_Template_Pricing__c=true on partner '
+                        + partnerId + ' (partner Compliance ' + partnerComplianceId + '). '
+                        + 'No pricing template cloned — merchant will need manual Merchant_Bank__c '
+                        + 'setup before Track D can compose MSA.',
+                        null, partnerId
+                    );
+                }
+            } else {
+                // No template hint from NC — allow only when partner is unambiguous.
+                if (allPartnerTemplates.size() == 1) {
+                    chosen.add(allPartnerTemplates[0]);
+                } else if (allPartnerTemplates.size() > 1) {
+                    logLegacyError(
+                        'Partner ' + partnerId + ' (Compliance ' + partnerComplianceId + ') has '
+                        + allPartnerTemplates.size() + ' Merchant_Bank__c rows with '
+                        + 'Partner_Template_Pricing__c=true but the NC application did not send '
+                        + 'metadata.msaTemplateId to disambiguate. No pricing template cloned — '
+                        + 'NC must include metadata.msaTemplateId for multi-template partners, '
+                        + 'or the merchant needs manual Merchant_Bank__c setup before Track D '
+                        + 'can compose MSA.',
+                        null, partnerId
+                    );
+                }
+                // else: 0 templates on partner → nothing to clone, no error (legit case).
+            }
+
+            if (!chosen.isEmpty()) {
+                String templateIndustry = chosen[0].Industry__c;
                 if (String.isNotBlank(templateIndustry)) {
                     update new Compliance__c(
                         Id          = complianceId,
@@ -1094,7 +1161,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 }
 
                 List<Merchant_Bank__c> newBanks = new List<Merchant_Bank__c>();
-                for (Merchant_Bank__c t : templates) {
+                for (Merchant_Bank__c t : chosen) {
                     Merchant_Bank__c nb = t.clone(false, true, false, false);
                     nb.Compliance__c               = complianceId;
                     nb.Partner_Template_Pricing__c = false;
@@ -1102,7 +1169,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
                 }
                 insert newBanks;
             }
-            
+
         } catch (Exception e) {
             logLegacyError('Failed to copy partner merchant banks', e, partnerId);
         }
@@ -1415,7 +1482,13 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public AdditionalInfoWrapper      additionalInformation;
         public MetadataWrapper            metadata;
         public String partnerId {
-            get { return metadata?.partnerId; }
+            get {
+                if (metadata == null) return null;
+                // Prefer new NC field; fall back to legacy for backwards compat.
+                return String.isNotBlank(metadata.partnerExtrenalId)
+                    ? metadata.partnerExtrenalId
+                    : metadata.partnerId;
+            }
         }
     }
 
@@ -1518,9 +1591,9 @@ private static Boolean isApprovedStatus(String ncStatus) {
 
 global class MetadataWrapper {
     public String partnerId;
+    public String partnerExtrenalId;
     public String msaTemplateId;
 }
-
     global class WebhookResult {
         public Boolean success = false;
         public String  message;

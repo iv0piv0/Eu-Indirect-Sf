@@ -125,7 +125,7 @@ private class NuveiConnectWebhookHandlerTest {
         // Metadata — partnerId
         NuveiConnectWebhookHandler.MetadataWrapper meta =
             new NuveiConnectWebhookHandler.MetadataWrapper();
-        meta.partnerId = 'PARTNER-EU-001';
+        meta.partnerExternalId = 'PARTNER-EU-001';
         req.metadata = meta;
 
         return req;

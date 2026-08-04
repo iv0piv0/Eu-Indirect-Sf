@@ -1485,8 +1485,8 @@ private static Boolean isApprovedStatus(String ncStatus) {
             get {
                 if (metadata == null) return null;
                 // Prefer new NC field; fall back to legacy for backwards compat.
-                return String.isNotBlank(metadata.partnerExtrenalId)
-                    ? metadata.partnerExtrenalId
+                return String.isNotBlank(metadata.partnerExternalId)
+                    ? metadata.partnerExternalId
                     : metadata.partnerId;
             }
         }

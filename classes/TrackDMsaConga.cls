@@ -235,33 +235,43 @@ public with sharing class TrackDMsaConga implements IMsaTrack {
         update upd;
     }
 
-    // ─── Step 1 (Conga path): fire headless composition ───────────────────────
+        // ─── Step 1 (Conga path): fire headless composition ───────────────────────
 
     /**
-     * Phase 1 of the Conga path — write the Conga Composer parameters and flip
-     * the trigger flag the Conga Trigger managed configuration watches, then
-     * move MSA_Status__c to 'started'. Conga composes asynchronously and stores
-     * the output File; Phase 2 resumes from there.
+     * Phase 1 of the Conga path — flip the trigger flag the Conga Trigger
+     * managed configuration watches, then move MSA_Status__c to 'started'.
+     * Conga composes asynchronously and stores the output as a modern
+     * Salesforce File (ContentVersion + ContentDocumentLink) via the Trigger
+     * URL params defined in the `EU_Indirect_MSA_Trigger__c` formula field on
+     * Compliance__c. Phase 2 (ContentDocumentLinkTriggerHandler → 
+     * MsaCongaDocuSignQueueable → completeCongaMsaSend) picks up the resulting
+     * File by title prefix (EU-MSA-<ComplianceId>) and drives the DocuSign
+     * envelope.
      *
-     * The parameter string injects the dynamic template Id and a deterministic
-     * output filename (EU-MSA-<ComplianceId>) so Phase 2 can recognise the
-     * resulting File. Email-off and store-as-File behaviour are governed by the
-     * Conga Trigger solution configuration (see the post-deploy admin steps).
+     * The URL parameters (TemplateId, DefaultPDF, OFN, SC0, DS7,
+     * QMode=SalesforceFile) live in the formula field so admins can adjust
+     * them without a code deploy — critical because Conga's headless Trigger
+     * silently defaults to classic Attachment output unless
+     * QMode=SalesforceFile is present (see 2026-08-02 debugging).
+     *
+     * NOTE: The Conga_MSA_Params__c field was written by an earlier version
+     * of this code (from the abandoned static-PDF flow). It is no longer read
+     * anywhere and is now unused. Left in place for backward compatibility;
+     * remove in a future cleanup once confirmed no dashboards/reports depend
+     * on it.
      */
     @TestVisible
     private void triggerCongaComposition(Compliance__c c, String congaTemplateId) {
-        String ofn = OUTPUT_FILENAME_PREFIX + c.Id;
-        String params = String.join(new List<String>{
-            'TemplateId=' + congaTemplateId,
-            'DefaultPDF=1',   // compose a PDF
-            'OFN=' + ofn      // output filename → Phase 2 detection prefix
-        }, '&');
+        // congaTemplateId is retained in the method signature for backward
+        // compatibility and diagnostics; the actual template Id used by
+        // Conga is baked into the EU_Indirect_MSA_Trigger__c formula field.
+        // A future refactor could route the dynamic template Id through a
+        // helper field the formula references.
 
         Compliance__c upd = new Compliance__c(
             Id = c.Id,
-            Conga_MSA_Params__c = params,
-            Fire_Conga_MSA__c   = true,
-            MSA_Status__c       = STATUS_STARTED
+            Fire_Conga_MSA__c = true,
+            MSA_Status__c     = STATUS_STARTED
         );
         if (c.MSA_Started_At__c == null) {
             upd.MSA_Started_At__c = DateTime.now();

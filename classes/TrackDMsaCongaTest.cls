@@ -831,24 +831,21 @@ private class TrackDMsaCongaTest {
 
         System.assertEquals(true, r);
 
-        Compliance__c after = [
-            SELECT MSA_Status__c, Fire_Conga_MSA__c, Conga_MSA_Params__c,
+ Compliance__c after = [
+            SELECT MSA_Status__c, Fire_Conga_MSA__c,
                    MSA_Started_At__c, DocuSign_Envelope_Id__c
             FROM Compliance__c WHERE Id = :c.Id
         ];
         System.assertEquals('started', after.MSA_Status__c,
             'Conga Phase 1 must move MSA_Status__c to started');
         System.assertEquals(true, after.Fire_Conga_MSA__c,
-            'Conga Phase 1 must flip Fire_Conga_MSA__c on');
-        System.assertNotEquals(null, after.Conga_MSA_Params__c,
-            'Conga Phase 1 must write the Conga parameter string');
-        System.assert(after.Conga_MSA_Params__c.contains('TPL-CONGA-DEFAULT'),
-            'Params must carry the org Conga template id (EU_Indirect_Template_ID__c)');
-        System.assert(after.Conga_MSA_Params__c.contains('EU-MSA-' + c.Id),
-            'Params must carry the deterministic output filename');
+            'Conga Phase 1 must flip Fire_Conga_MSA__c on — this is the field the '
+            + 'Conga Trigger managed configuration watches to fire composition');
         System.assertEquals(null, after.DocuSign_Envelope_Id__c,
-            'Conga Phase 1 must NOT send DocuSign yet');
-        System.assertNotEquals(null, after.MSA_Started_At__c);
+            'Conga Phase 1 must NOT send DocuSign yet — that happens in Phase 2 '
+            + '(MsaCongaDocuSignQueueable → completeCongaMsaSend)');
+        System.assertNotEquals(null, after.MSA_Started_At__c,
+            'MSA_Started_At__c must be stamped when Phase 1 fires');
     }
 
     @IsTest

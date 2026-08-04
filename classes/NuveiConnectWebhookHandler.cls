@@ -1484,10 +1484,7 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public String partnerId {
             get {
                 if (metadata == null) return null;
-                // Prefer new NC field; fall back to legacy for backwards compat.
-                return String.isNotBlank(metadata.partnerExternalId)
-                    ? metadata.partnerExternalId
-                    : metadata.partnerId;
+                return metadata.partnerExternalId;
             }
         }
     }
@@ -1590,8 +1587,12 @@ private static Boolean isApprovedStatus(String ncStatus) {
     }
 
 global class MetadataWrapper {
+    // NC's internal UUID for the partner — meaningless to Salesforce.
+    // Kept for logging/debugging only; NOT used for partner resolution.
     public String partnerId;
-    public String partnerExtrenalId;
+    // Our UUID that we shared with NC when configuring the partner.
+    // Matches Compliance__c.Nuvei_Partner_ID__c → used for resolution.
+    public String partnerExternalId;
     public String msaTemplateId;
 }
     global class WebhookResult {

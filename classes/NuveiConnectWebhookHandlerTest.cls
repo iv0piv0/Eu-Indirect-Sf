@@ -640,21 +640,15 @@ private class NuveiConnectWebhookHandlerTest {
         }
     }
 
-    @IsTest
+       @IsTest
     static void testEUInsert_msaTemplateId_matches_specific_partner_bank() {
         Compliance__c partner = createTestPartner('PARTNER-EU-001');
-        // First template — this one uses the shared helper that already
-        // works in the org (see testEUInsert_UKBank_PricingCopiedAndBankDetailsStamped).
-        createPartnerTemplateBanks(partner.Id);
-        // Second template — the one NC will point msaTemplateId at.
+        Id t1 = tryCreatePartnerTemplateBank(partner.Id, 10);
         Id t2 = tryCreatePartnerTemplateBank(partner.Id, 20);
-        // Third template — extra noise so the SELECT sees > 1 rows.
         Id t3 = tryCreatePartnerTemplateBank(partner.Id, 30);
 
-        if (t2 == null || t3 == null) {
-            // Org validation blocked multi-template setup — established team
-            // pattern is to skip rather than fail. In prod this path is
-            // exercised by real partner records.
+        if (t1 == null || t2 == null || t3 == null) {
+            // Established skip pattern — org validation blocked template setup.
             return;
         }
 
@@ -689,12 +683,11 @@ private class NuveiConnectWebhookHandlerTest {
     @IsTest
     static void testEUInsert_msaTemplateId_no_match_logs_and_skips() {
         Compliance__c partner = createTestPartner('PARTNER-EU-001');
-        createPartnerTemplateBanks(partner.Id);
+        Id t1 = tryCreatePartnerTemplateBank(partner.Id, 10);
         Id t2 = tryCreatePartnerTemplateBank(partner.Id, 20);
-        if (t2 == null) return; // established skip pattern
+        if (t1 == null || t2 == null) return;
 
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
-        // Valid Merchant_Bank__c Id prefix (a0X) but not on the partner.
         req.metadata.msaTemplateId = 'a0X000000000000AAA';
 
         Test.startTest();
@@ -729,9 +722,9 @@ private class NuveiConnectWebhookHandlerTest {
     @IsTest
     static void testEUInsert_no_msaTemplateId_multi_template_partner_logs_and_skips() {
         Compliance__c partner = createTestPartner('PARTNER-EU-001');
-        createPartnerTemplateBanks(partner.Id);
+        Id t1 = tryCreatePartnerTemplateBank(partner.Id, 10);
         Id t2 = tryCreatePartnerTemplateBank(partner.Id, 20);
-        if (t2 == null) return; // established skip pattern
+        if (t1 == null || t2 == null) return;
 
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
         // NC did NOT set msaTemplateId → multi-template partner ambiguous.

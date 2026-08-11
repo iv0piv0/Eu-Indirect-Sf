@@ -16,11 +16,29 @@ public class FinanceIntegration {
     public class Param {
         @InvocableVariable(label='Company Profile Id' required=true) public String compid;
     }
-    @InvocableMethod(label='Finance Integration')
-    public static void invocableFinanceIntegration(Param[] params) {
-        Param param = params[0];
+@InvocableMethod(label='Finance Integration')
+public static void invocableFinanceIntegration(Param[] params) {
+    Param param = params[0];
+    
+    // If we're already in an async context (@future, batch, queueable),
+    // we cannot call @future directly. Enqueue a queueable that will
+    // invoke the @future from a fresh transaction.
+    if (System.isFuture() || System.isBatch()) {
+        System.enqueueJob(new FinanceIntegrationDeferred(param.compid));
+    } else {
         futureFinanceIntegration(param.compid);
     }
+}
+
+// Queueable can be enqueued from @future/batch; from inside its execute()
+// we are back in a "safe" async context that CAN kick a fresh @future.
+public class FinanceIntegrationDeferred implements Queueable, Database.AllowsCallouts {
+    private String compid;
+    public FinanceIntegrationDeferred(String compid) { this.compid = compid; }
+    public void execute(QueueableContext ctx) {
+        futureFinanceIntegration(compid);
+    }
+}
     @future(callout=true)
     public static void futureFinanceIntegration(String compid) {
         FinanceIntegration fin = new FinanceIntegration();

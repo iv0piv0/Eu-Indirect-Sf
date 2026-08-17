@@ -360,11 +360,15 @@ private static Boolean isApprovedStatus(String ncStatus) {
 
     // ─── PUBLIC ENTRY POINT ──────────────────────────────────────────────────
 
-    global static WebhookResult processWebhook(NuveiConnectRequest req) {
+        global static WebhookResult processWebhook(NuveiConnectRequest req) {
     WebhookResult result = new WebhookResult();
 
     try {
-        // Edit 5 — add City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
+        // NOTE: This existence check is race-vulnerable when NC sends
+        // SUBMITTED + APPROVED nearly simultaneously (both transactions see
+        // "no existing" and both go INSERT path). The Unique constraint on
+        // Nuvei_Connect_Application_ID__c + the DUPLICATE_VALUE catch inside
+        // createAllObjects are the actual guardrails.
         List<Compliance__c> existing = [
             SELECT Id, Name, Account__c, Compliance_Status__c,
                    Technical_Onboarding_Status__c,
@@ -391,9 +395,16 @@ private static Boolean isApprovedStatus(String ncStatus) {
             }
         } else {
             Id complianceId = createAllObjects(req);
-            result.success = true;
-            result.message = 'Application created. Compliance Id: ' + complianceId;
-            result.complianceId = String.valueOf(complianceId);
+            if (complianceId == null) {
+                // createAllObjects detected a concurrent-insert race, re-fetched,
+                // and routed through handleStatusUpdate. Nothing more to do here.
+                result.success = true;
+                result.message = 'Status updated to (concurrent race resolved): ' + req.applicationStatus;
+            } else {
+                result.success = true;
+                result.message = 'Application created. Compliance Id: ' + complianceId;
+                result.complianceId = String.valueOf(complianceId);
+            }
         }
 
     } catch (Exception e) {
@@ -605,7 +616,47 @@ private static Boolean isApprovedStatus(String ncStatus) {
         insert opp;
 
         Compliance__c comp = buildCompliance(req, acc.Id, opp.Id, docuRecipientId);
-        insert comp;
+        try {
+            insert comp;
+        } catch (DmlException e) {
+            // Concurrency race — another webhook for the same applicationId
+            // won the INSERT while this transaction was mid-flight. Detect
+            // DUPLICATE_VALUE (fired by the Unique constraint on
+            // Nuvei_Connect_Application_ID__c), re-fetch the winning row,
+            // and route through the UPDATE path so we don't orphan a second
+            // Compliance with all its child DML.
+            Boolean isDup = false;
+            for (Integer i = 0; i < e.getNumDml(); i++) {
+                if (e.getDmlType(i) == StatusCode.DUPLICATE_VALUE) {
+                    isDup = true;
+                    break;
+                }
+            }
+            if (!isDup) {
+                throw e;
+            }
+            List<Compliance__c> winner = [
+                SELECT Id, Name, Account__c, Compliance_Status__c,
+                       Technical_Onboarding_Status__c,
+                       Nuvei_Connect_Status__c, Nuvei_Connect_Last_Webhook__c,
+                       Manual_MCC_Code__c, Url__c, From_Reseller__c,
+                       EU_Indirect_Orchestration__c,
+                       City_field__c, Primary_Contact__c, Descriptor__c, Descriptor_Type__c
+                FROM   Compliance__c
+                WHERE  Nuvei_Connect_Application_ID__c = :req.applicationId
+                LIMIT  1
+            ];
+            if (winner.isEmpty()) {
+                // Extremely unlikely — DUPLICATE_VALUE fired but the winning
+                // row is not visible. Rethrow so NC retries the webhook.
+                throw e;
+            }
+            handleStatusUpdate(winner[0], req);
+            // Signal to processWebhook that the race was resolved via update
+            // path; skip the rest of createAllObjects (Case create, junctions,
+            // pricing clone, etc. were done by the winner's transaction).
+            return null;
+        }
 
         // ── Wave 4 (gap #25): one Compliance_Contact__c junction row per owner.
         // Director__c is a formula on the junction → auto-fills from
@@ -778,9 +829,14 @@ private static Boolean isApprovedStatus(String ncStatus) {
         comp.Account__c                       = accountId;
         comp.Opportunity__c                   = oppId;
         comp.Nuvei_Connect_Application_ID__c  = req.applicationId;
-        comp.Compliance_Status__c             = NC_TO_SF_STATUS.get(
-            String.isNotBlank(req.applicationStatus) ? req.applicationStatus : 'SUBMITTED'
-        );
+    comp.Compliance_Status__c             = NC_TO_SF_STATUS.get(
+    String.isNotBlank(req.applicationStatus) ? req.applicationStatus : 'SUBMITTED'
+    );
+    if (String.isNotBlank(req.applicationStatus)) {
+    comp.Nuvei_Connect_Status__c = NC_TO_NC_NORMALIZED.containsKey(req.applicationStatus)
+        ? NC_TO_NC_NORMALIZED.get(req.applicationStatus)
+        : req.applicationStatus;
+}
         comp.From_Reseller__c    = resolvePartnerId(req.partnerId);
         comp.Nuvei_Partner_ID__c = req.partnerId;
         if (comp.From_Reseller__c != null) {
@@ -1115,39 +1171,32 @@ private static Boolean isApprovedStatus(String ncStatus) {
             List<Merchant_Bank__c> chosen = new List<Merchant_Bank__c>();
 
             if (String.isNotBlank(trimmedTemplateId)) {
-                // NC specified which template to use — must find an exact match.
-                for (Merchant_Bank__c t : allPartnerTemplates) {
-                    if (String.valueOf(t.Id) == trimmedTemplateId) {
-                        chosen.add(t);
-                        break;
-                    }
-                }
-                if (chosen.isEmpty()) {
-                    logLegacyError(
-                        'metadata.msaTemplateId "' + trimmedTemplateId + '" does not match any '
-                        + 'Merchant_Bank__c with Partner_Template_Pricing__c=true on partner '
-                        + partnerId + ' (partner Compliance ' + partnerComplianceId + '). '
-                        + 'No pricing template cloned — merchant will need manual Merchant_Bank__c '
-                        + 'setup before Track D can compose MSA.',
-                        null, partnerId
-                    );
-                }
-            } else {
-                // No template hint from NC — allow only when partner is unambiguous.
-                if (allPartnerTemplates.size() == 1) {
-                    chosen.add(allPartnerTemplates[0]);
-                } else if (allPartnerTemplates.size() > 1) {
-                    logLegacyError(
-                        'Partner ' + partnerId + ' (Compliance ' + partnerComplianceId + ') has '
-                        + allPartnerTemplates.size() + ' Merchant_Bank__c rows with '
-                        + 'Partner_Template_Pricing__c=true but the NC application did not send '
-                        + 'metadata.msaTemplateId to disambiguate. No pricing template cloned — '
-                        + 'NC must include metadata.msaTemplateId for multi-template partners, '
-                        + 'or the merchant needs manual Merchant_Bank__c setup before Track D '
-                        + 'can compose MSA.',
-                        null, partnerId
-                    );
-                }
+    // NC specified which template to use — must find an exact match.
+    // Cast to Id so 15-char / 18-char and case differences are normalized.
+    Id targetTemplateId;
+    try {
+        targetTemplateId = (Id) trimmedTemplateId;
+    } catch (System.StringException e) {
+        targetTemplateId = null;
+    }
+    if (targetTemplateId != null) {
+        for (Merchant_Bank__c t : allPartnerTemplates) {
+            if (t.Id == targetTemplateId) {
+                chosen.add(t);
+                break;
+            }
+        }
+    }
+    if (chosen.isEmpty()) {
+        logLegacyError(
+            'metadata.msaTemplateId "' + trimmedTemplateId + '" does not match any '
+            + 'Merchant_Bank__c with Partner_Template_Pricing__c=true on partner '
+            + partnerId + ' (partner Compliance ' + partnerComplianceId + '). '
+            + 'No pricing template cloned — merchant will need manual Merchant_Bank__c '
+            + 'setup before Track D can compose MSA.',
+            null, partnerId
+        );
+    }
                 // else: 0 templates on partner → nothing to clone, no error (legit case).
             }
 

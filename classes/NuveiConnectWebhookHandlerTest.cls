@@ -759,6 +759,42 @@ private class NuveiConnectWebhookHandlerTest {
             'A clear Execution_Log__c error row must be written when multi-template partner has '
             + 'no msaTemplateId hint');
     }
+    
+    @isTest
+static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
+    // Regression guard: yesterday's dedup fix exposed that createAllObjects
+    // did NOT set Nuvei_Connect_Status__c — only handleStatusUpdate did.
+    // For NC apps where only a single APPLICATION_SUBMITTED webhook arrives,
+    // Nuvei_Connect_Status__c was staying empty until a follow-up webhook.
+    NuveiConnectWebhookHandler.NuveiConnectRequest req =
+        new NuveiConnectWebhookHandler.NuveiConnectRequest();
+    req.applicationId     = 'NC-INIT-CREATE-001';
+    req.applicationStatus = 'APPLICATION_SUBMITTED';
+    req.rawPayload        = '{}';
+    req.businessOwnerInformation = new List<NuveiConnectWebhookHandler.BusinessOwnerWrapper>();
+    req.bankingInformation       = new List<NuveiConnectWebhookHandler.BankingInfoWrapper>();
+    // Minimal businessInformation to allow buildCompliance to run
+    req.businessInformation = new NuveiConnectWebhookHandler.BusinessInformationWrapper();
+    req.businessInformation.legalName = 'Init Create Co';
+
+    Test.startTest();
+    NuveiConnectWebhookHandler.WebhookResult result =
+        NuveiConnectWebhookHandler.processWebhook(req);
+    Test.stopTest();
+
+    System.assert(result.success, 'First webhook should succeed. Got: ' + result.message);
+
+    Compliance__c comp = [
+        SELECT Nuvei_Connect_Status__c, Compliance_Status__c
+        FROM Compliance__c
+        WHERE Nuvei_Connect_Application_ID__c = 'NC-INIT-CREATE-001'
+        LIMIT 1
+    ];
+    System.assertEquals('SUBMITTED', comp.Nuvei_Connect_Status__c,
+        'Nuvei_Connect_Status__c must be set on initial creation, not only on update');
+    System.assertEquals('Oscilar Submitted', comp.Compliance_Status__c,
+        'Compliance_Status__c must be set on initial creation');
+}
 
 
     // NOTE: testBoardingLogCreated_OnInsert is disabled pending Track I deployment.

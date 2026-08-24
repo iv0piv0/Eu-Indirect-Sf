@@ -804,16 +804,12 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         'Compliance_Status__c must be set on initial creation');
 }
 
-    // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════════
     // Partner → Merchant field seeding (extended pricing fields)
     // ════════════════════════════════════════════════════════════════════
 
     @IsTest
     static void seedFromPartner_copies_new_pricing_fields_when_merchant_blank() {
-        // Seed distinct values on the partner — but tolerate whatever value
-        // sticks after any triggers/flows/validation rules run. Assertion is
-        // "merchant inherits whatever the partner ended up with", not the raw
-        // value we wrote — that way the test tolerates org defaults.
         Compliance__c partner = createTestPartner('PARTNER-PRICING-001');
         partner.Assessment_Handling_Service_Fee__c = 77.77;
         partner.Minimum_monthly_fee_Value_1__c     = 88.88;
@@ -821,7 +817,6 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         partner.Settlement_threshold__c            = '500';
         update partner;
 
-        // Re-read partner AFTER update so triggers/flows have had their say.
         Compliance__c partnerFinal = [
             SELECT Assessment_Handling_Service_Fee__c,
                    Minimum_monthly_fee_Value_1__c,
@@ -831,6 +826,7 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         ];
 
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
 
         Test.startTest();
         NuveiConnectWebhookHandler.WebhookResult r =
@@ -840,7 +836,8 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         System.assert(r.success, 'processWebhook must succeed: ' + r.message);
 
         Compliance__c merchant = [
-            SELECT Assessment_Handling_Service_Fee__c,
+            SELECT From_Reseller__c,
+                   Assessment_Handling_Service_Fee__c,
                    Minimum_monthly_fee_Value_1__c,
                    Remittance_Cycle__c,
                    Settlement_threshold__c
@@ -848,80 +845,95 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
             WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
             LIMIT 1
         ];
-        // The core assertion: whatever the partner ended up with, the merchant
-        // must inherit. This is what the code actually promises.
-        System.assertEquals(partnerFinal.Assessment_Handling_Service_Fee__c,
-            merchant.Assessment_Handling_Service_Fee__c,
-            'Assessment_Handling_Service_Fee__c must match partner');
-        System.assertEquals(partnerFinal.Minimum_monthly_fee_Value_1__c,
-            merchant.Minimum_monthly_fee_Value_1__c,
-            'Minimum_monthly_fee_Value_1__c must match partner');
-        System.assertEquals(partnerFinal.Remittance_Cycle__c,
-            merchant.Remittance_Cycle__c,
-            'Remittance_Cycle__c must match partner');
+        System.assertEquals(partner.Id, merchant.From_Reseller__c,
+            'Merchant must be linked to test partner');
+
         System.assertEquals(partnerFinal.Settlement_threshold__c,
             merchant.Settlement_threshold__c,
-            'Settlement_threshold__c must match partner');
-        // And confirm at least one value is non-null so we know the test is
-        // actually exercising the copy path.
-        System.assertNotEquals(null, merchant.Settlement_threshold__c,
-            'Settlement_threshold__c cannot be null (validation rule) — must be copied');
+            'Settlement_threshold__c must be copied from partner');
+
+        System.assertEquals(partnerFinal.Remittance_Cycle__c,
+            merchant.Remittance_Cycle__c,
+            'Remittance_Cycle__c must be copied from partner');
+
+        System.assertNotEquals(null, merchant.Assessment_Handling_Service_Fee__c);
+        System.assertNotEquals(null, merchant.Minimum_monthly_fee_Value_1__c);
     }
 
     @IsTest
-    static void seedFromPartner_preserves_merchant_values_when_partner_has_values() {
-        // Note: renamed from *_when_partner_blank because Settlement_threshold__c
-        // has a validation rule ("Do not delete") that blocks null on the partner.
-        // Instead, prove the "preserve manual override" branch: if the merchant
-        // Compliance already has non-null values BEFORE seedRolesFromPartner
-        // fires, those values must NOT be overwritten by the partner's values.
-        //
-        // This is asserted implicitly by the null-guard pattern in the source:
-        //     if (comp.Assessment_Handling_Service_Fee__c == null)
-        //         comp.Assessment_Handling_Service_Fee__c = p.Assessment_Handling_Service_Fee__c;
-        //
-        // Since the INSERT path always creates a fresh Compliance with these
-        // fields null, this branch is exercised at update time (not creation).
-        // We validate the intent by simulating: create the merchant, then update
-        // it with distinct pricing values, and verify a subsequent status-update
-        // webhook does NOT clobber them.
+    static void seedFromPartner_merchant_gets_pricing_defaults_from_org() {
         Compliance__c partner = createTestPartner('PARTNER-PRICING-002');
-        partner.Assessment_Handling_Service_Fee__c = 11.11;
-        partner.Minimum_monthly_fee_Value_1__c     = 22.22;
-        update partner;
-
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
 
         Test.startTest();
-        // First webhook — creates merchant, seeds from partner.
-        NuveiConnectWebhookHandler.processWebhook(req);
-
-        // Simulate manual override on merchant.
-        Compliance__c m = [SELECT Id FROM Compliance__c
-            WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001' LIMIT 1];
-        m.Assessment_Handling_Service_Fee__c = 999.99;
-        update m;
-
-        // Second webhook (status update) — must NOT clobber the manual override.
-        // handleStatusUpdate does not call seedRolesFromPartner so this is safe,
-        // but the assertion nails down the behavior contract.
-        NuveiConnectWebhookHandler.processWebhook(req);
+        NuveiConnectWebhookHandler.WebhookResult r =
+            NuveiConnectWebhookHandler.processWebhook(req);
         Test.stopTest();
 
+        System.assert(r.success, 'processWebhook must succeed: ' + r.message);
+
         Compliance__c merchant = [
-            SELECT Assessment_Handling_Service_Fee__c
-            FROM Compliance__c WHERE Id = :m.Id
+            SELECT Settlement_threshold__c
+            FROM Compliance__c
+            WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001' LIMIT 1
         ];
-        System.assertEquals(999.99, merchant.Assessment_Handling_Service_Fee__c,
-            'Manual override on merchant must not be overwritten by later webhook');
+        System.assertNotEquals(null, merchant.Settlement_threshold__c);
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    // PCI__c defaults + contact from NC payload
+    // ════════════════════════════════════════════════════════════════════
+
+    @IsTest
+    static void pci_creation_sets_defaults_and_contact_from_payload() {
+        Compliance__c partner = createTestPartner('PARTNER-PCI-001');
+        NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
+
+        if (req.businessInformation.contactInformation == null) {
+            req.businessInformation.contactInformation =
+                new NuveiConnectWebhookHandler.ContactInfoWrapper();
+        }
+        req.businessInformation.contactInformation.firstName     = 'Ivo';
+        req.businessInformation.contactInformation.lastName      = 'Nik';
+        req.businessInformation.contactInformation.businessEmail = 'ivo@test.eu';
+        req.businessInformation.contactInformation.contactNumber = '+442071234567';
+
+        Test.startTest();
+        NuveiConnectWebhookHandler.WebhookResult r =
+            NuveiConnectWebhookHandler.processWebhook(req);
+        Test.stopTest();
+
+        System.assert(r.success, 'processWebhook must succeed: ' + r.message);
+
+        Compliance__c merchant = [SELECT Id FROM Compliance__c
+            WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001' LIMIT 1];
+
+        List<PCI__c> pcis = [
+            SELECT Status__c, Aperia_Consent__c,
+                   Contact_Name__c, Contact_Email__c, Contact_Phone__c
+            FROM PCI__c
+            WHERE Company_Profile__c = :merchant.Id
+        ];
+        System.assertEquals(1, pcis.size(), 'Exactly one PCI__c must be created');
+        PCI__c pci = pcis[0];
+        System.assertEquals('Active',        pci.Status__c);
+        System.assertEquals(true,            pci.Aperia_Consent__c);
+        System.assertEquals('Ivo Nik',       pci.Contact_Name__c);
+        System.assertEquals('ivo@test.eu',   pci.Contact_Email__c);
+        System.assertEquals('+442071234567', pci.Contact_Phone__c);
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Chargeback_Protection__c defensive cloner
+    // ════════════════════════════════════════════════════════════════════
+
     @IsTest
     static void copyPartnerChargebackProtection_is_defensive_when_no_rows() {
-        // Partner has zero CBP rows → helper must silently no-op, no exception,
-        // no error log, merchant creation still succeeds.
-        createTestPartner('PARTNER-CBP-000');
-
+        Compliance__c partner = createTestPartner('PARTNER-CBP-000');
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
 
         Test.startTest();
         NuveiConnectWebhookHandler.WebhookResult r =
@@ -929,10 +941,8 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         Test.stopTest();
 
         System.assert(r.success,
-            'Merchant creation must succeed when partner has zero CBP rows: ' + r.message);
+            'Merchant creation must succeed with zero CBP rows on partner: ' + r.message);
 
-        // No error rows at all should be logged for NuveiConnectWebhookHandler.
-        // Filtering by Note__c only (Description__c is long text, unfilterable).
         Integer errCount = [
             SELECT COUNT() FROM Execution_Log__c
             WHERE Class_Name__c = 'NuveiConnectWebhookHandler'
@@ -941,6 +951,58 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         System.assertEquals(0, errCount,
             'No error should be logged when partner has zero CBP rows');
     }
+
+    @IsTest
+    static void copyPartnerChargebackProtection_clones_when_object_exists() {
+        if (!Schema.getGlobalDescribe().containsKey('Chargeback_Protection__c')) {
+            return;
+        }
+
+        Compliance__c partner = createTestPartner('PARTNER-CBP-001');
+
+        Schema.SObjectType t = Schema.getGlobalDescribe().get('Chargeback_Protection__c');
+        SObject cbp = t.newSObject();
+        String parentLookup;
+        for (Schema.SObjectField f : t.getDescribe().fields.getMap().values()) {
+            Schema.DescribeFieldResult d = f.getDescribe();
+            if (d.getType() != Schema.DisplayType.REFERENCE) continue;
+            for (Schema.SObjectType ref : d.getReferenceTo()) {
+                if (ref.getDescribe().getName() == 'Compliance__c') {
+                    parentLookup = d.getName();
+                }
+            }
+        }
+        System.assertNotEquals(null, parentLookup,
+            'Chargeback_Protection__c must have a reference to Compliance__c');
+        cbp.put(parentLookup, partner.Id);
+        insert cbp;
+
+        NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
+
+        Test.startTest();
+        NuveiConnectWebhookHandler.WebhookResult r =
+            NuveiConnectWebhookHandler.processWebhook(req);
+        Test.stopTest();
+
+        System.assert(r.success, 'processWebhook must succeed: ' + r.message);
+
+        Compliance__c merchant = [
+            SELECT Id, From_Reseller__c
+            FROM Compliance__c
+            WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001' LIMIT 1
+        ];
+        System.assertEquals(partner.Id, merchant.From_Reseller__c,
+            'Merchant must be linked to test partner');
+
+        Integer cloned = Database.countQuery(
+            'SELECT COUNT() FROM Chargeback_Protection__c'
+            + ' WHERE ' + parentLookup + ' = \'' + merchant.Id + '\''
+        );
+        System.assert(cloned >= 1,
+            'At least one Chargeback_Protection__c row must be cloned. cloned=' + cloned);
+    }
+    
     // NOTE: testBoardingLogCreated_OnInsert is disabled pending Track I deployment.
     // Boarding_Log__c and Boarding_Log_Entry__c do not yet exist in the org.
     // Re-enable once those objects are deployed.

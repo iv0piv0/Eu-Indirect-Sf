@@ -678,12 +678,31 @@ private static Boolean isApprovedStatus(String ncStatus) {
         }
 
         try {
-            PCI__c pci = new PCI__c();
-            pci.Company_Profile__c = comp.Id;
-            insert pci;
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'NuveiConnectWebhook | PCI__c creation failed: ' + e.getMessage());
-        }
+    PCI__c pci = new PCI__c();
+    pci.Company_Profile__c = comp.Id;
+
+    // Defaults required by ops
+    pci.Status__c         = 'Active';
+    pci.Aperia_Consent__c = true;
+
+    // Contact details — straight from NC payload (same source used by
+    // buildContact to create the SF Contact record earlier in this flow).
+    ContactInfoWrapper ci = req.businessInformation != null
+        ? req.businessInformation.contactInformation
+        : null;
+    if (ci != null) {
+        String fullName = String.isNotBlank(ci.firstName)
+            ? (ci.firstName + ' ' + (ci.lastName != null ? ci.lastName : '')).trim()
+            : ci.lastName;
+        pci.Contact_Name__c  = fullName;
+        pci.Contact_Email__c = ci.businessEmail;
+        pci.Contact_Phone__c = ci.contactNumber;
+    }
+
+    insert pci;
+} catch (Exception e) {
+    System.debug(LoggingLevel.ERROR, 'NuveiConnectWebhook | PCI__c creation failed: ' + e.getMessage());
+}
 
         Application_Form__c appForm = buildApplicationForm(req, comp.Id);
         insert appForm;
@@ -696,13 +715,19 @@ private static Boolean isApprovedStatus(String ncStatus) {
         List<Directors_or_Ultimate_Beneficial_Owner__c> directors = buildDirectors(req, comp.Id, appForm.Id);
         if (!directors.isEmpty()) insert directors;
 
-                copyPartnerMerchantBanks(
+        copyPartnerMerchantBanks(
             comp.Id,
             req.partnerId,
             req.bankingInformation,
             req.businessInformation != null ? req.businessInformation.legalName : null,
             req.metadata != null ? req.metadata.msaTemplateId : null
         );
+
+        // Post-demo: defensively clone Chargeback_Protection__c rows from the
+        // partner Compliance to the newly-created merchant. Written with dynamic
+        // SOQL / describe so the day the CBP custom object is deleted from the
+        // org, this class still compiles and the flow keeps working.
+        copyPartnerChargebackProtection(comp.Id, resolvePartnerId(req.partnerId));
 
         return comp.Id;
     }
@@ -1274,6 +1299,89 @@ private static Boolean isApprovedStatus(String ncStatus) {
         }
         if (!records.isEmpty()) insert records;
     }
+    
+        /**
+     * Defensively clone Chargeback_Protection__c rows from partner → merchant.
+     *
+     * Nuvei ops are planning to delete the Chargeback_Protection__c custom
+     * object in the near future. This helper is written entirely via dynamic
+     * SOQL / describe / dynamic DML, so when the object is removed from the
+     * org:
+     *   - This class still compiles (no static references to the object).
+     *   - The merchant creation flow proceeds normally (early return).
+     *   - No error is logged during normal operation post-deletion.
+     *
+     * Never throws. Never blocks merchant creation.
+     */
+    private static void copyPartnerChargebackProtection(Id merchantComplianceId, Id partnerComplianceId) {
+        if (merchantComplianceId == null || partnerComplianceId == null) return;
+
+        final String CBP_API_NAME = 'Chargeback_Protection__c';
+
+        try {
+            // 1) Object existence guard — the day ops deletes the object, this
+            //    early-returns silently.
+            Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+            if (!gd.containsKey(CBP_API_NAME)) return;
+
+            Schema.SObjectType cbpType = gd.get(CBP_API_NAME);
+            Schema.DescribeSObjectResult cbpDescribe = cbpType.getDescribe();
+            Map<String, Schema.SObjectField> fieldMap = cbpDescribe.fields.getMap();
+
+            // 2) Discover the reference field on Chargeback_Protection__c that
+            //    points to Compliance__c. Cannot hardcode the API name since
+            //    the object may not exist at compile time.
+            String parentLookupField;
+            for (String fName : fieldMap.keySet()) {
+                Schema.DescribeFieldResult f = fieldMap.get(fName).getDescribe();
+                if (f.getType() != Schema.DisplayType.REFERENCE) continue;
+                for (Schema.SObjectType ref : f.getReferenceTo()) {
+                    if (ref.getDescribe().getName() == 'Compliance__c') {
+                        parentLookupField = f.getName();
+                        break;
+                    }
+                }
+                if (parentLookupField != null) break;
+            }
+            if (parentLookupField == null) return; // no way to relate — silent no-op
+
+            // 3) Build a SELECT of all createable, non-formula, non-audit fields.
+            List<String> selectFields = new List<String>{ 'Id' };
+            for (String fName : fieldMap.keySet()) {
+                Schema.DescribeFieldResult f = fieldMap.get(fName).getDescribe();
+                if (!f.isCreateable()) continue;
+                if (f.isCalculated()) continue;
+                if (f.isAutoNumber()) continue;
+                selectFields.add(f.getName());
+            }
+            String soql =
+                'SELECT ' + String.join(selectFields, ', ')
+                + ' FROM ' + CBP_API_NAME
+                + ' WHERE ' + parentLookupField + ' = :partnerComplianceId';
+
+            List<SObject> partnerRows = Database.query(soql);
+            if (partnerRows.isEmpty()) return;
+
+            // 4) Clone each row, rewriting the parent lookup to the merchant.
+            List<SObject> newRows = new List<SObject>();
+            for (SObject src : partnerRows) {
+                SObject clone = cbpType.newSObject();
+                for (String fName : selectFields) {
+                    if (fName == 'Id') continue;
+                    if (fName.equalsIgnoreCase(parentLookupField)) continue;
+                    Object v = src.get(fName);
+                    if (v != null) clone.put(fName, v);
+                }
+                clone.put(parentLookupField, merchantComplianceId);
+                newRows.add(clone);
+            }
+            insert newRows;
+        } catch (Exception e) {
+            // Never rethrow — this is defensive and must never block merchant creation.
+            logLegacyError('copyPartnerChargebackProtection failed', e,
+                           String.valueOf(partnerComplianceId));
+        }
+    }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────
 
@@ -1314,10 +1422,16 @@ private static Boolean isApprovedStatus(String ncStatus) {
         return partners.isEmpty() ? null : partners[0].Sales_Rep__c;
     }
     
-        private static void seedRolesFromPartner(Compliance__c comp) {
+           private static void seedRolesFromPartner(Compliance__c comp) {
         Id partnerComplianceId = comp.From_Reseller__c;
+        if (partnerComplianceId == null) return;
+
         List<Compliance__c> partners = [
-            SELECT Sales_Rep__c, Account_Manager__c, Underwriting_Mgr__c
+            SELECT Sales_Rep__c, Account_Manager__c, Underwriting_Mgr__c,
+                   Assessment_Handling_Service_Fee__c,
+                   Minimum_monthly_fee_Value_1__c,
+                   Remittance_Cycle__c,
+                   Settlement_threshold__c
             FROM Compliance__c
             WHERE Id = :partnerComplianceId
             LIMIT 1
@@ -1327,9 +1441,21 @@ private static Boolean isApprovedStatus(String ncStatus) {
         }
         Compliance__c p = partners[0];
 
+        // Roles
         if (comp.Sales_Rep__c == null)         comp.Sales_Rep__c         = p.Sales_Rep__c;
         if (comp.Account_Manager__c == null)   comp.Account_Manager__c   = p.Account_Manager__c;
         if (comp.Underwriting_Mgr__c == null)  comp.Underwriting_Mgr__c  = p.Underwriting_Mgr__c;
+
+        // Pricing defaults — copy only when merchant value is blank so any
+        // manual override on the merchant Compliance is preserved.
+        if (comp.Assessment_Handling_Service_Fee__c == null)
+            comp.Assessment_Handling_Service_Fee__c = p.Assessment_Handling_Service_Fee__c;
+        if (comp.Minimum_monthly_fee_Value_1__c == null)
+            comp.Minimum_monthly_fee_Value_1__c = p.Minimum_monthly_fee_Value_1__c;
+        if (comp.Remittance_Cycle__c == null)
+            comp.Remittance_Cycle__c = p.Remittance_Cycle__c;
+        if (comp.Settlement_threshold__c == null)
+            comp.Settlement_threshold__c = p.Settlement_threshold__c;
     }
 
     private static void createConfigurationCase(Compliance__c comp) {

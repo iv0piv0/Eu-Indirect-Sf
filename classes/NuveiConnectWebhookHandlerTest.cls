@@ -760,7 +760,7 @@ private class NuveiConnectWebhookHandlerTest {
             + 'no msaTemplateId hint');
     }
     
-    @isTest
+   @isTest
 static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
     // Regression guard: yesterday's dedup fix exposed that createAllObjects
     // did NOT set Nuvei_Connect_Status__c — only handleStatusUpdate did.
@@ -773,9 +773,17 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
     req.rawPayload        = '{}';
     req.businessOwnerInformation = new List<NuveiConnectWebhookHandler.BusinessOwnerWrapper>();
     req.bankingInformation       = new List<NuveiConnectWebhookHandler.BankingInfoWrapper>();
-    // Minimal businessInformation to allow buildCompliance to run
+
+    // Minimal businessInformation + contactInformation so buildContact
+    // produces a Contact with a non-null LastName.
     req.businessInformation = new NuveiConnectWebhookHandler.BusinessInformationWrapper();
     req.businessInformation.legalName = 'Init Create Co';
+    req.businessInformation.contactInformation =
+        new NuveiConnectWebhookHandler.ContactInfoWrapper();
+    req.businessInformation.contactInformation.firstName     = 'Init';
+    req.businessInformation.contactInformation.lastName      = 'Contact';
+    req.businessInformation.contactInformation.businessEmail = 'init@example.com';
+    req.businessInformation.contactInformation.contactNumber = '+441234567890';
 
     Test.startTest();
     NuveiConnectWebhookHandler.WebhookResult result =
@@ -796,7 +804,103 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         'Compliance_Status__c must be set on initial creation');
 }
 
+    // ════════════════════════════════════════════════════════════════════
+    // Partner → Merchant field seeding (extended pricing fields)
+    // ════════════════════════════════════════════════════════════════════
 
+    @IsTest
+    static void seedFromPartner_copies_new_pricing_fields_when_merchant_blank() {
+        Compliance__c partner = createTestPartner('PARTNER-PRICING-001');
+        partner.Assessment_Handling_Service_Fee__c = 10;       // DOUBLE
+        partner.Minimum_monthly_fee_Value_1__c     = 25;       // DOUBLE
+        partner.Remittance_Cycle__c                = 'Daily';  // PICKLIST value
+        partner.Settlement_threshold__c            = '500';    // PICKLIST value
+        update partner;
+
+        NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+
+        Test.startTest();
+        NuveiConnectWebhookHandler.WebhookResult r =
+            NuveiConnectWebhookHandler.processWebhook(req);
+        Test.stopTest();
+
+        System.assert(r.success, 'processWebhook must succeed: ' + r.message);
+
+        Compliance__c merchant = [
+            SELECT Assessment_Handling_Service_Fee__c,
+                   Minimum_monthly_fee_Value_1__c,
+                   Remittance_Cycle__c,
+                   Settlement_threshold__c
+            FROM Compliance__c
+            WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
+            LIMIT 1
+        ];
+        System.assertEquals(10,      merchant.Assessment_Handling_Service_Fee__c,
+            'Assessment_Handling_Service_Fee__c must be copied from partner');
+        System.assertEquals(25,      merchant.Minimum_monthly_fee_Value_1__c,
+            'Minimum_monthly_fee_Value_1__c must be copied from partner');
+        System.assertEquals('Daily', merchant.Remittance_Cycle__c,
+            'Remittance_Cycle__c must be copied from partner');
+        System.assertEquals('500',   merchant.Settlement_threshold__c,
+            'Settlement_threshold__c must be copied from partner');
+    }
+
+    @IsTest
+    static void seedFromPartner_leaves_null_when_partner_blank() {
+        // Partner exists but all 4 new fields are null → merchant stays null,
+        // no exception thrown.
+        createTestPartner('PARTNER-PRICING-002');
+
+        NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+
+        Test.startTest();
+        NuveiConnectWebhookHandler.WebhookResult r =
+            NuveiConnectWebhookHandler.processWebhook(req);
+        Test.stopTest();
+
+        System.assert(r.success, 'processWebhook must succeed: ' + r.message);
+
+        Compliance__c merchant = [
+            SELECT Assessment_Handling_Service_Fee__c,
+                   Minimum_monthly_fee_Value_1__c,
+                   Remittance_Cycle__c,
+                   Settlement_threshold__c
+            FROM Compliance__c
+            WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001'
+            LIMIT 1
+        ];
+        System.assertEquals(null, merchant.Assessment_Handling_Service_Fee__c);
+        System.assertEquals(null, merchant.Minimum_monthly_fee_Value_1__c);
+        System.assertEquals(null, merchant.Remittance_Cycle__c);
+        System.assertEquals(null, merchant.Settlement_threshold__c);
+    }
+
+    @IsTest
+    static void copyPartnerChargebackProtection_is_defensive_when_no_rows() {
+        // Partner has zero CBP rows → helper must silently no-op, no exception,
+        // no error log, merchant creation still succeeds.
+        createTestPartner('PARTNER-CBP-000');
+
+        NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
+
+        Test.startTest();
+        NuveiConnectWebhookHandler.WebhookResult r =
+            NuveiConnectWebhookHandler.processWebhook(req);
+        Test.stopTest();
+
+        System.assert(r.success,
+            'Merchant creation must succeed when partner has zero CBP rows: ' + r.message);
+
+        // No error rows at all should be logged for NuveiConnectWebhookHandler.
+        // Filtering by Note__c only (Description__c is long text, unfilterable).
+        Integer errCount = [
+            SELECT COUNT() FROM Execution_Log__c
+            WHERE Class_Name__c = 'NuveiConnectWebhookHandler'
+              AND Type__c = 'Error'
+        ];
+        System.assertEquals(0, errCount,
+            'No error should be logged when partner has zero CBP rows');
+    }
     // NOTE: testBoardingLogCreated_OnInsert is disabled pending Track I deployment.
     // Boarding_Log__c and Boarding_Log_Entry__c do not yet exist in the org.
     // Re-enable once those objects are deployed.

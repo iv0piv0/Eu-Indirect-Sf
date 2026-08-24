@@ -140,7 +140,8 @@ private class NuveiConnectWebhookHandlerTest {
         Compliance__c partner = new Compliance__c(
             Name              = 'Test Partner',
             Account__c        = partnerAcc.Id,
-            Nuvei_Partner_ID__c = entityId
+            Nuvei_Partner_ID__c = entityId,
+            Industry__c       = 'ISO'   // required by From_Reseller__c filter
         );
         insert partner;
         return partner;
@@ -804,33 +805,27 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         'Compliance_Status__c must be set on initial creation');
 }
 
-        // ════════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════
     // Partner → Merchant field seeding (extended pricing fields)
     // ════════════════════════════════════════════════════════════════════
 
-        @IsTest
+    @IsTest
     static void seedFromPartner_copies_new_pricing_fields_when_merchant_blank() {
-        Compliance__c partner = createTestPartner('PARTNER-PRICING-001');
+        // Use the same partner id as buildEURequest()'s default so no rewiring
+        // is needed and the partner Account passes org validation rules.
+        Compliance__c partner = createTestPartner('PARTNER-EU-001');
         partner.Assessment_Handling_Service_Fee__c = 77.77;
         partner.Minimum_monthly_fee_Value_1__c     = 88.88;
         partner.Remittance_Cycle__c                = 'Daily';
         partner.Settlement_threshold__c            = '500';
-        partner.Nuvei_Partner_ID__c                = 'PARTNER-PRICING-001'; // re-assert
         update partner;
 
-        // Re-read the partner AFTER update to capture what actually stuck.
         Compliance__c partnerFinal = [
-            SELECT Nuvei_Partner_ID__c,
-                   Assessment_Handling_Service_Fee__c,
-                   Minimum_monthly_fee_Value_1__c,
-                   Remittance_Cycle__c,
-                   Settlement_threshold__c
+            SELECT Settlement_threshold__c, Remittance_Cycle__c
             FROM Compliance__c WHERE Id = :partner.Id LIMIT 1
         ];
-        System.debug('DEBUG partnerFinal.Nuvei_Partner_ID__c=' + partnerFinal.Nuvei_Partner_ID__c);
 
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
-        req.metadata.partnerExternalId = partnerFinal.Nuvei_Partner_ID__c;
 
         Test.startTest();
         NuveiConnectWebhookHandler.WebhookResult r =
@@ -848,19 +843,12 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
             FROM Compliance__c
             WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001' LIMIT 1
         ];
-        System.debug('DEBUG merchant.From_Reseller__c=' + merchant.From_Reseller__c);
-
-        // Only assert on Settlement_threshold__c (picklist that survives org flows).
-        // Skip From_Reseller__c linkage assertion — if org flow strips
-        // Nuvei_Partner_ID__c on partner insert we can't verify the link.
-        // Skip Remittance_Cycle__c — org flow forces 'Weekly with 1 week delay'.
-        // Skip DOUBLE fields — org flow forces 4000.
-        if (merchant.From_Reseller__c != null) {
-            System.assertEquals(partnerFinal.Settlement_threshold__c,
-                merchant.Settlement_threshold__c,
-                'When partner links, Settlement_threshold__c must be copied');
-        }
-        System.assertNotEquals(null, merchant.Settlement_threshold__c);
+        System.assertEquals(partner.Id, merchant.From_Reseller__c,
+            'Merchant must link to partner');
+        System.assertEquals(partnerFinal.Settlement_threshold__c,
+            merchant.Settlement_threshold__c,
+            'Settlement_threshold__c must be copied from partner');
+        // Other 3 fields overridden by org Before-Insert flow — just assert non-null.
         System.assertNotEquals(null, merchant.Assessment_Handling_Service_Fee__c);
         System.assertNotEquals(null, merchant.Minimum_monthly_fee_Value_1__c);
         System.assertNotEquals(null, merchant.Remittance_Cycle__c);
@@ -868,9 +856,8 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
 
     @IsTest
     static void seedFromPartner_merchant_gets_pricing_defaults_from_org() {
-        Compliance__c partner = createTestPartner('PARTNER-PRICING-002');
+        createTestPartner('PARTNER-EU-001');
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
-        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
 
         Test.startTest();
         NuveiConnectWebhookHandler.WebhookResult r =
@@ -893,9 +880,8 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
 
     @IsTest
     static void pci_creation_sets_defaults_and_contact_from_payload() {
-        Compliance__c partner = createTestPartner('PARTNER-PCI-001');
+        createTestPartner('PARTNER-EU-001');
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
-        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
 
         if (req.businessInformation.contactInformation == null) {
             req.businessInformation.contactInformation =
@@ -919,8 +905,7 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         List<PCI__c> pcis = [
             SELECT Status__c, Aperia_Consent__c,
                    Contact_Name__c, Contact_Email__c, Contact_Phone__c
-            FROM PCI__c
-            WHERE Company_Profile__c = :merchant.Id
+            FROM PCI__c WHERE Company_Profile__c = :merchant.Id
         ];
         System.assertEquals(1, pcis.size(), 'Exactly one PCI__c must be created');
         PCI__c pci = pcis[0];
@@ -937,9 +922,8 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
 
     @IsTest
     static void copyPartnerChargebackProtection_is_defensive_when_no_rows() {
-        Compliance__c partner = createTestPartner('PARTNER-CBP-000');
+        createTestPartner('PARTNER-EU-001');
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
-        req.metadata.partnerExternalId = partner.Nuvei_Partner_ID__c;
 
         Test.startTest();
         NuveiConnectWebhookHandler.WebhookResult r =
@@ -958,20 +942,13 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
             'No error should be logged when partner has zero CBP rows');
     }
 
- @IsTest
+    @IsTest
     static void copyPartnerChargebackProtection_clones_when_object_exists() {
         if (!Schema.getGlobalDescribe().containsKey('Chargeback_Protection__c')) {
             return;
         }
 
-        Compliance__c partner = createTestPartner('PARTNER-CBP-001');
-        // Re-assert Nuvei_Partner_ID__c in case a BeforeInsert flow clobbered it.
-        partner.Nuvei_Partner_ID__c = 'PARTNER-CBP-001';
-        update partner;
-
-        Compliance__c partnerCheck = [SELECT Nuvei_Partner_ID__c FROM Compliance__c
-            WHERE Id = :partner.Id LIMIT 1];
-        System.debug('DEBUG partnerCheck.Nuvei_Partner_ID__c=' + partnerCheck.Nuvei_Partner_ID__c);
+        Compliance__c partner = createTestPartner('PARTNER-EU-001');
 
         Schema.SObjectType t = Schema.getGlobalDescribe().get('Chargeback_Protection__c');
         SObject cbp = t.newSObject();
@@ -991,7 +968,6 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         insert cbp;
 
         NuveiConnectWebhookHandler.NuveiConnectRequest req = buildEURequest();
-        req.metadata.partnerExternalId = partnerCheck.Nuvei_Partner_ID__c;
 
         Test.startTest();
         NuveiConnectWebhookHandler.WebhookResult r =
@@ -1001,27 +977,17 @@ static void initial_creation_sets_nuvei_connect_status_on_new_compliance() {
         System.assert(r.success, 'processWebhook must succeed: ' + r.message);
 
         Compliance__c merchant = [
-            SELECT Id, From_Reseller__c, Nuvei_Partner_ID__c
+            SELECT Id, From_Reseller__c
             FROM Compliance__c
             WHERE Nuvei_Connect_Application_ID__c = 'EU-APP-001' LIMIT 1
         ];
-        System.debug('DEBUG merchant.From_Reseller__c=' + merchant.From_Reseller__c
-            + ' Nuvei_Partner_ID__c=' + merchant.Nuvei_Partner_ID__c);
+        System.assertEquals(partner.Id, merchant.From_Reseller__c);
 
-        // If the org strips Nuvei_Partner_ID__c on merchant insert, resolvePartnerId
-        // may return null and CBP cloner correctly no-ops. Assert conditionally.
-        if (merchant.From_Reseller__c != null) {
-            Integer cloned = Database.countQuery(
-                'SELECT COUNT() FROM Chargeback_Protection__c'
-                + ' WHERE ' + parentLookup + ' = \'' + merchant.Id + '\''
-            );
-            System.assert(cloned >= 1,
-                'When partner links, at least one CBP row must be cloned. cloned=' + cloned);
-        } else {
-            System.debug('DEBUG merchant.From_Reseller__c is null — CBP cloner correctly no-op\'d. '
-                + 'This means the test org has automation that clears Nuvei_Partner_ID__c. '
-                + 'Test passes but CBP clone was not exercised.');
-        }
+        Integer cloned = Database.countQuery(
+            'SELECT COUNT() FROM Chargeback_Protection__c'
+            + ' WHERE ' + parentLookup + ' = \'' + merchant.Id + '\''
+        );
+        System.assert(cloned >= 1, 'At least one CBP row must be cloned. cloned=' + cloned);
     }
     
     // NOTE: testBoardingLogCreated_OnInsert is disabled pending Track I deployment.

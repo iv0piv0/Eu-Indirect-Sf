@@ -1,47 +1,64 @@
 @RestResource(urlMapping='/nuveiConnectWebhook')
 global without sharing class NuveiConnectWebhookHandler {
-    @HttpPost
+       @HttpPost
     global static void handlePost() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
         res.addHeader('Content-Type', 'application/json');
+
+        String body = req.requestBody == null ? '' : req.requestBody.toString();
+
+        // Phase 1 — log inbound (fast, <100ms). Never blocks the ACK.
+        Id logId;
         try {
-            String body = req.requestBody == null ? '' : req.requestBody.toString();
-
-            // ── Inbound payload logging (always, regardless of outcome) ──
-            try {
-                insert new Execution_Log__c(
-                    Class_Name__c  = 'NuveiConnectWebhookHandler',
-                    Method_Name__c = 'handlePost',
-                    Type__c        = 'Info',
-                    Note__c        = 'NC Webhook Inbound Payload',
-                    Payload__c     = String.isBlank(body) ? '(empty body)' : body.left(131072)
-                );
-            } catch (Exception logEx) {
-                System.debug('Inbound log failed: ' + logEx.getMessage());
-            }
-            // ─────────────────────────────────────────────────────────────
-
-            Map<String, Object> envelope = (Map<String, Object>) JSON.deserializeUntyped(body);
-
-            // NC sends applicationData as an escaped JSON string — parse it twice
-            String appDataStr = (String) envelope.get('applicationData');
-            Map<String, Object> appData = (Map<String, Object>) JSON.deserializeUntyped(appDataStr);
-
-            // Merge applicationId and applicationStatus from envelope into appData
-            appData.put('applicationId', envelope.get('applicationId'));
-            appData.put('applicationStatus', envelope.get('applicationStatus'));
-
-            NuveiConnectRequest ncReq = (NuveiConnectRequest) JSON.deserialize(
-                JSON.serialize(appData), NuveiConnectRequest.class
+            Execution_Log__c logRow = new Execution_Log__c(
+                Class_Name__c  = 'NuveiConnectWebhookHandler',
+                Method_Name__c = 'handlePost',
+                Type__c        = 'Info',
+                Note__c        = 'NC Webhook Inbound Payload (async queued)',
+                Payload__c     = String.isBlank(body) ? '(empty body)' : body.left(131072)
             );
-            WebhookResult result = processWebhook(ncReq);
-            res.statusCode = result.success ? 200 : 422;
-            res.responseBody = Blob.valueOf(JSON.serialize(result));
-        } catch (Exception e) {
-            res.statusCode = 500;
-            res.responseBody = Blob.valueOf('{"success":false,"message":"' + e.getMessage().replace('"','\\"') + '"}');
+            insert logRow;
+            logId = logRow.Id;
+        } catch (Exception ignore) { /* never block ACK on logging */ }
+
+        // Phase 2 — sanity check that the payload is parseable JSON.
+        // Malformed JSON gets a 400 immediately (NC won't retry a 400).
+        try {
+            JSON.deserializeUntyped(body);
+        } catch (Exception badJson) {
+            res.statusCode = 400;
+            res.responseBody = Blob.valueOf(
+                '{"success":false,"message":"Malformed JSON: '
+                + badJson.getMessage().replace('"','\\"') + '"}'
+            );
+            return;
         }
+
+        // Phase 3 — enqueue the actual work in a separate transaction.
+        try {
+            System.enqueueJob(new NuveiConnectWebhookQueueable(body, logId));
+        } catch (Exception e) {
+            // enqueueJob can fail if we're already inside a queueable chain hitting
+            // limits. Fall back to synchronous processing so we don't drop the webhook.
+            try {
+                Map<String, Object> envelope = (Map<String, Object>) JSON.deserializeUntyped(body);
+                String appDataStr = (String) envelope.get('applicationData');
+                Map<String, Object> appData = (Map<String, Object>) JSON.deserializeUntyped(appDataStr);
+                appData.put('applicationId', envelope.get('applicationId'));
+                appData.put('applicationStatus', envelope.get('applicationStatus'));
+                NuveiConnectRequest ncReq = (NuveiConnectRequest) JSON.deserialize(
+                    JSON.serialize(appData), NuveiConnectRequest.class
+                );
+                processWebhook(ncReq); // best-effort sync fallback
+            } catch (Exception ignore2) { /* already logged inbound */ }
+        }
+
+        // Phase 4 — ACK immediately with 200 as NC expects.
+        res.statusCode = 200;
+        res.responseBody = Blob.valueOf(
+            '{"success":true,"message":"Accepted for asynchronous processing"}'
+        );
     }
 
     private static final Id RT_EL_NC = RecordTypeHelper.getRecordTypeIdByName('Execution_Log__c', 'NuveiConnect');

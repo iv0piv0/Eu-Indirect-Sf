@@ -1,6 +1,6 @@
 @RestResource(urlMapping='/nuveiConnectWebhook')
 global without sharing class NuveiConnectWebhookHandler {
-       @HttpPost
+        @HttpPost
     global static void handlePost() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
@@ -987,7 +987,13 @@ private static Boolean isApprovedStatus(String ncStatus) {
         if (rtId != null) af.RecordTypeId = rtId;
 
         if (req.businessInformation != null) {
-            af.Company_name__c         = req.businessInformation.legalName;
+        // Wave 5: set BOTH the standard Name label (Conga template pulls this)
+       // AND the legacy custom Company_name__c. Truncate to each field's max.
+        if (String.isNotBlank(req.businessInformation.legalName)) {
+        String legal = req.businessInformation.legalName;
+        af.Name            = legal.length() > 80 ? legal.substring(0, 80) : legal;   // standard, max 80
+        af.Company_name__c = legal.length() > 50 ? legal.substring(0, 50) : legal;   // custom, max 50
+    }
             af.Company_DBA__c          = req.businessInformation.doingBusinessAs;
             af.Company_Type__c         = NC_TO_SF_COMPANY_TYPE.containsKey(req.businessInformation.businessType)
                 ? NC_TO_SF_COMPANY_TYPE.get(req.businessInformation.businessType)
@@ -1056,6 +1062,57 @@ private static Boolean isApprovedStatus(String ncStatus) {
             af.Operational_address_same_as_registered__c = addressesMatch(bizAddr, opAddr);
         }
 
+        // ─── Wave 5: Primary Contact block ────────────────────────────────
+        // Populate from businessInformation.contactInformation. Only set when
+        // blank so replays don't clobber manual edits.
+        if (req.businessInformation != null
+            && req.businessInformation.contactInformation != null) {
+            ContactInfoWrapper ci = req.businessInformation.contactInformation;
+            if (String.isBlank(af.Primary_Contact_First_Name_New__c)
+                && String.isNotBlank(ci.firstName)) {
+                af.Primary_Contact_First_Name_New__c = ci.firstName;
+            }
+            if (String.isBlank(af.Primary_Contact_Last_Name_New__c)
+                && String.isNotBlank(ci.lastName)) {
+                af.Primary_Contact_Last_Name_New__c = ci.lastName;
+            }
+            if (String.isBlank(af.Primary_Contact_Email_New__c)
+                && String.isNotBlank(ci.businessEmail)) {
+                af.Primary_Contact_Email_New__c = ci.businessEmail;
+            }
+            if (String.isBlank(af.Primary_Contact_Tel_New__c)
+                && String.isNotBlank(ci.contactNumber)) {
+                af.Primary_Contact_Tel_New__c = ci.contactNumber;
+            }
+            // Primary_Contact_Title_New__c intentionally left blank — NC does
+            // not collect salutation/title.
+        }
+
+        // ─── Wave 5: APM Pricing Manager block ─────────────────────────────
+        // Business decision: reuse Portal Admin (cPanel admin) as the APM
+        // Pricing Manager. NC does not collect a dedicated APM pricing contact.
+        if (req.additionalInformation != null) {
+            AdditionalInfoWrapper ai = req.additionalInformation;
+            if (String.isBlank(af.APM_Pricing_Manager_First_Name__c)
+                && String.isNotBlank(ai.portalAdminFirstName)) {
+                af.APM_Pricing_Manager_First_Name__c = ai.portalAdminFirstName;
+            }
+            if (String.isBlank(af.APM_Pricing_Manager_Last_Name__c)
+                && String.isNotBlank(ai.portalAdminLastName)) {
+                af.APM_Pricing_Manager_Last_Name__c = ai.portalAdminLastName;
+            }
+            if (String.isBlank(af.APM_Pricing_Manager_Email__c)
+                && String.isNotBlank(ai.portalAdminEmail)) {
+                af.APM_Pricing_Manager_Email__c = ai.portalAdminEmail;
+            }
+            if (String.isBlank(af.APM_Pricing_Manager_Phone__c)
+                && String.isNotBlank(ai.portalAdminContactNumber)) {
+                af.APM_Pricing_Manager_Phone__c = ai.portalAdminContactNumber;
+            }
+            // Title/Position, Secret Word, Phone Code intentionally blank —
+            // not in NC payload.
+        }
+
         return af;
     }
 
@@ -1113,6 +1170,11 @@ private static Boolean isApprovedStatus(String ncStatus) {
             site.MCC_Code__c = mcc.length() > 10 ? mcc.substring(0, 10) : mcc;
         }
 
+        // Wave 5: auto-approve new Website record from webhook so UW does
+        // not have to click through a manual approval step for merchants
+        // already approved by NC.
+        site.UW_Approval_picklist__c = 'Approved';
+
         return site;
     }
 
@@ -1140,6 +1202,31 @@ private static Boolean isApprovedStatus(String ncStatus) {
             // the Director/UBO row (Contact side is already set — this makes
             // the KYC-side reporting consistent with the Contact side).
             d.Authorized_Signatory__c = bo.isAuthorizedSignatory == true;
+
+            // Wave 5: NC document details — Passport_Number__c and expiry from
+            // the first documentDetails entry. Fields sit on the outer wrapper
+            // (per NC swagger), NOT inside documents[]. Null-safe + bad-date-tolerant.
+            if (bo.documentDetails != null && !bo.documentDetails.isEmpty()) {
+                BoDocumentDetailsWrapper dd = bo.documentDetails[0];
+                if (dd != null) {
+                    if (String.isNotBlank(dd.documentNumber)) {
+                        String docNum = dd.documentNumber.length() > 50
+                            ? dd.documentNumber.substring(0, 50)
+                            : dd.documentNumber;
+                        d.Passport_Number__c = docNum;
+                    }
+                    if (String.isNotBlank(dd.expiryDate)) {
+                        try {
+                            d.Passport_Expiration_Date__c = Date.valueOf(dd.expiryDate);
+                        } catch (Exception badDate) {
+                            System.debug(LoggingLevel.WARN,
+                                'NuveiConnectWebhook | Wave 5 | invalid document expiryDate "'
+                                + dd.expiryDate + '" for owner ' + bo.email
+                                + ' — Passport_Expiration_Date__c left null');
+                        }
+                    }
+                }
+            }
 
             if (bo.homeAddress != null) {
                 d.Country__c         = resolveCountry(bo.homeAddress.country);
@@ -1176,97 +1263,144 @@ private static Boolean isApprovedStatus(String ncStatus) {
      * Banking_Details__c is always created regardless — those describe the
      * merchant's own bank account, not partner pricing.
      */
-    private static void copyPartnerMerchantBanks(
-        Id complianceId,
-        String partnerId,
-        List<BankingInfoWrapper> bankingInfo,
-        String legalName,
-        String msaTemplateId
-    ) {
-        if (String.isBlank(partnerId)) {
-            createBankingDetails(complianceId, bankingInfo, legalName);
-            return;
-        }
-
-        Id partnerComplianceId = resolvePartnerId(partnerId);
-        if (partnerComplianceId == null) {
-            logLegacyError('Partner not found for partnerId: ' + partnerId, null, partnerId);
-            createBankingDetails(complianceId, bankingInfo, legalName);
-            return;
-        }
-
-        try {
-            String trimmedTemplateId = String.isBlank(msaTemplateId) ? null : msaTemplateId.trim();
-
-            List<Merchant_Bank__c> allPartnerTemplates = [
-                SELECT Id, RecordTypeId,
-                       CHB_Handling__c, Credit_Fee_Per_Credit__c, Trx_Fee__c,
-                       Discount_Fee_ALL_Value_1__c,
-                       Discount_Fee_EU_Value_1__c,
-                       Discount_Fee_ROW_Value_1__c,
-                       Industry__c
-                FROM   Merchant_Bank__c
-                WHERE  Compliance__c = :partnerComplianceId
-                AND    Partner_Template_Pricing__c = true
-            ];
-
-            List<Merchant_Bank__c> chosen = new List<Merchant_Bank__c>();
-
-            if (String.isNotBlank(trimmedTemplateId)) {
-    // NC specified which template to use — must find an exact match.
-    // Cast to Id so 15-char / 18-char and case differences are normalized.
-    Id targetTemplateId;
-    try {
-        targetTemplateId = (Id) trimmedTemplateId;
-    } catch (System.StringException e) {
-        targetTemplateId = null;
-    }
-    if (targetTemplateId != null) {
-        for (Merchant_Bank__c t : allPartnerTemplates) {
-            if (t.Id == targetTemplateId) {
-                chosen.add(t);
-                break;
-            }
-        }
-    }
-    if (chosen.isEmpty()) {
-        logLegacyError(
-            'metadata.msaTemplateId "' + trimmedTemplateId + '" does not match any '
-            + 'Merchant_Bank__c with Partner_Template_Pricing__c=true on partner '
-            + partnerId + ' (partner Compliance ' + partnerComplianceId + '). '
-            + 'No pricing template cloned — merchant will need manual Merchant_Bank__c '
-            + 'setup before Track D can compose MSA.',
-            null, partnerId
-        );
-    }
-                // else: 0 templates on partner → nothing to clone, no error (legit case).
-            }
-
-            if (!chosen.isEmpty()) {
-                String templateIndustry = chosen[0].Industry__c;
-                if (String.isNotBlank(templateIndustry)) {
-                    update new Compliance__c(
-                        Id          = complianceId,
-                        Industry__c = templateIndustry
-                    );
-                }
-
-                List<Merchant_Bank__c> newBanks = new List<Merchant_Bank__c>();
-                for (Merchant_Bank__c t : chosen) {
-                    Merchant_Bank__c nb = t.clone(false, true, false, false);
-                    nb.Compliance__c               = complianceId;
-                    nb.Partner_Template_Pricing__c = false;
-                    newBanks.add(nb);
-                }
-                insert newBanks;
-            }
-
-        } catch (Exception e) {
-            logLegacyError('Failed to copy partner merchant banks', e, partnerId);
-        }
-
+private static void copyPartnerMerchantBanks(
+    Id complianceId,
+    String partnerId,
+    List<BankingInfoWrapper> bankingInfo,
+    String legalName,
+    String msaTemplateId
+) {
+    if (String.isBlank(partnerId)) {
         createBankingDetails(complianceId, bankingInfo, legalName);
+        return;
     }
+
+    Id partnerComplianceId = resolvePartnerId(partnerId);
+    if (partnerComplianceId == null) {
+        logLegacyError('Partner not found for partnerId: ' + partnerId, null, partnerId);
+        createBankingDetails(complianceId, bankingInfo, legalName);
+        return;
+    }
+
+    try {
+        String trimmedTemplateId = String.isBlank(msaTemplateId) ? null : msaTemplateId.trim();
+
+        // ── Dynamic SELECT of every queryable field on Merchant_Bank__c ─────
+        // Rationale: we need a 1:1 clone. Any field not in the SELECT would
+        // come out as the schema default (e.g. Holdback_rate__c=10 instead of
+        // template's 0), and any minimum-enforcement flag missed here would
+        // make MerchantBankEnforceMinimumFields reject the insert (e.g.
+        // Non_Standard_PQ__c=true on non-standard partner pricing). We also
+        // need Finance_Approval__c and VP_Sales_Approval__c to carry over so
+        // merchants inherit the partner's already-granted approvals.
+        Set<String> fieldNames = new Set<String>();
+        for (Schema.SObjectField f : Merchant_Bank__c.SObjectType.getDescribe().fields.getMap().values()) {
+            Schema.DescribeFieldResult d = f.getDescribe();
+            // Skip compound Address fields — not directly queryable/writable.
+            if (d.getType() == Schema.DisplayType.ADDRESS) continue;
+            fieldNames.add(d.getName());
+        }
+        // Belt-and-suspenders — ensure the fields we depend on downstream
+        // are present even if describe filtering ever drops one.
+        fieldNames.addAll(new Set<String>{
+            'Id', 'RecordTypeId', 'Compliance__c',
+            'Partner_Template_Pricing__c', 'Industry__c'
+        });
+        String soql = 'SELECT ' + String.join(new List<String>(fieldNames), ', ')
+            + ' FROM Merchant_Bank__c'
+            + ' WHERE Compliance__c = :partnerComplianceId'
+            + ' AND Partner_Template_Pricing__c = true';
+        List<Merchant_Bank__c> allPartnerTemplates = Database.query(soql);
+
+        List<Merchant_Bank__c> chosen = new List<Merchant_Bank__c>();
+
+        if (String.isNotBlank(trimmedTemplateId)) {
+            // NC specified which template to use — must find an exact match.
+            // Cast to Id so 15-char / 18-char and case differences are normalized.
+            Id targetTemplateId;
+            try {
+                targetTemplateId = (Id) trimmedTemplateId;
+            } catch (System.StringException e) {
+                targetTemplateId = null;
+            }
+            if (targetTemplateId != null) {
+                for (Merchant_Bank__c t : allPartnerTemplates) {
+                    if (t.Id == targetTemplateId) {
+                        chosen.add(t);
+                        break;
+                    }
+                }
+            }
+            if (chosen.isEmpty()) {
+                logLegacyError(
+                    'metadata.msaTemplateId "' + trimmedTemplateId + '" does not match any '
+                    + 'Merchant_Bank__c with Partner_Template_Pricing__c=true on partner '
+                    + partnerId + ' (partner Compliance ' + partnerComplianceId + '). '
+                    + 'No pricing template cloned — merchant will need manual Merchant_Bank__c '
+                    + 'setup before Track D can compose MSA.',
+                    null, partnerId
+                );
+            }
+        } else {
+            // No msaTemplateId → auto-pick only if exactly 1 template exists.
+            if (allPartnerTemplates.size() == 1) {
+                chosen.add(allPartnerTemplates[0]);
+            } else if (allPartnerTemplates.size() > 1) {
+                logLegacyError(
+                    'Partner ' + partnerId + ' has ' + allPartnerTemplates.size()
+                    + ' Merchant_Bank__c rows with Partner_Template_Pricing__c=true and NC did NOT '
+                    + 'send metadata.msaTemplateId. Ambiguous — no pricing template cloned.',
+                    null, partnerId
+                );
+            }
+            // else: 0 templates on partner → nothing to clone, no error (legit case).
+        }
+
+        if (!chosen.isEmpty()) {
+            String templateIndustry = chosen[0].Industry__c;
+            if (String.isNotBlank(templateIndustry)) {
+                update new Compliance__c(
+                    Id          = complianceId,
+                    Industry__c = templateIndustry
+                );
+            }
+
+            List<Merchant_Bank__c> newBanks = new List<Merchant_Bank__c>();
+            for (Merchant_Bank__c t : chosen) {
+                // deep clone, preserveId=false, deepClone=true, preserveReadonlyTimestamps=false, preserveAutonumber=false
+                Merchant_Bank__c nb = t.clone(false, true, false, false);
+                // Only two overrides — everything else is a verbatim copy of the
+                // partner template (including Non_Standard_PQ__c, Finance_Approval__c,
+                // VP_Sales_Approval__c, Holdback_rate__c, and every other pricing field).
+                nb.Compliance__c               = complianceId;
+                nb.Partner_Template_Pricing__c = false;
+                newBanks.add(nb);
+            }
+            insert newBanks;
+        }
+
+    } catch (Exception e) {
+        // Surface loudly — the previous silent-catch cost real debugging time.
+        // logLegacyError is kept for backward-compat; add a NuveiConnect log too
+        // so the standard queueable-log query surfaces it.
+        logLegacyError('Failed to copy partner merchant banks', e, partnerId);
+        try {
+            insert new Execution_Log__c(
+                RecordTypeId  = RT_EL_NC,
+                Class_Name__c = 'NuveiConnectWebhookHandler',
+                Method_Name__c= 'copyPartnerMerchantBanks',
+                Type__c       = 'Error',
+                Note__c       = 'Failed to clone partner Merchant_Bank__c for partnerId '
+                                + partnerId + ' → compliance ' + complianceId
+                                + ': ' + e.getMessage(),
+                Payload__c    = (e.getStackTraceString() != null
+                                    ? e.getStackTraceString().left(131072) : null)
+            );
+        } catch (Exception ignore) { /* never let logging mask the original error */ }
+    }
+
+    createBankingDetails(complianceId, bankingInfo, legalName);
+}
 
     private static void createBankingDetails(
         Id complianceId,
@@ -1723,8 +1857,28 @@ private static Boolean isApprovedStatus(String ncStatus) {
         public String  ownerRole;
         public Boolean isAuthorizedSignatory;   // ← Wave 4 (gap #23)
         public AddressWrapper homeAddress;
+        public List<BoDocumentDetailsWrapper> documentDetails;   // ← Wave 5
+
+
+    }
+    
+global class BoDocumentDetailsWrapper {
+        // Wave 5: identity info sits on this outer object.
+        public String documentNumber;
+        public String referenceNumber;
+        public String issuanceCountry;
+        public String issuanceStateOrProvince;
+        public String expiryDate;
+        public List<BoDocumentWrapper> documents;
     }
 
+    global class BoDocumentWrapper {
+        // Wave 5: file upload metadata only.
+        public String documentType;
+        public String documentName;
+        public String documentTypeClassification;
+        public String document;   // base64
+    }
     global class BankingInfoWrapper {
         public String bankCountry;
         public String accountHolderName;
